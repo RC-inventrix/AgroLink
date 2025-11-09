@@ -72,7 +72,7 @@ Our initial demo will focus on proving the core end-to-end functionality. The MV
 
 ```bash
 # Clone the repository
-git clone [https://github.com/your-username/govilink.git](https://github.com/your-username/govilink.git)
-cd govilink
+git clone [https://github.com/RC-inventrix/AgroLink.git](https://github.com/RC-inventrix/AgroLink.git)
+cd agrolink
 
 # (Instructions to be added)
