@@ -1,8 +1,8 @@
-# GoviLink - A Farmer-Friendly Web Application
+# AgroLink - A Farmer-Friendly Web Application
 
 > **Project Status:** In Development
 
-[cite_start]GoviLink is a farmer-friendly web platform designed to connect local farmers directly with buyers, vendors, and markets[cite: 72]. [cite_start]The system aims to eliminate middlemen, allowing farmers to sell their harvest at fair prices while buyers gain access to fresh, quality produce[cite: 73].
+[cite_start]AgroLink is a farmer-friendly web platform designed to connect local farmers directly with buyers, vendors, and markets[cite: 72]. [cite_start]The system aims to eliminate middlemen, allowing farmers to sell their harvest at fair prices while buyers gain access to fresh, quality produce[cite: 73].
 
 [cite_start]With a simple, intuitive, and mobile-friendly design, the application ensures that even farmers with minimal technical knowledge can easily manage their products, view orders, and track sales[cite: 74].
 
