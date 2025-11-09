@@ -10,7 +10,7 @@
 
 ## 📚 Full Documentation
 
-For a detailed breakdown of our system architecture, database schema, API design, and user stories, please see our **[Project Wiki](https://github.com/your-username/govilink/wiki)**.
+For a detailed breakdown of our system architecture, database schema, API design, and user stories, please see our **[Project Wiki]([https://github.com/your-username/govilink/wiki](https://github.com/RC-inventrix/AgroLink.wiki.git))**.
 
 ---
 
