@@ -6,7 +6,18 @@
       <list>
         <option value="$PROJECT_DIR$/backend/auth-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/product-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/config-server/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/service-discovery/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/api-gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/indentityAndUser-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/productCatalog-service/pom.xml" />
       </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/backend/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/product-service/pom.xml" />
+      </set>
     </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="openjdk-25" project-jdk-type="JavaSDK">

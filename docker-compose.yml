@@ -1,19 +1,130 @@
-
 services:
+  # --- INFRASTRUCTURE LAYER ---
+
+  # 1. Database
   postgres:
     image: postgres:15
     container_name: agro_postgres
     environment:
-      POSTGRES_USER: agro_admin
-      POSTGRES_PASSWORD: agro_password
-      POSTGRES_DB: agro_link_db
+      POSTGRES_USER: ${DB_USER}       # Reads from .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD} # Reads from .env
+      POSTGRES_DB: ${DB_NAME}         # Reads from .env
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d # Runs your init.sql script
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Database GUI (Moved to 8090 to avoid conflict with Gateway)
   adminer:
     image: adminer
+    container_name: agro_adminer
     ports:
-      - "8080:8080"
+      - "8090:8080"
+    networks:
+      - agro-net
+    depends_on:
+      - postgres
+
+  # 3. Service Discovery (Eureka)
+  service-discovery:
+    build: ./backend/service-discovery
+    container_name: agro_discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 4. Config Server
+  config-server:
+    build: ./backend/config-server
+    container_name: agro_config
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      EUREKA_HOST: service-discovery
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+
+  # --- MICROSERVICES LAYER ---
+
+  # 5. Identity & User Service
+  identity-service:
+    build: ./backend/indentityAndUser-service
+    container_name: agro_identity
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+
+  # 6. Product Catalog Service
+  product-service:
+    build: ./backend/productCatalog-service
+    container_name: agro_products
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      OPENAI_API_KEY: ${OPENAI_API_KEY} # Reads from .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+
+  # 7. API Gateway (Main Entry Point)
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: agro_gateway
+    ports:
+      - "8080:8080" # Frontend talks to THIS port
+    environment:
+      EUREKA_HOST: service-discovery
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+    networks:
+      - agro-net
+
+# --- VOLUMES & NETWORKS ---
 volumes:
   postgres_data:
+
+networks:
+  agro-net:
+    driver: bridge
