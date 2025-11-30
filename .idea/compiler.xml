@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
       <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -32,13 +33,13 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="api-gateway" options="-parameters" />
+      <module name="api-gateway" options="" />
       <module name="auth-service" options="-parameters" />
-      <module name="config-server" options="-parameters" />
+      <module name="config-server" options="" />
       <module name="indentityAndUser-service" options="-parameters" />
       <module name="product-service" options="-parameters" />
-      <module name="productCatalog-service" options="-parameters" />
-      <module name="service-discovery" options="-parameters" />
+      <module name="productCatalog-service" options="" />
+      <module name="service-discovery" options="" />
     </option>
   </component>
 </project>
