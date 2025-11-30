@@ -68,6 +68,8 @@ services:
   identity-service:
     build: ./backend/indentityAndUser-service
     container_name: agro_identity
+    ports:
+      - "8081:8081"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432

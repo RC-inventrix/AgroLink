@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
       <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -13,8 +14,16 @@
         <module name="api-gateway" />
         <module name="config-server" />
         <module name="productCatalog-service" />
-        <module name="indentityAndUser-service" />
         <module name="service-discovery" />
+      </profile>
+      <profile name="Annotation profile for indentityAndUser-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+        </processorPath>
+        <module name="indentityAndUser-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -24,13 +33,13 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="api-gateway" options="-parameters" />
+      <module name="api-gateway" options="" />
       <module name="auth-service" options="-parameters" />
-      <module name="config-server" options="-parameters" />
+      <module name="config-server" options="" />
       <module name="indentityAndUser-service" options="-parameters" />
       <module name="product-service" options="-parameters" />
-      <module name="productCatalog-service" options="-parameters" />
-      <module name="service-discovery" options="-parameters" />
+      <module name="productCatalog-service" options="" />
+      <module name="service-discovery" options="" />
     </option>
   </component>
 </project>
