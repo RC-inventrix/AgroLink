@@ -13,8 +13,16 @@
         <module name="api-gateway" />
         <module name="config-server" />
         <module name="productCatalog-service" />
-        <module name="indentityAndUser-service" />
         <module name="service-discovery" />
+      </profile>
+      <profile name="Annotation profile for indentityAndUser-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+        </processorPath>
+        <module name="indentityAndUser-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
