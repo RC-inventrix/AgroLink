@@ -1,0 +1,50 @@
+{
+  "pages": {
+    "/_app": [
+      "static/chunks/71e22_next_dist_compiled_42d27095._.js",
+      "static/chunks/71e22_next_dist_shared_lib_44b5d266._.js",
+      "static/chunks/71e22_next_dist_client_3283acee._.js",
+      "static/chunks/71e22_next_dist_a54f205c._.js",
+      "static/chunks/71e22_next_app_5ac7eaad.js",
+      "static/chunks/[next]_entry_page-loader_ts_6c3b62fc._.js",
+      "static/chunks/71e22_react-dom_87797ad6._.js",
+      "static/chunks/71e22_05df4456._.js",
+      "static/chunks/[root-of-the-server]__7b1f36da._.js",
+      "static/chunks/Desktop_vercel generated_AgroLink_frontend_agroLink_pages__app_2da965e7._.js",
+      "static/chunks/88e7d_vercel generated_AgroLink_frontend_agroLink_pages__app_83f16ddb._.js"
+    ],
+    "/_error": [
+      "static/chunks/71e22_next_dist_compiled_42d27095._.js",
+      "static/chunks/71e22_next_dist_shared_lib_d8649394._.js",
+      "static/chunks/71e22_next_dist_client_3283acee._.js",
+      "static/chunks/71e22_next_dist_ed043525._.js",
+      "static/chunks/71e22_next_error_9f95553d.js",
+      "static/chunks/[next]_entry_page-loader_ts_578605c0._.js",
+      "static/chunks/71e22_react-dom_87797ad6._.js",
+      "static/chunks/71e22_05df4456._.js",
+      "static/chunks/[root-of-the-server]__eb5a326e._.js",
+      "static/chunks/Desktop_vercel generated_AgroLink_frontend_agroLink_pages__error_2da965e7._.js",
+      "static/chunks/88e7d_vercel generated_AgroLink_frontend_agroLink_pages__error_e765fcef._.js"
+    ]
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/71e22_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [
+    "static/development/_ssgManifest.js",
+    "static/development/_buildManifest.js"
+  ],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_476d0952._.js",
+    "static/chunks/71e22_next_dist_compiled_react-dom_f44d25c1._.js",
+    "static/chunks/71e22_next_dist_compiled_react-server-dom-turbopack_a63106f7._.js",
+    "static/chunks/71e22_next_dist_compiled_next-devtools_index_a0780820.js",
+    "static/chunks/71e22_next_dist_compiled_7aa48ebd._.js",
+    "static/chunks/71e22_next_dist_client_3637318a._.js",
+    "static/chunks/71e22_next_dist_917b4920._.js",
+    "static/chunks/71e22_@swc_helpers_cjs_8ea54c1c._.js",
+    "static/chunks/Desktop_vercel generated_AgroLink_frontend_agroLink_a0ff3932._.js",
+    "static/chunks/turbopack-Desktop_vercel generated_AgroLink_frontend_agroLink_ec495d4a._.js"
+  ]
+}
