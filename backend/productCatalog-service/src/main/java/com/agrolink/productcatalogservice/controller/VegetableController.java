@@ -20,7 +20,7 @@ public class VegetableController {
 
     private final VegetableService service;
 
-    private final String UPLOAD_DIR = "uploads/";
+    private final String UPLOAD_DIR = "/app/uploads/";
 
     @PostMapping("/add")
     public ResponseEntity<?> addVegetable(
