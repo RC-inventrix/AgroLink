@@ -4,7 +4,7 @@
     <file url="file://$PROJECT_DIR$/backend/api-gateway/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/auth-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/config-server/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/backend/indentityAndUser-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/identityAndUser-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/product-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/productCatalog-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/service-discovery/src/main/java" charset="UTF-8" />
