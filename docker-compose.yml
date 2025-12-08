@@ -66,11 +66,12 @@ services:
 
   # 5. Identity & User Service
   identity-service:
-    build: ./backend/indentityAndUser-service
+    build: backend/identityAndUser-service
     container_name: agro_identity
     ports:
       - "8081:8081"
     environment:
+      JWT_SECRET: hNrENfhMcRYpyD0pJQ5JpGCquGmdQrnRFe1Q9gkOQ7c
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
@@ -104,6 +105,8 @@ services:
         condition: service_healthy
     networks:
       - agro-net
+    volumes:
+      - ./uploads:/app/uploads
 
   # 7. API Gateway (Main Entry Point)
   api-gateway:
