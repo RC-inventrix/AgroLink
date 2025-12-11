@@ -1,0 +1,5 @@
+@layer components {
+    .input-field {
+        @apply w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:border-transparent shadow-lg transition-all text-sm;
+    }
+}
