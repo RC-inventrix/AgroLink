@@ -1,6 +1,8 @@
 package com.agrolink.indentityanduserservice.config;
 
 import com.agrolink.indentityanduserservice.services.CustomUserDetailsService;
+// 1. FIXED: Added missing Lombok import
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,46 +15,48 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Import this
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor // This annotation generates the constructor for us automatically
 public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter; // 1. Add Filter Field
+    // 2. FIXED: Removed duplicate 'userDetailsService'. We only need this one.
+    private final CustomUserDetailsService customUserDetailsService;
 
-    // 2. Update Constructor to inject the Filter
-    public SecurityConfig(CustomUserDetailsService userDetailsService,
-                          JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.userDetailsService = userDetailsService;
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
+    // 3. FIXED: Ensure JwtAuthenticationFilter is imported if it's in a different package!
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // 4. FIXED: Removed the manual constructor.
+    // The @RequiredArgsConstructor annotation creates it for us, ensuring all final fields are initialized.
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless APIs
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .anyRequest().authenticated() // All other requests require a token
+                        .anyRequest().authenticated()
                 )
-                // 3. Add the JWT Filter BEFORE the standard UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+
 
     @Bean
-    public AuthenticationProvider authenticationProvider() {
-        // Spring Security 7+ / Boot 4.0 style: Constructor Injection
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
+    // CHANGE 2: Add 'PasswordEncoder passwordEncoder' as a parameter here.
+    // Spring will automatically inject the bean from SecurityConfigAdmin.
+    public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
+        authProvider.setUserDetailsService(customUserDetailsService);
+
+        // Use the injected parameter
+        authProvider.setPasswordEncoder(passwordEncoder);
+
         return authProvider;
     }
 
