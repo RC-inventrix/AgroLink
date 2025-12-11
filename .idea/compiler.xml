@@ -12,22 +12,23 @@
         </processorPath>
         <module name="api-gateway" />
         <module name="config-server" />
+        <module name="identityAndUser-service" />
         <module name="service-discovery" />
       </profile>
-      <profile name="Annotation profile for productCatalog-service" enabled="true">
+      <profile name="Annotation profile for orderPayment-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
+        <module name="orderPayment-service" />
         <module name="productCatalog-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="auth-service" target="25" />
-      <module name="identityAndUser-service" target="21" />
-      <module name="indentityAndUser-service" target="1.5" />
+      <module name="indentityAndUser-service" target="21" />
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>
   </component>
@@ -37,6 +38,7 @@
       <module name="auth-service" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="identityAndUser-service" options="-parameters" />
+      <module name="orderPayment-service" options="-parameters" />
       <module name="product-service" options="-parameters" />
       <module name="productCatalog-service" options="-parameters" />
       <module name="service-discovery" options="-parameters" />
