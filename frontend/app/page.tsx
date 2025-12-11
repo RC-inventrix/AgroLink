@@ -1,108 +1,65 @@
-"use client"
+import Image from "next/image";
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link" // Import Link for navigation
-import {
-    Menu,
-    X,
-    Search,
-    Leaf,
-    ShoppingCart,
-    Users,
-    MessageCircle,
-    Lock,
-    ChevronRight,
-    Facebook,
-    Twitter,
-    Instagram,
-} from "lucide-react"
-
-export default function AgroLinkHome() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-    return (
-        <div className="min-h-screen bg-white text-[#03230F]">
-            <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
-                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-14 sm:h-16">
-                        <div className="flex items-center gap-2">
-                            {/* Ensure image is in public/images/ */}
-                            <Image
-                                src="/images/group-206.png"
-                                alt="AgroLink Logo"
-                                width={180}
-                                height={64}
-                                className="h-8 sm:h-12 w-auto"
-                            />
-                        </div>
-
-                        {/* Desktop Menu */}
-                        <div className="hidden md:flex items-center gap-6 lg:gap-8">
-                            <a href="#" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Home
-                            </a>
-                            <a href="#about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                About
-                            </a>
-                            <a href="#features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Features
-                            </a>
-                            <a href="#contact" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Contact
-                            </a>
-                        </div>
-
-                        {/* Auth Buttons - Desktop */}
-                        <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                            <Link href="/auth/login">
-                                <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                    Login
-                                </button>
-                            </Link>
-                            <Link href="/auth/register">
-                                <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                    Register
-                                </button>
-                            </Link>
-                        </div>
-
-                        {/* Mobile Menu Toggle */}
-                        <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                            {isMenuOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
-                        </button>
-                    </div>
-
-                    {/* Mobile Menu */}
-                    {isMenuOpen && (
-                        <div className="md:hidden pb-4 space-y-3 bg-[#03230F] border-t border-gray-700">
-                            <Link href="/auth/login" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                Login
-                            </Link>
-                            <Link href="/auth/register" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                Register
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            </nav>
-
-            {/* ... (Rest of the Home Page Content remains exactly the same) ... */}
-            {/* Just ensure image paths like "/images/tom-nicholson..." match your public folder */}
-
-            <section className="relative w-full h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] mt-14 sm:mt-16 flex flex-col items-center justify-center overflow-hidden">
-                <div
-                    className="absolute inset-0 z-0 bg-cover bg-center"
-                    style={{
-                        backgroundImage: 'url("/images/tom-nicholson-ptw2xsseqxm.jpeg")',
-                    }}
-                >
-                    <div className="absolute inset-0 bg-black/35"></div>
-                </div>
-                {/* ... (Keep existing content) ... */}
-            </section>
-
-            {/* ... (Keep Features, How It Works, Footer sections) ... */}
+export default function Home() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+        <Image
+          className="dark:invert"
+          src="/next.svg"
+          alt="Next.js logo"
+          width={100}
+          height={20}
+          priority
+        />
+        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
+          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+            To get started, edit the page.tsx file.
+          </h1>
+          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            Looking for a starting point or more instructions? Head over to{" "}
+            <a
+              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
+            >
+              Templates
+            </a>{" "}
+            or the{" "}
+            <a
+              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
+            >
+              Learning
+            </a>{" "}
+            center.
+          </p>
         </div>
-    )
+        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+          <a
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className="dark:invert"
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={16}
+              height={16}
+            />
+            Deploy Now
+          </a>
+          <a
+            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
+        </div>
+      </main>
+    </div>
+  );
 }
