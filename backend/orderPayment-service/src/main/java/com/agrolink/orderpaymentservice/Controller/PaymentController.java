@@ -25,17 +25,20 @@ public class PaymentController {
                 .setCancelUrl("http://localhost:8082/api/payment/cancel")
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
-                                .setPriceData(
-                                        SessionCreateParams.LineItem.PriceData.builder()
-                                                .setCurrency("lkr")
-                                                .setUnitAmount(1000000L)
-                                                .setProductData(
-                                                        SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                .setName("test product")
-                                                                .build()
-                                                )
-                                                .build()
-                                ).setQuantity(1L)
+//                                .setPriceData(
+//                                        SessionCreateParams.LineItem.PriceData.builder()
+//                                                .setCurrency("lkr")
+//                                                .setUnitAmount(1000000L)
+//                                                .setProductData(
+//                                                        SessionCreateParams.LineItem.PriceData.ProductData.builder()
+//                                                                .setName("test product")
+//                                                                .build()
+//                                                )
+//                                                .build()
+//                                ).setQuantity(1L)
+//                                .build()
+                                .setPrice("price_1SciXIJhk5DMuYs0OSpqxvvE")  // ← Use your actual Dashboard price ID
+                                .setQuantity(1L)
                                 .build()
 
                 ).build();
