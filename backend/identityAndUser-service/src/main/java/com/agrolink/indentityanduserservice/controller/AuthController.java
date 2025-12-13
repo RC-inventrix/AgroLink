@@ -64,10 +64,7 @@ public class AuthController {
 
                 // Map the specific fields
                 user.setBusinessName(request.getBusinessName());
-                user.setAddress(request.getStreetAddress()); // Map "Street Address" to DB "Address"
-                user.setDistrict(request.getDistrict());
-                user.setZipcode(request.getZipcode());
-                user.setNic(request.getBusinessRegOrNic()); // Map "Reg/NIC" to DB "NIC"
+                // Map "Reg/NIC" to DB "NIC"
             }
             // 4. Buyer Logic (Optional but recommended)
             else if (user.getRole() == Role.Buyer) {
