@@ -13,21 +13,35 @@
     const stripe = Stripe("pk_test_51SciI1Jhk5DMuYs0sLJzumgLUD4k3WGoFKZEU0KziigsTfediDqgxdRejvQhC3rorFiH483BacZv93pJOuZxIpF500zsCs0SY9"); // Replace with your Stripe publishable key
 
     document.getElementById("checkout-button").addEventListener("click", () => {
-        fetch("http://localhost:8082/api/payment/create-checkout-session", { // Replace with your backend URL
+        fetch("http://localhost:8075/api/payment/create-checkout-session?userId=123", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
         })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) {
+                    // Start of error handling
+                    const text = await response.text();
+                    throw new Error("Backend Error: " + text);
+                }
+                return response.json();
+            })
             .then(data => {
-                return stripe.redirectToCheckout({ sessionId: data.sessionId });
+                if (data.error) {
+                    alert("Server Error: " + data.error);
+                } else if (data.sessionId) {
+                    return stripe.redirectToCheckout({ sessionId: data.sessionId });
+                } else {
+                    alert("No Session ID returned!");
+                }
             })
             .then(result => {
-                if (result.error) {
+                if (result && result.error) {
                     alert(result.error.message);
                 }
             })
             .catch(error => {
                 console.error("Error:", error);
+                alert("Something went wrong: " + error.message);
             });
     });
 </script>
