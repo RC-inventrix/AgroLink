@@ -24,12 +24,11 @@ services:
 
   # 2. Database GUI (Moved to 8090 to avoid conflict with Gateway)
   adminer:
-    image: adminer
-    container_name: agro_adminer
+    image: adminer:4.8.1  # 👈 Change 1: Use specific version
+    platform: linux/amd64 # 👈 Change 2: Force Intel/AMD architecture
+    restart: always
     ports:
       - "8090:8080"
-    networks:
-      - agro-net
     depends_on:
       - postgres
 
