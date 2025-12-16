@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 # Skip tests to speed up the build
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.count=3
 
 # Stage 2: Run the application
 # CHANGED: Switched from 25-ea to 21-jdk (Stable LTS)

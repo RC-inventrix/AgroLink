@@ -33,6 +33,14 @@ export default function RegistrationStep1() {
             alert("Please fill in all fields")
             return
         }
+
+        // --- NEW CODE: Check password length ---
+        if (formData.password.length < 6) {
+            alert("Password must be at least 6 characters long")
+            return
+        }
+        // ---------------------------------------
+
         if (formData.password !== formData.repeatPassword) {
             alert("Passwords do not match")
             return
