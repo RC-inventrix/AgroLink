@@ -38,7 +38,7 @@ export default function AgroLinkHome() {
             <div className="flex items-center gap-2">
               <Image
                 src="/images/group-206.png"
-                alt="AgroLink Logo"
+                alt=" AgroLink Logo"
                 width={180}
                 height={64}
                 className="h-8 sm:h-12 w-auto"
