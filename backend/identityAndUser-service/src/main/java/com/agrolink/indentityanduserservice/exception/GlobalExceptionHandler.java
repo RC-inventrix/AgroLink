@@ -52,12 +52,14 @@ public class GlobalExceptionHandler {
     // 4. Handle Generic "Crash" Errors (Database down, NullPointer, etc.)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex) {
-        ex.printStackTrace(); // Log it for the developer (you)
+        ex.printStackTrace(); // Keep this to see logs in your console
 
+        // CHANGE IS HERE: We append "ex.getMessage()" to the error text
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected internal error occurred."
+                "An unexpected internal error occurred: " + ex.getMessage()
         );
+
         problem.setTitle("Internal Server Error");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
     }
