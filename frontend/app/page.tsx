@@ -69,9 +69,12 @@ export default function AgroLinkHome() {
 
                         {/* Auth Buttons - Desktop */}
                         <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                Login
-                            </button>
+
+                           <Link href="/login">
+                               <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
+                                   Login
+                               </button>
+                           </Link>
                             {/* Wrapped Register Button */}
                             <Link href="/register">
                                 <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
