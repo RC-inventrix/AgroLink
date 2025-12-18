@@ -1,7 +1,6 @@
 package com.agrolink.indentityanduserservice.config;
 
 import com.agrolink.indentityanduserservice.services.CustomUserDetailsService;
-// 1. FIXED: Added missing Lombok import
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,29 +11,23 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor // This annotation generates the constructor for us automatically
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    // 2. FIXED: Removed duplicate 'userDetailsService'. We only need this one.
     private final CustomUserDetailsService customUserDetailsService;
-
-    // 3. FIXED: Ensure JwtAuthenticationFilter is imported if it's in a different package!
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    // 4. FIXED: Removed the manual constructor.
-    // The @RequiredArgsConstructor annotation creates it for us, ensuring all final fields are initialized.
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                // FIX: The .cors() line is REMOVED completely because the API Gateway handles it now.
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
@@ -44,19 +37,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-
-
     @Bean
-    // CHANGE 2: Add 'PasswordEncoder passwordEncoder' as a parameter here.
-    // Spring will automatically inject the bean from SecurityConfigAdmin.
     public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-
         authProvider.setUserDetailsService(customUserDetailsService);
-
-        // Use the injected parameter
         authProvider.setPasswordEncoder(passwordEncoder);
-
         return authProvider;
     }
 
