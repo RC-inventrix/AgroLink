@@ -94,7 +94,7 @@ export default function RegistrationStep1() {
 
                     <div className="mt-3 text-center">
             <span className="text-white/80 text-sm">
-              Do you have an account? <Link href="/auth/login" className="text-[#EEC044] font-semibold hover:underline">Login</Link>
+              Do you have an account? <Link href="/login" className="text-[#EEC044] font-semibold hover:underline">Login</Link>
             </span>
                     </div>
                 </div>

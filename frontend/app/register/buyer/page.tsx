@@ -14,6 +14,7 @@ export default function BuyerRegistration() {
     const [isLoading, setIsLoading] = useState(false)
 
     useEffect(() => {
+        // Ensure user didn't skip step 1
         if (!sessionStorage.getItem("registerDataStep1")) {
             router.push("/register")
         }
@@ -28,36 +29,50 @@ export default function BuyerRegistration() {
         setIsLoading(true)
 
         try {
+            // 1. Retrieve Step 1 Data (Name, Email, Password, etc.)
             const step1Data = JSON.parse(sessionStorage.getItem("registerDataStep1") || "{}")
 
+            // 2. Create Payload matching Backend DTO
             const payload = {
                 ...step1Data,
                 role: "Buyer",
-                businessName: formData.businessName, // Optional
-                streetAddress: formData.deliveryAddress, // Mapped to address
+                businessName: formData.businessName,
+                streetAddress: formData.deliveryAddress, // Maps to 'streetAddress' in backend
                 district: formData.district,
                 zipcode: formData.zipCode,
                 businessRegOrNic: "" // Empty for buyers
             }
 
-            const response = await fetch("/api/auth/register", {
+            // 3. API Call to Spring Boot Backend
+            // FIX: Point directly to backend URL, not relative path
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+
+            const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             })
 
             if (response.ok) {
-                alert("Account Created!")
+                // 4. Success! Clear data and redirect to FRONTEND Login Page
+                alert("Account Created Successfully!")
                 sessionStorage.removeItem("registerDataStep1")
-                router.push("/auth/login")
+
+                // This redirects to your Next.js app/login/page.tsx
+                router.push("/login")
             } else {
                 const msg = await response.text()
-                alert("Failed: " + msg)
+                alert("Registration Failed: " + msg)
             }
-        } catch (error) {
-            alert("Error connecting to server")
-        } finally {
-            setIsLoading(false)
+        } catch (error: any) {
+            console.error("Full Registration Error:", error);
+
+            // FIX: Detailed error reporting
+            if (error.message === "Failed to fetch") {
+                alert("CONNECTION ERROR: Browser cannot reach http://localhost:8080. \n\n1. Check if Docker 'api-gateway' is running.\n2. Open http://localhost:8080/auth/login in your browser to test connectivity.");
+            } else {
+                alert("ERROR: " + error.message);
+            }
         }
     }
 

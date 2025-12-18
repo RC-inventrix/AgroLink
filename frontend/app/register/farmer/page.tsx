@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export default function FarmerRegistration() {
     const router = useRouter()
@@ -42,28 +41,39 @@ export default function FarmerRegistration() {
                 streetAddress: formData.streetAddress,
                 district: formData.district,
                 zipcode: formData.zipCode,
-                businessRegOrNic: formData.registrationNumber, // Matches backend expected field
+                businessRegOrNic: formData.registrationNumber,
             }
 
-            // 3. API Call
-            const response = await fetch("/api/auth/register", {
+            // 3. API Call to Spring Boot Backend
+            // FIX: Point directly to backend URL
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+
+            const response = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             })
 
             if (response.ok) {
+                // 4. Success! Redirect to FRONTEND Login Page
                 alert("Registration Successful!")
                 sessionStorage.removeItem("registerDataStep1")
-                router.push("/auth/login")
+
+                // This redirects to app/login/page.tsx
+                router.push("/login")
             } else {
                 const msg = await response.text()
                 alert("Registration Failed: " + msg)
             }
-        } catch (error) {
-            alert("Network Error")
-        } finally {
-            setIsLoading(false)
+        } catch (error: any) {
+            console.error("Full Registration Error:", error);
+
+            // FIX: Detailed error reporting
+            if (error.message === "Failed to fetch") {
+                alert("CONNECTION ERROR: Browser cannot reach http://localhost:8080. \n\n1. Check if Docker 'api-gateway' is running.\n2. Open http://localhost:8080/auth/login in your browser to test connectivity.");
+            } else {
+                alert("ERROR: " + error.message);
+            }
         }
     }
 
@@ -89,7 +99,7 @@ export default function FarmerRegistration() {
                     </form>
                 </div>
             </div>
-            {/* Keep your background image here */}
+            {/* Background Image */}
             <div className="hidden lg:flex w-1/2 relative">
                 <img src="/farmer-background.png" alt="Farming background" className="w-full h-full object-cover" />
             </div>
