@@ -10,10 +10,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD} # Reads from .env
       POSTGRES_DB: ${DB_NAME}         # Reads from .env
     ports:
-      - "5433:5432"
+      - "5433:5432" # External:Internal
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d # Runs your init.sql script
+      - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
       - agro-net
     healthcheck:
@@ -22,16 +22,17 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Database GUI (Moved to 8090 to avoid conflict with Gateway)
+  # 2. Database GUI
   adminer:
-    image: adminer
-    container_name: agro_adminer
+    image: adminer:4.8.1
+    platform: linux/amd64
+    restart: always
     ports:
       - "8090:8080"
-    networks:
-      - agro-net
     depends_on:
       - postgres
+    networks:     # <--- ADDED: Must be on the same network to find 'postgres'
+      - agro-net
 
   # 3. Service Discovery (Eureka)
   service-discovery:
@@ -83,6 +84,7 @@ services:
         condition: service_healthy
       service-discovery:
         condition: service_healthy
+        # <--- FIXED: Removed stray build/ports config that was here
     networks:
       - agro-net
 
@@ -97,7 +99,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
-      OPENAI_API_KEY: ${OPENAI_API_KEY} # Reads from .env
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,12 +128,12 @@ services:
     networks:
       - agro-net
 
-  # 8. Order & Payment Service (NEW)
+  # 8. Order & Payment Service
   order-payment-service:
     build: ./backend/orderPayment-service
     container_name: agro_orders
     ports:
-      - "8082:8082" # Expose so you can test via Postman if needed
+      - "8082:8082"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -146,6 +148,7 @@ services:
         condition: service_healthy
     networks:
       - agro-net
+
 # --- VOLUMES & NETWORKS ---
 volumes:
   postgres_data:
