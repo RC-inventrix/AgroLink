@@ -10,6 +10,12 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
+        <module name="api-gateway" />
+        <module name="config-server" />
+        <module name="identityAndUser-service" />
+        <module name="service-discovery" />
+      </profile>
+      <profile name="Annotation profile for orderPayment-service" enabled="true">
         <module name="orderPayment-service" />
         <module name="productCatalog-service" />
       </profile>
@@ -22,6 +28,8 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
         </processorPath>
+        <module name="orderPayment-service" />
+        <module name="productCatalog-service" />
         <module name="api-gateway" />
         <module name="config-server" />
         <module name="service-discovery" />
@@ -29,8 +37,7 @@
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="auth-service" target="25" />
-      <module name="identityAndUser-service" target="21" />
-      <module name="indentityAndUser-service" target="1.5" />
+      <module name="indentityAndUser-service" target="21" />
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>
   </component>
