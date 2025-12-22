@@ -61,8 +61,15 @@ export default function LoginForm() {
                 localStorage.setItem("adminSession", "true")
             }
 
+            if(selectedRole == "farmer"){
+                router.push(`/seller/dashboard`)
+            }else if(selectedRole == "buyer"){
+                router.push(`/buyer/dashboard`)
+            }else{
+                router.push(`/admin/dashboard`)
+            }
             // Redirect user to their dashboard/home
-            router.push("/")
+
 
         } catch (err: any) {
             console.error("Login failed", err)
