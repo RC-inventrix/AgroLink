@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { href: "/buyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/buyer/browse", label: "Browse Products", icon: ShoppingBag },
-  { href: "/buyer/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/buyer/wishlist", label: "Wishlist", icon: Heart },
   { href: "/buyer/orders", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },

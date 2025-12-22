@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button"; // ඔබේ UI components භාවිතා කිරීම
 import { Card } from "@/components/ui/card";
+import Link from 'next/link';
 
 export default function CartPage() {
     const cartItems = [
@@ -55,9 +56,11 @@ export default function CartPage() {
                             </div>
                         </div>
                         {/* Custom Button Color [cite: 88] */}
+                        <Link href="/checkout">
                         <Button className="w-full bg-[#EEC044] text-[#04000B] hover:bg-[#d4ac3d] font-bold mt-8">
                             PROCEED TO CHECKOUT
                         </Button>
+                        </Link>
                     </Card>
                 </div>
             </div>
