@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { DashboardHeader } from "@/components/dashboard-header"
+import Link from "next/link"
 
 // Mock data
 const cartItems = [
@@ -197,7 +198,9 @@ export default function BuyerDashboard() {
                                         </div>
                                     ))}
                                 </div>
-                                <Button className="mt-4 w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Cart</Button>
+                                <Link href="/cart">
+                                    <Button className="mt-4 w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Cart</Button>
+                                </Link>
                             </CardContent>
                         </Card>
 
