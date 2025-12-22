@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment")
-@CrossOrigin("http://localhost:8075")
+@CrossOrigin("http://localhost:3000")
 public class PaymentController {
 
     private final OrderService orderService;
@@ -55,9 +55,12 @@ public class PaymentController {
 
             Session session = Session.create(params);
 
-            // --- STEP 3: Create Dynamic JSON ---
-            // We use the fetched 'productName' here instead of "test product"
+// --- STEP 3: Create Dynamic JSON ---
             String dynamicItemsJson = String.format("[{\"name\":\"%s\",\"qty\":1}]", productName);
+
+// ... (Order saving logic remains the same) ...
+
+
 
             // 4. Save to DB
             Order order = new Order();
@@ -70,12 +73,17 @@ public class PaymentController {
 
             orderService.createOrder(order);
 
+
             response.put("sessionId", session.getId());
+            response.put("url", session.getUrl());
+
+
 
         } catch (Exception e) {
             e.printStackTrace();
             response.put("error", e.getMessage());
         }
+
 
         return response;
     }
