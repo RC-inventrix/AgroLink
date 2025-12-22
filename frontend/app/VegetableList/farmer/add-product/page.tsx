@@ -1,154 +1,120 @@
 "use client";
 
 import { useState } from "react";
-
-// ✅ This file is ONLY the UI part (MAIN CONTENT)
-// Path: app/farmer/add-product/page.tsx
-// Header & Footer are already handled in app/layout.tsx
+import { useRouter } from "next/navigation";
 
 export default function AddProductPage() {
+    const router = useRouter();
+
+    const [name, setName] = useState("");
+    const [category, setCategory] = useState("");
+    const [quantity, setQuantity] = useState("");
     const [pricingType, setPricingType] = useState("fixed");
-    const [images, setImages] = useState<File[]>([]);
+    const [fixedPrice, setFixedPrice] = useState("");
+    const [startingBid, setStartingBid] = useState("");
+    const [bidStart, setBidStart] = useState("");
+    const [bidEnd, setBidEnd] = useState("");
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files) return;
-        setImages((prev) => [...prev, ...Array.from(e.target.files!)]);
-    };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
 
-    const removeImage = (index: number) => {
-        setImages(images.filter((_, i) => i !== index));
+        const newProduct = {
+            id: Date.now(),
+            name,
+            category,
+            quantity,
+            pricingType,
+            fixedPrice,
+            startingBid,
+            bidStart,
+            bidEnd,
+            image: "/carrot.jpg", // demo image
+        };
+
+        // 🔹 get existing products
+        const existing = JSON.parse(localStorage.getItem("products") || "[]");
+
+        // 🔹 save new product
+        localStorage.setItem("products", JSON.stringify([...existing, newProduct]));
+
+        // 🔹 go to listed products page
+        router.push("/VegetableList/farmer");
     };
 
     return (
-        <main className="flex justify-center items-center px-4 py-12 bg-gray-100">
-            <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-center mb-6">
-                    Add Vegetable Item
-                </h2>
+        <main className="flex justify-center p-6 bg-gray-100 min-h-screen">
+            <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl w-full max-w-xl space-y-4">
 
-                <form className="space-y-4">
-                    {/* Vegetable Name */}
-                    <input
-                        type="text"
-                        placeholder="Vegetable Name"
-                        className="w-full border p-3 rounded"
-                    />
+                <h2 className="text-2xl font-bold text-center">Add Vegetable</h2>
 
-                    {/* Category */}
-                    <select className="w-full border p-3 rounded">
-                        <option>All Categories</option>
-                        <option>Leafy</option>
-                        <option>Root</option>
-                        <option>Fruit</option>
-                        <option>Organic</option>
-                    </select>
+                <input
+                    className="w-full border p-3 rounded"
+                    placeholder="Vegetable Name"
+                    onChange={(e) => setName(e.target.value)}
+                />
 
-                    {/* Quantity */}
-                    <input
-                        type="number"
-                        placeholder="Quantity (kg)"
-                        className="w-full border p-3 rounded"
-                    />
+                <select
+                    className="w-full border p-3 rounded"
+                    onChange={(e) => setCategory(e.target.value)}
+                >
+                    <option value="">Select Category</option>
+                    <option>Leafy</option>
+                    <option>Root</option>
+                    <option>Fruit</option>
+                </select>
 
-                    {/* Pricing Type */}
-                    <div>
-                        <label className="font-semibold">Pricing Type</label>
-                        <div className="flex gap-6 mt-2">
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={pricingType === "fixed"}
-                                    onChange={() => setPricingType("fixed")}
-                                />
-                                Fixed Price
-                            </label>
+                <input
+                    className="w-full border p-3 rounded"
+                    placeholder="Quantity (kg)"
+                    onChange={(e) => setQuantity(e.target.value)}
+                />
 
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={pricingType === "bidding"}
-                                    onChange={() => setPricingType("bidding")}
-                                />
-                                Bidding
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Fixed Price */}
-                    {pricingType === "fixed" && (
+                {/* Pricing type */}
+                <div>
+                    <p className="font-semibold">Pricing Type</p>
+                    <label className="mr-4">
                         <input
-                            type="number"
-                            placeholder="Fixed Price (LKR)"
+                            type="radio"
+                            checked={pricingType === "fixed"}
+                            onChange={() => setPricingType("fixed")}
+                        /> Fixed Price
+                    </label>
+
+                    <label>
+                        <input
+                            type="radio"
+                            checked={pricingType === "bidding"}
+                            onChange={() => setPricingType("bidding")}
+                        /> Bidding
+                    </label>
+                </div>
+
+                {/* Fixed Price */}
+                {pricingType === "fixed" && (
+                    <input
+                        className="w-full border p-3 rounded"
+                        placeholder="Fixed Price (LKR)"
+                        onChange={(e) => setFixedPrice(e.target.value)}
+                    />
+                )}
+
+                {/* Bidding */}
+                {pricingType === "bidding" && (
+                    <>
+                        <input
                             className="w-full border p-3 rounded"
+                            placeholder="Starting Bid (LKR)"
+                            onChange={(e) => setStartingBid(e.target.value)}
                         />
-                    )}
+                        <input type="date" className="w-full border p-3 rounded" onChange={(e) => setBidStart(e.target.value)} />
+                        <input type="date" className="w-full border p-3 rounded" onChange={(e) => setBidEnd(e.target.value)} />
+                    </>
+                )}
 
-                    {/* Bidding */}
-                    {pricingType === "bidding" && (
-                        <div className="space-y-3">
-                            <input
-                                type="number"
-                                placeholder="Starting Bid Price (LKR)"
-                                className="w-full border p-3 rounded"
-                            />
-                            <input type="date" className="w-full border p-3 rounded" />
-                            <input type="time" className="w-full border p-3 rounded" />
-                        </div>
-                    )}
-
-                    {/* Description */}
-                    <textarea
-                        rows={4}
-                        placeholder="Description"
-                        className="w-full border p-3 rounded"
-                    />
-
-                    {/* Image Upload */}
-                    <div>
-                        <label className="font-semibold">Upload Images</label>
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleImageUpload}
-                            className="block mt-2"
-                        />
-
-                        <div className="grid grid-cols-3 gap-3 mt-4">
-                            {images.map((img, index) => (
-                                <div key={index} className="relative">
-                                    <img
-                                        src={URL.createObjectURL(img)}
-                                        className="h-24 w-full object-cover rounded"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(index)}
-                                        className="absolute top-1 right-1 bg-black text-white rounded-full px-2"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-4 pt-4">
-                        <button
-                            type="submit"
-                            className="bg-black text-white px-6 py-3 rounded w-full"
-                        >
-                            Submit Listing
-                        </button>
-                        <button
-                            type="reset"
-                            className="border border-black px-6 py-3 rounded w-full"
-                        >
-                            Reset
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <button className="bg-black text-white w-full py-3 rounded">
+                    Submit Product
+                </button>
+            </form>
         </main>
     );
 }
