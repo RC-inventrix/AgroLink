@@ -1,3 +1,4 @@
+import "../../globals-buyer-dashboard.css"
 import {
     Bell,
     ShoppingCart,

@@ -151,6 +151,29 @@ services:
     networks:
       - agro-net
 
+  # 9. Chat Service
+  chat-service:
+    build: ./backend/chat-service # Ensure this path matches your directory structure
+    container_name: agro_chat
+    ports:
+      - "8083:8083" # Using the next available port
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+
+
+
 # --- VOLUMES & NETWORKS ---
 volumes:
   postgres_data:
