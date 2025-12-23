@@ -66,7 +66,7 @@ export default function SellerDashboard() {
                         <h1 style={styles.title}>Welcome back, Farmer! 👨‍🌾</h1>
                         <p style={styles.subtitle}>Here is what’s happening with your store today.</p>
                     </div>
-                    <Link href="/VegetableList/farmer/add-product">
+                    <Link href="/frontend/app/vegetableList/farmer/add-product">
                         <button style={styles.createBtn}>+ Add New Product</button>
                     </Link>
 
