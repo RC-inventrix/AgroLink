@@ -22,7 +22,7 @@ const navItems = [
   { href: "/buyer/orders", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
-  { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
 ]
 
 export function DashboardNav() {
