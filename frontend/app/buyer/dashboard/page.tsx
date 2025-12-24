@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react" // Added React hooks
 import "../../globals-buyer-dashboard.css"
 import {
     Bell,
@@ -17,13 +20,17 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { DashboardHeader } from "@/components/dashboard-header"
+import ProtectedRoute from "@/components/protected-route"
+import Link from "next/link"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Mock data
+
+
 const cartItems = [
     { id: 1, name: "Fresh Tomatoes", image: "/buyer-dashboard/red-tomatoes.jpg", quantity: 5 },
     { id: 2, name: "Carrots", image: "/buyer-dashboard/orange-carrots.jpg", quantity: 3 },
@@ -153,87 +160,129 @@ const notifications = [
     { id: 3, type: "warning", message: "Your order #1234 is pending payment" },
 ]
 
+
 export default function BuyerDashboard() {
+    const [firstName, setFirstName] = useState("User")
+
+    useEffect(() => {
+        const fetchUserName = async () => {
+            try {
+                // 1. Retrieve the token from LocalStorage
+                const token = localStorage.getItem("token");
+
+                if (!token) {
+                    console.error("No authentication token found");
+                    return;
+                }
+
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+
+                // 2. Updated fetch with Authorization Header
+                const response = await fetch(`${baseUrl}/auth/me`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`, // Send the JWT
+                        "Content-Type": "application/json"
+                    }
+                    // Note: credentials: "include" is removed as we aren't using cookies
+                })
+
+                if (response.ok) {
+                    const data = await response.json()
+                    if (data.fullName) {
+                        const nameParts = data.fullName.split(" ")
+                        setFirstName(nameParts[0])
+                    }
+                } else if (response.status === 401) {
+                    console.error("Session expired or invalid token");
+                }
+            } catch (err) {
+                console.error("Failed to fetch user name:", err)
+            }
+        }
+
+        fetchUserName()
+    }, [])
+
     return (
-        <div className="min-h-screen bg-background">
-            <DashboardHeader />
-
-            <div className="flex">
-                <DashboardNav />
-
-                <main className="flex-1 p-6 lg:p-8">
-                    {/* Hero Banner */}
-                    <div className="relative mb-8 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/80 p-8 text-primary-foreground">
-                        <div className="absolute inset-0 opacity-10">
-                            <div className="h-full w-full bg-[url('/buyer-dashboard/farm-vegetables-fresh-produce.jpg')] bg-cover bg-center" />
+        <ProtectedRoute>
+            <div className="min-h-screen bg-background">
+                {/* ... (Rest of your component remains exactly the same) ... */}
+                <DashboardHeader />
+                <div className="flex">
+                    <DashboardNav />
+                    <main className="flex-1 p-6 lg:p-8">
+                        <div className="relative mb-8 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/80 p-8 text-primary-foreground">
+                            <div className="relative z-10">
+                                <h1 className="mb-2 text-3xl font-bold text-balance">
+                                    Welcome back {firstName}👋
+                                </h1>
+                                <p className="text-lg text-primary-foreground/90 text-pretty">
+                                    Manage your orders, bargains, and requests in one place
+                                </p>
+                                {/* ... rest of JSX */}
+                            </div>
                         </div>
-                        <div className="relative z-10">
-                            <h1 className="mb-2 text-3xl font-bold text-balance">Welcome back 👋</h1>
-                            <p className="text-lg text-primary-foreground/90 text-pretty">
-                                Manage your orders, bargains, and requests in one place
-                            </p>
+                        <div className="mb-8 grid gap-6 md:grid-cols-2">
+                            <Card className="hover:shadow-lg transition-shadow">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-lg font-semibold">My Cart</CardTitle>
+                                    <ShoppingCart className="h-5 w-5 text-accent" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-bold text-primary mb-4">{cartItems.length} items</div>
+                                    <div className="flex gap-2">
+                                        {cartItems.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-accent/20"
+                                            >
+                                                <img
+                                                    src={item.image || "/buyer-dashboard/placeholder.svg"}
+                                                    alt={item.name}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Link href="/cart">
+                                        <Button className="mt-4 w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Cart</Button>
+                                    </Link>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="hover:shadow-lg transition-shadow">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-lg font-semibold">Wishlist</CardTitle>
+                                    <Heart className="h-5 w-5 text-accent" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-bold text-primary mb-4">{wishlistItems.length} items</div>
+                                    <div className="flex gap-2">
+                                        {wishlistItems.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-accent/20"
+                                            >
+                                                <img
+                                                    src={item.image || "/buyer-dashboard/placeholder.svg"}
+                                                    alt={item.name}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-4 w-full border-accent text-accent hover:bg-accent/10 bg-transparent"
+                                    >
+                                        View Wishlist
+                                    </Button>
+                                </CardContent>
+                            </Card>
                         </div>
-                    </div>
 
-                    {/* Quick Access Cards */}
-                    <div className="mb-8 grid gap-6 md:grid-cols-2">
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg font-semibold">My Cart</CardTitle>
-                                <ShoppingCart className="h-5 w-5 text-accent" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold text-primary mb-4">{cartItems.length} items</div>
-                                <div className="flex gap-2">
-                                    {cartItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-accent/20"
-                                        >
-                                            <img
-                                                src={item.image || "/buyer-dashboard/placeholder.svg"}
-                                                alt={item.name}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button className="mt-4 w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Cart</Button>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg font-semibold">Wishlist</CardTitle>
-                                <Heart className="h-5 w-5 text-accent" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold text-primary mb-4">{wishlistItems.length} items</div>
-                                <div className="flex gap-2">
-                                    {wishlistItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-accent/20"
-                                        >
-                                            <img
-                                                src={item.image || "/buyer-dashboard/placeholder.svg"}
-                                                alt={item.name}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    className="mt-4 w-full border-accent text-accent hover:bg-accent/10 bg-transparent"
-                                >
-                                    View Wishlist
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Orders Section */}
+                        {/* Orders Section */}
                     <Card className="mb-8">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -506,98 +555,11 @@ export default function BuyerDashboard() {
                             </Card>
                         </div>
                     </div>
-                </main>
-            </div>
-
-            <footer className="bg-[#04000B] text-white py-8 sm:py-12 px-3 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
-                        {/* Brand */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                                <div className="w-8 h-8 bg-[#EEC044] rounded-lg flex items-center justify-center">
-                                    <Leaf className="text-[#03230F] w-5 h-5" />
-                                </div>
-                                <span className="text-lg sm:text-xl font-bold">AgroLink</span>
-                            </div>
-                            <p className="text-gray-400 text-xs sm:text-sm">
-                                Connecting farmers and buyers for sustainable agriculture.
-                            </p>
-                        </div>
-
-                        {/* Quick Links */}
-                        <div>
-                            <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Quick Links</h4>
-                            <ul className="space-y-1.5 sm:space-y-2 text-gray-400 text-xs sm:text-sm">
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Home
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        About
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Features
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Contact
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Legal */}
-                        <div>
-                            <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Legal</h4>
-                            <ul className="space-y-1.5 sm:space-y-2 text-gray-400 text-xs sm:text-sm">
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Privacy Policy
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Terms of Service
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" className="hover:text-[#EEC044] transition">
-                                        Cookie Policy
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Contact */}
-                        <div>
-                            <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Contact</h4>
-                            <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4">support@agrolink.com</p>
-                            <div className="flex gap-4">
-                                <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">
-                                    <Facebook className="w-4 sm:w-5 h-4 sm:h-5" />
-                                </a>
-                                <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">
-                                    <Twitter className="w-4 sm:w-5 h-4 sm:h-5" />
-                                </a>
-                                <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">
-                                    <Instagram className="w-4 sm:w-5 h-4 sm:h-5" />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Copyright */}
-                    <div className="border-t border-gray-700 pt-6 sm:pt-8 text-center text-gray-400 text-xs sm:text-sm">
-                        <p>&copy; 2025 AgroLink. All rights reserved. Connecting farmers and buyers worldwide.</p>
-                    </div>
+                    </main>
+                    
                 </div>
-            </footer>
-        </div>
+                <footer />
+            </div>
+        </ProtectedRoute>
     )
 }

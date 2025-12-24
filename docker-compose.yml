@@ -9,6 +9,7 @@ services:
       POSTGRES_USER: ${DB_USER}       # Reads from .env
       POSTGRES_PASSWORD: ${DB_PASSWORD} # Reads from .env
       POSTGRES_DB: ${DB_NAME}         # Reads from .env
+
     ports:
       - "5433:5432" # External:Internal
     volumes:
@@ -72,7 +73,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      JWT_SECRET: hNrENfhMcRYpyD0pJQ5JpGCquGmdQrnRFe1Q9gkOQ7c
+      JWT_SECRET: ${JWT_KEY}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
@@ -143,6 +144,7 @@ services:
       EUREKA_HOST: service-discovery
       secret_key: ${secret_key}        # <<-- set lowercase name to match application.properties
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET} # optional: webhook secret
+      JWT_SECRET: ${JWT_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -164,6 +166,8 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
+      JWT_SECRET: ${JWT_KEY}
+      CHAT_AES_KEY: ${CHAT_AES_KEY}
     depends_on:
       postgres:
         condition: service_healthy

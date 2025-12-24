@@ -39,24 +39,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // 1. Check if the request has an Authorization header
         String authHeader = request.getHeader("Authorization");
+        String token = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7); // Extract from LocalStorage header
+        }
+
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2. Extract the token
-        String token = authHeader.substring(7);
-
         try {
-            // 3. Extract the email (subject) from the token
-            // We need to re-create the key here or expose a method in JwtService to validate
-            // For simplicity, let's duplicate the key logic or better: use JwtService
-            // NOTE: It is better to add a validateToken method in JwtService,
-            // but for now we will parse it here manually to extract the username.
-
             SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
             Claims claims = Jwts.parser()
@@ -67,12 +62,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String userEmail = claims.getSubject();
 
-            // 4. If user is found and not already authenticated
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 1. EXTRACT THE NEW CLAIM: Get the numeric ID from the token
+            Integer userId = claims.get("userId", Integer.class);
 
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
-                // 5. Create Authentication Token
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -81,15 +76,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // 6. Set the user in the SecurityContext
+                // 2. STORE FOR CONTROLLER: Put the ID in the request attributes
+                // This allows ChatController to see the numeric ID
+                request.setAttribute("userId", userId);
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            // Token is invalid or expired
             System.out.println("JWT Token validation failed: " + e.getMessage());
         }
 
-        // 7. Continue the filter chain
         filterChain.doFilter(request, response);
     }
 }
