@@ -13,6 +13,7 @@ export interface Conversation {
   timestamp: string
   unread: boolean
   starred: boolean
+  online: boolean
 }
 
 interface ConversationListProps {

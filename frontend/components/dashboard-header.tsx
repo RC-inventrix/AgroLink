@@ -11,10 +11,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 //import logo from "../public/buyer-dashboard/agro-logo.png"
 
+
 export function DashboardHeader() {
+
+  const router = useRouter(); // Initialize the router hook
+
+  const handleLogout = () => {
+    // 1. Clear the tab-specific session storage
+    sessionStorage.clear(); 
+    
+    // 2. Optional: If you still have data in localStorage, clear it too
+    sessionStorage.removeItem("id");
+    sessionStorage.removeItem("token");
+
+    // 3. Redirect the user to the login screen
+    router.push("/login"); 
+
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b bg-primary text-primary-foreground">
       <div className="flex h-16 items-center justify-between px-6">
@@ -69,7 +87,12 @@ export function DashboardHeader() {
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuItem>Billing</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleLogout} 
+                className="text-red-600 focus:text-red-600 cursor-pointer font-medium"
+              >
+                Log out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
