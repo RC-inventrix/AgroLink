@@ -21,13 +21,13 @@ public class ChatService {
     }
 
     // Get the full conversation between two people
-    public List<ChatMessage> getChatHistory(String user1, String user2) {
+    public List<ChatMessage> getChatHistory(Long user1, Long user2) {
         return repository.findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampAsc(
                 user1, user2, user1, user2);
     }
 
     // Get list of unique users to show in the "All Messages" sidebar
     public List<String> getContactList(Long userId) {
-        return repository.findDistinctConversationPartners(String.valueOf(userId));
+        return repository.findDistinctConversationPartners(userId);
     }
 }

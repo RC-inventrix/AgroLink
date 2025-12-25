@@ -9,7 +9,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // Apply to all endpoints including /api/chat/**
+        registry.addMapping("/api/**") // Apply to all endpoints including /api/chat/**
                 .allowedOrigins("http://localhost:3000") // Your React app's URL
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

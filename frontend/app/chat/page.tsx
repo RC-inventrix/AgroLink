@@ -38,11 +38,11 @@ export default function ChatPage() {
         });
 
         if (res.ok) {
-          const ids: string[] = await res.json();
+          const ids: number[] = await res.json();
           // Map backend String IDs (emails) to the frontend Conversation interface
-          const mapped: Conversation[] = ids.map((email) => ({
-            id: email,
-            name: email.split("@")[0], // Simple display name from email
+          const mapped: Conversation[] = ids.map((id) => ({
+            id: id.toString(),
+            name: id.toString().split("@")[0], // Simple display name from email
             lastMessage: "Click to start chatting",
             avatar: "/buyer-dashboard/farmer-portrait.png",
             online: true,
