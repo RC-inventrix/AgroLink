@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react" // Import useState for input tracking
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import type { Conversation } from "./conversation-list"
 
 export interface Message {
   id: string
-  senderId: number // Changed to number to match backend BIGINT
+  senderId: number // Primitive number to match backend BIGINT
   content: string
   timestamp: string
   isCurrentUser: boolean
@@ -19,12 +19,49 @@ export interface Message {
 interface MessageViewProps {
   conversation: Conversation
   messages: Message[]
-  onSendMessage: (content: string) => void // Prop from page.tsx
+  onSendMessage: (content: string) => void
 }
 
 export function MessageView({ conversation, messages, onSendMessage }: MessageViewProps) {
-  // Local state to manage the text being typed
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState("")
+
+  // --- Dynamic WhatsApp Style Status Logic ---
+  const renderStatus = () => {
+    // 1. If user is online, show green "Online" text
+    if (conversation.online) {
+      return <span className="text-green-600 font-medium">Online</span>
+    }
+
+    // 2. Otherwise, calculate "Last seen" logic
+    const timestamp = conversation.timestamp
+    if (!timestamp) return "Offline"
+
+    const date = new Date(timestamp)
+    const now = new Date()
+
+    // Check if the date is calendar "Today"
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+
+    const timeString = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+
+    if (isToday) {
+      return `Last seen today at ${timeString}`
+    } else {
+      const dateString = date.toLocaleDateString([], {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+      return `Last seen ${dateString} at ${timeString}`
+    }
+  }
 
   const initials = conversation.name
     .split(" ")
@@ -33,33 +70,39 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
     .toUpperCase()
     .slice(0, 2)
 
-  // Logic to trigger the send action
   const handleSend = () => {
     if (inputValue.trim()) {
-      onSendMessage(inputValue);
-      setInputValue(""); // Clear the box after sending
+      onSendMessage(inputValue)
+      setInputValue("")
     }
-  };
+  }
 
-  // Allow sending by pressing the 'Enter' key
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSend();
+    if (e.key === "Enter") {
+      handleSend()
     }
-  };
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-white">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={conversation.avatar || "/placeholder.svg"} />
-            <AvatarFallback className="bg-[#2d5016] text-white">{initials}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={conversation.avatar || "/placeholder.svg"} />
+              <AvatarFallback className="bg-[#2d5016] text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            {/* Green Online Dot Indicator */}
+            {conversation.online && (
+              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+            )}
+          </div>
           <div>
             <h2 className="font-semibold text-gray-900">{conversation.name}</h2>
-            <p className="text-sm text-gray-500">Last seen {conversation.timestamp}</p>
+            <p className="text-sm text-gray-500">{renderStatus()}</p>
           </div>
         </div>
 
@@ -68,7 +111,14 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
             <Edit className="h-5 w-5 text-gray-600" />
           </Button>
           <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-            <Star className={cn("h-5 w-5", conversation.starred ? "text-[#f4a522] fill-[#f4a522]" : "text-gray-600")} />
+            <Star
+              className={cn(
+                "h-5 w-5",
+                conversation.starred
+                  ? "text-[#f4a522] fill-[#f4a522]"
+                  : "text-gray-600"
+              )}
+            />
           </Button>
           <Button variant="ghost" size="icon" className="hover:bg-gray-100">
             <MoreVertical className="h-5 w-5 text-gray-600" />
@@ -81,31 +131,54 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
         <p className="text-sm text-gray-700 text-center">
           <span className="font-medium">🛡️ WE HAVE YOUR BACK</span>
           {" - "}
-          For added safety and your protection, keep payments and communications within Agrolink.
+          For added safety and your protection, keep payments and communications
+          within Agrolink.
         </p>
       </div>
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.map((message) => (
-          <div key={message.id} className={cn("flex gap-3", message.isCurrentUser && "flex-row-reverse")}>
+          <div
+            key={message.id}
+            className={cn(
+              "flex gap-3",
+              message.isCurrentUser && "flex-row-reverse"
+            )}
+          >
             {!message.isCurrentUser && (
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src={conversation.avatar || "/placeholder.svg"} />
-                <AvatarFallback className="bg-[#2d5016] text-white text-xs">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-[#2d5016] text-white text-xs">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
             )}
 
-            <div className={cn("flex flex-col gap-1 max-w-[70%]", message.isCurrentUser && "items-end")}>
+            <div
+              className={cn(
+                "flex flex-col gap-1 max-w-[70%]",
+                message.isCurrentUser && "items-end"
+              )}
+            >
               <div
                 className={cn(
                   "rounded-lg px-4 py-2",
-                  message.isCurrentUser ? "bg-[#2d5016] text-white" : "bg-gray-100 text-gray-900",
+                  message.isCurrentUser
+                    ? "bg-[#2d5016] text-white"
+                    : "bg-gray-100 text-gray-900"
                 )}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {message.content}
+                </p>
               </div>
-              <span className="text-xs text-gray-500">{message.timestamp}</span>
+              <span className="text-xs text-gray-500">
+                {new Date(message.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
             </div>
           </div>
         ))}
@@ -117,22 +190,30 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
           <div className="flex-1 bg-gray-50 rounded-lg border border-gray-200 focus-within:border-[#2d5016] focus-within:ring-1 focus-within:ring-[#2d5016] transition-all">
             <Input
               placeholder="Type a message..."
-              value={inputValue} // Bind input to local state
-              onChange={(e) => setInputValue(e.target.value)} // Update state on type
-              onKeyDown={handleKeyPress} // Support 'Enter' key
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyPress}
               className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <div className="flex items-center gap-2 px-3 pb-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-200">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-gray-200"
+              >
                 <Smile className="h-4 w-4 text-gray-600" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-200">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-gray-200"
+              >
                 <Paperclip className="h-4 w-4 text-gray-600" />
               </Button>
             </div>
           </div>
-          <Button 
-            onClick={handleSend} // Mount the click event to trigger handleSend
+          <Button
+            onClick={handleSend}
             className="bg-[#f4a522] hover:bg-[#d89112] text-white h-10 px-6"
           >
             <Send className="h-4 w-4" />

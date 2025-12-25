@@ -167,8 +167,8 @@ export default function BuyerDashboard() {
     useEffect(() => {
         const fetchUserName = async () => {
             try {
-                // 1. Retrieve the token from LocalStorage
-                const token = localStorage.getItem("token");
+                // 1. Retrieve the token from sessionStorage
+                const token = sessionStorage.getItem("token");
 
                 if (!token) {
                     console.error("No authentication token found");

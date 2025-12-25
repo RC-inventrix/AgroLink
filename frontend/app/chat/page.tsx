@@ -20,15 +20,13 @@ export default function ChatPage() {
 
   // 1. WebSocket Setup: Connect and Subscribe to private messages
   useEffect(() => {
-    // Connect to the /ws endpoint defined in your WebSocketConfig.java
     const socket = new SockJS(`${baseUrl}/ws`); 
     const client = new Client({
       webSocketFactory: () => socket,
       onConnect: () => {
         console.log("Connected to WebSocket");
-        const myId = localStorage.getItem("id");
+        const myId = sessionStorage.getItem("id"); // Using sessionStorage for tab isolation
         
-        // Subscribe to your private queue using the numeric ID
         if (myId) {
           client.subscribe(`/user/${myId}/queue/messages`, (message) => {
             const newMessage = JSON.parse(message.body);
@@ -39,8 +37,8 @@ export default function ChatPage() {
               if (isFromSelected) {
                 return [...prev, { 
                   ...newMessage, 
-                  id: Date.now(), 
-                  isCurrentUser: false // Incoming is always from the other user
+                  id: Date.now().toString(), // Ensure ID is a string for React keys
+                  isCurrentUser: false 
                 }];
               }
               return prev;
@@ -49,7 +47,7 @@ export default function ChatPage() {
             // Update sidebar last message preview
             setConversations((prev) => 
               prev.map(conv => conv.id === newMessage.senderId.toString() 
-                ? { ...conv, lastMessage: newMessage.content } 
+                ? { ...conv, lastMessage: newMessage.content, timestamp: newMessage.timestamp } 
                 : conv
               )
             );
@@ -72,7 +70,7 @@ export default function ChatPage() {
   // 2. Fetch Contact List (REST API)
   useEffect(() => {
     const fetchContacts = async () => {
-      const token = localStorage.getItem("token"); 
+      const token = sessionStorage.getItem("token"); 
       if (!token) return;
 
       try {
@@ -88,10 +86,10 @@ export default function ChatPage() {
           const ids: number[] = await res.json();
           const mapped: Conversation[] = ids.map((id) => ({
             id: id.toString(),
-            name: `User ${id}`, // Removed .split("@") because IDs are now numeric
+            name: `User ${id}`, 
             lastMessage: "Click to start chatting",
             avatar: "/buyer-dashboard/farmer-portrait.png",
-            online: true,
+            online: false, // Default to false; would be updated by real-time logic
             timestamp: new Date().toISOString(),
             unread: false,
             starred: false,
@@ -113,8 +111,8 @@ export default function ChatPage() {
     if (!selectedConversationId) return;
 
     const fetchHistory = async () => {
-      const token = localStorage.getItem("token");
-      const myId = localStorage.getItem("id");
+      const token = sessionStorage.getItem("token");
+      const myId = sessionStorage.getItem("id");
       
       try {
         const res = await fetch(`${baseUrl}/api/chat/history/${selectedConversationId}`, {
@@ -128,11 +126,10 @@ export default function ChatPage() {
         if (res.ok) {
           const rawMessages = await res.json();
           const mappedMessages = rawMessages.map((m: any) => ({
-            id: Number(m.id),
-            senderId: Number(m.senderId), // Explicitly cast to Number
+            id: m.id.toString(), // Convert numeric DB ID to string
+            senderId: Number(m.senderId), // Explicitly cast to Number for types
             content: m.content,
             timestamp: m.timestamp,
-            // Logic: Is the sender of this message ME?
             isCurrentUser: m.senderId.toString() === myId,
           }));
           setMessages(mappedMessages);
@@ -148,21 +145,20 @@ export default function ChatPage() {
   // 4. Handle Sending Messages (WebSocket Publish)
   const handleSendMessage = (content: string) => {
     if (stompClient?.connected && selectedConversationId) {
-      const myId = localStorage.getItem("id");
+      const myId = sessionStorage.getItem("id");
       const chatMessage = {
-        senderId: Number(myId), // Must be a number
-        recipientId: Number(selectedConversationId), // Must be a number
+        senderId: Number(myId), 
+        recipientId: Number(selectedConversationId), 
         content: content,
         timestamp: new Date().toISOString()
       };
 
-      // Publishes to @MessageMapping("/chat.send")
       stompClient.publish({
         destination: "/app/chat.send",
         body: JSON.stringify(chatMessage)
       });
 
-      // Optimistically add your own message to the UI instantly
+      // Optimistic UI update
       const uiMessage: Message = { 
         id: Date.now().toString(), 
         senderId: Number(myId), 
@@ -171,6 +167,14 @@ export default function ChatPage() {
         isCurrentUser: true 
       };
       setMessages((prev) => [...prev, uiMessage]);
+
+      // Update sidebar preview for current user
+      setConversations((prev) => 
+        prev.map(conv => conv.id === selectedConversationId 
+          ? { ...conv, lastMessage: content, timestamp: chatMessage.timestamp } 
+          : conv
+        )
+      );
     }
   };
 
@@ -197,7 +201,7 @@ export default function ChatPage() {
                 <MessageView 
                   conversation={selectedConversation} 
                   messages={messages} 
-                  onSendMessage={handleSendMessage} // Pass down the WebSocket handler
+                  onSendMessage={handleSendMessage} 
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">

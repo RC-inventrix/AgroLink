@@ -40,10 +40,10 @@ export default function LoginForm() {
             const data = await response.json();
 
             if(response.ok){
-                localStorage.setItem("token", data.token); 
-    localStorage.setItem("userRole", data.role);
-    localStorage.setItem("userEmail", data.email);
-    localStorage.setItem("id", data.id);
+                sessionStorage.setItem("token", data.token); 
+    sessionStorage.setItem("userRole", data.role);
+    sessionStorage.setItem("userEmail", data.email);
+    sessionStorage.setItem("id", data.id);
             }
 
             if (!response.ok) {
@@ -51,12 +51,12 @@ export default function LoginForm() {
             }
 
             // SUCCESSFUL LOGIN
-            // Note: We no longer manually save the token in localStorage. 
+            // Note: We no longer manually save the token in sessionStorage. 
             // The browser automatically handles the HttpOnly cookie.
 
             if (!isAdmins) {
                 // Save the role to help with frontend UI logic/routing
-                localStorage.setItem("userRole", data.role);
+                sessionStorage.setItem("userRole", data.role);
                 
                 // ROLE-BASED REDIRECTION: Sends user to their specific dashboard
                 if (data.role.toLowerCase() === "buyer") {
@@ -65,7 +65,7 @@ export default function LoginForm() {
                     router.push("/seller/dashboard");
                 }
             } else {
-                localStorage.setItem("adminSession", "true");
+                sessionStorage.setItem("adminSession", "true");
                 router.push("/admin/dashboard");
             }
         } catch (err: any) {
