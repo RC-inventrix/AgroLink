@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AuthService {
 
@@ -64,5 +66,9 @@ public class AuthService {
         return userRepository.findByEmail(email)
                 .map(User::getFullname) // Assuming your Entity has a getFullName() method
                 .orElse("User");
+    }
+
+    public List<User> findAllById(List<Long> ids) {
+        return userRepository.findAllById(ids);
     }
 }

@@ -25,7 +25,7 @@ export default function ChatPage() {
       webSocketFactory: () => socket,
       onConnect: () => {
         console.log("Connected to WebSocket");
-        const myId = sessionStorage.getItem("id"); // Using sessionStorage for tab isolation
+        const myId = sessionStorage.getItem("id");
         
         if (myId) {
           client.subscribe(`/user/${myId}/queue/messages`, (message) => {
@@ -37,7 +37,7 @@ export default function ChatPage() {
               if (isFromSelected) {
                 return [...prev, { 
                   ...newMessage, 
-                  id: Date.now().toString(), // Ensure ID is a string for React keys
+                  id: Date.now().toString(), 
                   isCurrentUser: false 
                 }];
               }
@@ -67,14 +67,15 @@ export default function ChatPage() {
     };
   }, [baseUrl, selectedConversationId]);
 
-  // 2. Fetch Contact List (REST API)
+  // 2. Fetch Contact List (REST API) with Full Name Resolution
   useEffect(() => {
     const fetchContacts = async () => {
       const token = sessionStorage.getItem("token"); 
       if (!token) return;
 
       try {
-        const res = await fetch(`${baseUrl}/api/chat/contacts`, {
+        // Step A: Fetch Contact IDs from Chat Service
+        const contactIdsRes = await fetch(`${baseUrl}/api/chat/contacts`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -82,14 +83,27 @@ export default function ChatPage() {
           }
         });
 
-        if (res.ok) {
-          const ids: number[] = await res.json();
+        if (contactIdsRes.ok) {
+          const ids: number[] = await contactIdsRes.json();
+
+          // Step B: Resolve Full Names from Identity Service
+          // This calls your newly created @GetMapping("/fullnames")
+          const nameRes = await fetch(`http://localhost:8081/auth/fullnames?ids=${ids.join(',')}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          const fullNameMap = nameRes.ok ? await nameRes.json() : {};
+
+          // Step C: Map to Conversation objects with real names
           const mapped: Conversation[] = ids.map((id) => ({
             id: id.toString(),
-            name: `User ${id}`, 
+            name: fullNameMap[id] || `User ${id}`, // Use Full Name from database
             lastMessage: "Click to start chatting",
             avatar: "/buyer-dashboard/farmer-portrait.png",
-            online: false, // Default to false; would be updated by real-time logic
+            online: false, 
             timestamp: new Date().toISOString(),
             unread: false,
             starred: false,
@@ -126,8 +140,8 @@ export default function ChatPage() {
         if (res.ok) {
           const rawMessages = await res.json();
           const mappedMessages = rawMessages.map((m: any) => ({
-            id: m.id.toString(), // Convert numeric DB ID to string
-            senderId: Number(m.senderId), // Explicitly cast to Number for types
+            id: m.id.toString(), 
+            senderId: Number(m.senderId), 
             content: m.content,
             timestamp: m.timestamp,
             isCurrentUser: m.senderId.toString() === myId,
@@ -158,7 +172,6 @@ export default function ChatPage() {
         body: JSON.stringify(chatMessage)
       });
 
-      // Optimistic UI update
       const uiMessage: Message = { 
         id: Date.now().toString(), 
         senderId: Number(myId), 
@@ -168,7 +181,6 @@ export default function ChatPage() {
       };
       setMessages((prev) => [...prev, uiMessage]);
 
-      // Update sidebar preview for current user
       setConversations((prev) => 
         prev.map(conv => conv.id === selectedConversationId 
           ? { ...conv, lastMessage: content, timestamp: chatMessage.timestamp } 

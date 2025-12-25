@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController // Changed to RestController for better JSON handling
 @RequestMapping("/api/chat")
@@ -86,6 +87,7 @@ public class ChatController {
         // 2. Fetch history using two numeric IDs
         return ResponseEntity.ok(chatService.getChatHistory(myId, recipientId));
     }
+
 
 
 }
