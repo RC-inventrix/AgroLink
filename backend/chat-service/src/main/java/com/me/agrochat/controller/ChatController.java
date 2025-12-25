@@ -57,7 +57,13 @@ public class ChatController {
         if (auth == null) return ResponseEntity.status(401).build();
 
         // Retrieve the ID we just put in the request attribute
-        Long userId = (Long) request.getAttribute("userId");
+        Object userIdObj = request.getAttribute("userId");
+
+        if (userIdObj == null) {
+            return ResponseEntity.status(400).body("User ID missing from token");
+        }
+
+        Long userId = Long.valueOf(userIdObj.toString());
 
         // Pass the numeric ID to your service for the database query
         return ResponseEntity.ok(chatService.getContactList(userId));
@@ -68,9 +74,16 @@ public class ChatController {
      */
     @GetMapping("/history/{recipientId}")
     public ResponseEntity<List<ChatMessage>> getHistory(
-            Authentication auth, @PathVariable Long recipientId) {
+            HttpServletRequest request, // Add this to get the attribute
+            Authentication auth,
+            @PathVariable Long recipientId) {
 
-        // Identity is securely fetched from the JWT cookie
-        return ResponseEntity.ok(chatService.getChatHistory(auth.getName(), String.valueOf(recipientId)));
+        if (auth == null) return ResponseEntity.status(401).build();
+
+        // 1. Get your numeric ID from the filter's attribute
+        Long myId = (Long) request.getAttribute("userId");
+
+        // 2. Fetch history using two numeric IDs
+        return ResponseEntity.ok(chatService.getChatHistory(myId, recipientId));
     }
 }

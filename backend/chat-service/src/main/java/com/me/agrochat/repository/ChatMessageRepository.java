@@ -10,14 +10,14 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     // 1. Fetch chat history between two users (ordered by time)
     List<ChatMessage> findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampAsc(
-            String senderId, String recipientId, String recipientId2, String senderId2);
+            Long senderId, Long recipientId, Long recipientId2, Long senderId2);
 
     // 2. Fetch unique users the current user has conversations with (for the sidebar)
     @Query("SELECT DISTINCT CASE WHEN m.senderId = :userId THEN m.recipientId ELSE m.senderId END " +
             "FROM ChatMessage m WHERE m.senderId = :userId OR m.recipientId = :userId")
-    List<String> findDistinctConversationPartners(@Param("userId") String userId);
+    List<String> findDistinctConversationPartners(@Param("userId") Long userId);
 
     // 3. Fetch the very last message for a preview in the sidebar
     ChatMessage findFirstBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampDesc(
-            String s1, String r1, String s2, String r2);
+            Long s1, Long r1, Long s2, Long r2);
 }
