@@ -3,6 +3,7 @@ package com.agrolink.indentityanduserservice.controller;
 import com.agrolink.indentityanduserservice.dto.AuthResponse;
 import com.agrolink.indentityanduserservice.dto.LoginRequest;
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
+import com.agrolink.indentityanduserservice.model.User;
 import com.agrolink.indentityanduserservice.services.AuthService;
 import com.agrolink.indentityanduserservice.services.JwtService;
 import jakarta.servlet.http.Cookie;
@@ -16,6 +17,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -28,6 +33,13 @@ public class AuthController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
@@ -102,5 +114,19 @@ public class AuthController {
 
         // 3. Return a small JSON object with the name
         return ResponseEntity.ok(java.util.Map.of("fullName", fullName));
+    }
+
+    @GetMapping("/fullnames")
+    public ResponseEntity<Map<Long, String>> getFullNamesByIds(@RequestParam List<Long> ids) {
+        // Use the method we just added to authService
+        List<User> users = authService.findAllById(ids);
+
+        Map<Long, String> fullNameMap = users.stream()
+                .collect(Collectors.toMap(
+                        User::getId,       // Key: Long
+                        User::getFullname  // Value: String
+                ));
+
+        return ResponseEntity.ok(fullNameMap);
     }
 }
