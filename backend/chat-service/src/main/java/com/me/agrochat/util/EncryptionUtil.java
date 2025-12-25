@@ -9,6 +9,7 @@ import java.util.Base64;
 @Component
 public class EncryptionUtil {
 
+
     private final String algorithm = "AES";
 
     // DO NOT make this static. Spring won't inject the value if it's static.
