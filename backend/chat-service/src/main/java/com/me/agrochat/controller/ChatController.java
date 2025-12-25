@@ -86,4 +86,6 @@ public class ChatController {
         // 2. Fetch history using two numeric IDs
         return ResponseEntity.ok(chatService.getChatHistory(myId, recipientId));
     }
+
+
 }

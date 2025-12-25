@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react" // Import useState for input tracking
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import type { Conversation } from "./conversation-list"
 
 export interface Message {
   id: string
-  senderId: string
+  senderId: number // Changed to number to match backend BIGINT
   content: string
   timestamp: string
   isCurrentUser: boolean
@@ -18,15 +19,34 @@ export interface Message {
 interface MessageViewProps {
   conversation: Conversation
   messages: Message[]
+  onSendMessage: (content: string) => void // Prop from page.tsx
 }
 
-export function MessageView({ conversation, messages }: MessageViewProps) {
+export function MessageView({ conversation, messages, onSendMessage }: MessageViewProps) {
+  // Local state to manage the text being typed
+  const [inputValue, setInputValue] = useState("");
+
   const initials = conversation.name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2)
+
+  // Logic to trigger the send action
+  const handleSend = () => {
+    if (inputValue.trim()) {
+      onSendMessage(inputValue);
+      setInputValue(""); // Clear the box after sending
+    }
+  };
+
+  // Allow sending by pressing the 'Enter' key
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSend();
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-white">
@@ -97,6 +117,9 @@ export function MessageView({ conversation, messages }: MessageViewProps) {
           <div className="flex-1 bg-gray-50 rounded-lg border border-gray-200 focus-within:border-[#2d5016] focus-within:ring-1 focus-within:ring-[#2d5016] transition-all">
             <Input
               placeholder="Type a message..."
+              value={inputValue} // Bind input to local state
+              onChange={(e) => setInputValue(e.target.value)} // Update state on type
+              onKeyDown={handleKeyPress} // Support 'Enter' key
               className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <div className="flex items-center gap-2 px-3 pb-2">
@@ -108,7 +131,10 @@ export function MessageView({ conversation, messages }: MessageViewProps) {
               </Button>
             </div>
           </div>
-          <Button className="bg-[#f4a522] hover:bg-[#d89112] text-white h-10 px-6">
+          <Button 
+            onClick={handleSend} // Mount the click event to trigger handleSend
+            className="bg-[#f4a522] hover:bg-[#d89112] text-white h-10 px-6"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
