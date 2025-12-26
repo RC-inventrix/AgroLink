@@ -1,6 +1,6 @@
 package com.agrolink.productcatalogservice.model;
 
-public enum PriceType {
-    Fixed,
-    Bidding
+public enum PricingType {
+    FIXED,
+    BIDDING
 }
