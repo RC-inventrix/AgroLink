@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @RestController // Changed to RestController for better JSON handling
 @RequestMapping("/api/chat")
@@ -34,6 +33,8 @@ public class ChatController {
      */
     @MessageMapping("/chat.send")
     public void processMessage(@Payload ChatMessage chatMessage) {
+
+        chatMessage.setIsRead(false);
         // 1. Preserve the plain text for the live push
         String plainText = chatMessage.getContent();
 
@@ -88,6 +89,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatHistory(myId, recipientId));
     }
 
+    @PutMapping("/read/{senderId}/{recipientId}")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long senderId,@PathVariable Long recipientId) {
+        // In production, get currentUserId from the SecurityContext or Token
+        chatService.markMessagesAsRead(senderId, recipientId);
+        return ResponseEntity.ok().build();
+    }
 
 
 }

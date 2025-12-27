@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Getter
+@Setter
 public class ChatMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,4 +24,14 @@ public class ChatMessage {
 
     // Automatically set the time the message was created
     private LocalDateTime timestamp;
+    @PrePersist
+    protected void onCreate() {
+        this.timestamp = LocalDateTime.now();
+    }
+
+    // Update your getters and setters to use Boolean
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
+
+
 }

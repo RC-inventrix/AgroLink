@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { ConversationList, type Conversation } from "@/components/chat/conversation-list"
@@ -17,146 +17,152 @@ export default function ChatPage() {
   const [stompClient, setStompClient] = useState<any>(null)
 
   const baseUrl = "http://localhost:8083"
+  const selectedIdRef = useRef(selectedConversationId);
 
-  // 1. WebSocket Setup: Connect and Subscribe to private messages
+  // 1. SYNC FUNCTION: Updates PostgreSQL that messages are read
+  const syncReadStatus = useCallback(async (senderId: string) => {
+    const token = sessionStorage.getItem("token");
+    const myId = sessionStorage.getItem("id");
+    if (!token || !myId || !senderId) return;
+
+    try {
+      await fetch(`${baseUrl}/api/chat/read/${senderId}/${myId}`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error("Database sync failed:", err);
+    }
+  }, [baseUrl]);
+
+  // 2. TRIGGER: Syncs when opening a chat OR when a new message arrives
+  useEffect(() => {
+    selectedIdRef.current = selectedConversationId;
+
+    if (selectedConversationId) {
+      setConversations(prev => prev.map(conv => 
+        conv.id === selectedConversationId 
+          ? { ...conv, unread: false, unreadCount: 0 } 
+          : conv
+      ));
+
+      syncReadStatus(selectedConversationId);
+    }
+  }, [selectedConversationId, messages.length, syncReadStatus]);
+
+  // 3. WebSocket Setup
   useEffect(() => {
     const socket = new SockJS(`${baseUrl}/ws`); 
     const client = new Client({
       webSocketFactory: () => socket,
       onConnect: () => {
-        console.log("Connected to WebSocket");
         const myId = sessionStorage.getItem("id");
-        
         if (myId) {
           client.subscribe(`/user/${myId}/queue/messages`, (message) => {
             const newMessage = JSON.parse(message.body);
-            
-            // Real-time update: Only add if message is from the currently selected contact
+            const currentActiveId = selectedIdRef.current;
+
             setMessages((prev) => {
-              const isFromSelected = newMessage.senderId.toString() === selectedConversationId;
-              if (isFromSelected) {
+              if (newMessage.senderId.toString() === currentActiveId) {
                 return [...prev, { 
                   ...newMessage, 
                   id: Date.now().toString(), 
-                  isCurrentUser: false 
+                  isCurrentUser: false,
+                  isRead: true // Locally mark as read since chat is open
                 }];
               }
               return prev;
             });
 
-            // Update sidebar last message preview
             setConversations((prev) => 
-              prev.map(conv => conv.id === newMessage.senderId.toString() 
-                ? { ...conv, lastMessage: newMessage.content, timestamp: newMessage.timestamp } 
-                : conv
-              )
+              prev.map(conv => {
+                if (conv.id.toString() === newMessage.senderId.toString()) {
+                  const isChatNotOpen = currentActiveId !== newMessage.senderId.toString();
+                  return { 
+                    ...conv, 
+                    lastMessage: newMessage.content, 
+                    timestamp: newMessage.timestamp,
+                    unread: isChatNotOpen,
+                    unreadCount: isChatNotOpen ? (conv.unreadCount || 0) + 1 : 0
+                  };
+                }
+                return conv;
+              })
             );
           });
         }
-      },
-      onStompError: (frame) => {
-        console.error('Broker reported error: ' + frame.headers['message']);
       },
     });
 
     client.activate();
     setStompClient(client);
+    return () => { void client.deactivate(); };
+  }, [baseUrl]);
 
-    return () => {
-      if (client) client.deactivate();
-    };
-  }, [baseUrl, selectedConversationId]);
-
-  // 2. Fetch Contact List (REST API) with Full Name Resolution
+  // 4. Fetch Contacts
   useEffect(() => {
     const fetchContacts = async () => {
       const token = sessionStorage.getItem("token"); 
       if (!token) return;
-
       try {
-        // Step A: Fetch Contact IDs from Chat Service
-        const contactIdsRes = await fetch(`${baseUrl}/api/chat/contacts`, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+        const res = await fetch(`${baseUrl}/api/chat/contacts`, {
+          method: "GET", headers: { "Authorization": `Bearer ${token}` }
         });
-
-        if (contactIdsRes.ok) {
-          const ids: number[] = await contactIdsRes.json();
-
-          // Step B: Resolve Full Names from Identity Service
-          // This calls your newly created @GetMapping("/fullnames")
+        if (res.ok) {
+          const ids: number[] = await res.json();
           const nameRes = await fetch(`http://localhost:8081/auth/fullnames?ids=${ids.join(',')}`, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
+            method: "GET", headers: { "Authorization": `Bearer ${token}` }
           });
-
           const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-          // Step C: Map to Conversation objects with real names
           const mapped: Conversation[] = ids.map((id) => ({
             id: id.toString(),
-            name: fullNameMap[id] || `User ${id}`, // Use Full Name from database
-            lastMessage: "Click to start chatting",
+            name: fullNameMap[id] || `User ${id}`, 
+            lastMessage: "Click to start chatting", 
             avatar: "/buyer-dashboard/farmer-portrait.png",
-            online: false, 
+            online: !!id, 
             timestamp: new Date().toISOString(),
             unread: false,
+            unreadCount: 0,
             starred: false,
           }));
           setConversations(mapped);
         }
-      } catch (err) {
-        console.error("Network error fetching contacts:", err);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setIsLoading(false); }
     };
-    
     fetchContacts();
   }, [baseUrl]);
 
-  // 3. Fetch History when a conversation is selected (REST API)
+  // 5. Fetch History: Now maps the isRead status from DB
   useEffect(() => {
     if (!selectedConversationId) return;
 
     const fetchHistory = async () => {
       const token = sessionStorage.getItem("token");
       const myId = sessionStorage.getItem("id");
-      
       try {
         const res = await fetch(`${baseUrl}/api/chat/history/${selectedConversationId}`, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+          method: "GET", headers: { "Authorization": `Bearer ${token}` }
         });
 
         if (res.ok) {
           const rawMessages = await res.json();
-          const mappedMessages = rawMessages.map((m: any) => ({
+          setMessages(rawMessages.map((m: any) => ({
             id: m.id.toString(), 
             senderId: Number(m.senderId), 
             content: m.content,
             timestamp: m.timestamp,
             isCurrentUser: m.senderId.toString() === myId,
-          }));
-          setMessages(mappedMessages);
+            isRead: m.isRead // CRITICAL: Map the DB status
+          })));
         }
-      } catch (err) {
-        console.error("Failed to fetch history:", err);
-      }
+      } catch (err) { console.error("Failed to fetch history:", err); }
     };
 
     fetchHistory();
   }, [selectedConversationId, baseUrl]);
 
-  // 4. Handle Sending Messages (WebSocket Publish)
+  // 6. Handle Sending
   const handleSendMessage = (content: string) => {
     if (stompClient?.connected && selectedConversationId) {
       const myId = sessionStorage.getItem("id");
@@ -164,7 +170,8 @@ export default function ChatPage() {
         senderId: Number(myId), 
         recipientId: Number(selectedConversationId), 
         content: content,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        isRead: false // Initially unread when sent
       };
 
       stompClient.publish({
@@ -172,15 +179,7 @@ export default function ChatPage() {
         body: JSON.stringify(chatMessage)
       });
 
-      const uiMessage: Message = { 
-        id: Date.now().toString(), 
-        senderId: Number(myId), 
-        content, 
-        timestamp: chatMessage.timestamp, 
-        isCurrentUser: true 
-      };
-      setMessages((prev) => [...prev, uiMessage]);
-
+      setMessages((prev) => [...prev, { ...chatMessage, id: Date.now().toString(), isCurrentUser: true }]);
       setConversations((prev) => 
         prev.map(conv => conv.id === selectedConversationId 
           ? { ...conv, lastMessage: content, timestamp: chatMessage.timestamp } 
@@ -190,13 +189,14 @@ export default function ChatPage() {
     }
   };
 
+  const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
   const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
 
   return (
     <>
       <DashboardHeader />
       <div className="flex">
-        <DashboardNav />
+        <DashboardNav unreadCount={totalUnread} />
         <div className="flex h-[calc(100vh-4rem)] flex-1">
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center">
@@ -204,21 +204,11 @@ export default function ChatPage() {
             </div>
           ) : (
             <>
-              <ConversationList
-                conversations={conversations}
-                selectedId={selectedConversationId}
-                onSelect={setSelectedConversationId}
-              />
+              <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} />
               {selectedConversation ? (
-                <MessageView 
-                  conversation={selectedConversation} 
-                  messages={messages} 
-                  onSendMessage={handleSendMessage} 
-                />
+                <MessageView conversation={selectedConversation} messages={messages} onSendMessage={handleSendMessage} />
               ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a contact to start messaging
-                </div>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a contact to start messaging</div>
               )}
             </>
           )}
