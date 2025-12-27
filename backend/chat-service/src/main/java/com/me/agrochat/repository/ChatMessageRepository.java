@@ -1,7 +1,9 @@
 package com.me.agrochat.repository;
 
 import com.me.agrochat.model.ChatMessage;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -20,4 +22,10 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     // 3. Fetch the very last message for a preview in the sidebar
     ChatMessage findFirstBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampDesc(
             Long s1, Long r1, Long s2, Long r2);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.senderId = :senderId AND m.recipientId = :recipientId AND m.isRead = false")
+    void markAsRead(@Param("senderId") Long senderId, @Param("recipientId") Long recipientId);
 }
+

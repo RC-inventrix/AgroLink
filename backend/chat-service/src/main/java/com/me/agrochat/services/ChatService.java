@@ -46,5 +46,8 @@ public class ChatService {
         return repository.findDistinctConversationPartners(userId);
     }
 
-
+    public void markMessagesAsRead(Long senderId, Long recipientId) {
+        // Use the instance variable 'repository', not the Interface name
+        repository.markAsRead(senderId, recipientId);
+    }
 }
