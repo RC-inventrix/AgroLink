@@ -68,7 +68,7 @@ export default function ChatPage() {
                   ...newMessage, 
                   id: Date.now().toString(), 
                   isCurrentUser: false,
-                  isRead: true // Locally mark as read since chat is open
+                  isRead: true 
                 }];
               }
               return prev;
@@ -99,41 +99,59 @@ export default function ChatPage() {
     return () => { void client.deactivate(); };
   }, [baseUrl]);
 
-  // 4. Fetch Contacts
+  // 4. Fetch Contacts: UPDATED to fetch unread counts per user
   useEffect(() => {
     const fetchContacts = async () => {
       const token = sessionStorage.getItem("token"); 
+      const myId = sessionStorage.getItem("id");
       if (!token) return;
+      
       try {
         const res = await fetch(`${baseUrl}/api/chat/contacts`, {
           method: "GET", headers: { "Authorization": `Bearer ${token}` }
         });
+        
         if (res.ok) {
           const ids: number[] = await res.json();
+          
+          // Fetch names from Identity Service
           const nameRes = await fetch(`http://localhost:8081/auth/fullnames?ids=${ids.join(',')}`, {
             method: "GET", headers: { "Authorization": `Bearer ${token}` }
           });
           const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-          const mapped: Conversation[] = ids.map((id) => ({
-            id: id.toString(),
-            name: fullNameMap[id] || `User ${id}`, 
-            lastMessage: "Click to start chatting", 
-            avatar: "/buyer-dashboard/farmer-portrait.png",
-            online: !!id, 
-            timestamp: new Date().toISOString(),
-            unread: false,
-            unreadCount: 0,
-            starred: false,
+          // NEW LOGIC: Map contacts and fetch their specific unread counts
+          const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
+            const unreadRes = await fetch(`${baseUrl}/api/chat/unread-count/${id}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
+
+            return {
+              id: id.toString(),
+              name: fullNameMap[id] || `User ${id}`, 
+              lastMessage: "Click to start chatting", 
+              avatar: "/buyer-dashboard/farmer-portrait.png",
+              online: !!id, 
+              timestamp: new Date().toISOString(),
+              unread: dbCount > 0,
+              unreadCount: dbCount, // Verified from PostgreSQL
+              starred: false,
+            };
           }));
+
           setConversations(mapped);
         }
-      } catch (err) { console.error(err); } finally { setIsLoading(false); }
+      } catch (err) { 
+        console.error("Fetch contacts error:", err); 
+      } finally { 
+        setIsLoading(false); 
+      }
     };
     fetchContacts();
   }, [baseUrl]);
 
-  // 5. Fetch History: Now maps the isRead status from DB
+  // 5. Fetch History
   useEffect(() => {
     if (!selectedConversationId) return;
 
@@ -153,7 +171,7 @@ export default function ChatPage() {
             content: m.content,
             timestamp: m.timestamp,
             isCurrentUser: m.senderId.toString() === myId,
-            isRead: m.isRead // CRITICAL: Map the DB status
+            isRead: m.isRead 
           })));
         }
       } catch (err) { console.error("Failed to fetch history:", err); }
@@ -171,7 +189,7 @@ export default function ChatPage() {
         recipientId: Number(selectedConversationId), 
         content: content,
         timestamp: new Date().toISOString(),
-        isRead: false // Initially unread when sent
+        isRead: false 
       };
 
       stompClient.publish({

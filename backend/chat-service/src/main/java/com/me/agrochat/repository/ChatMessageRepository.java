@@ -27,5 +27,10 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Transactional
     @Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.senderId = :senderId AND m.recipientId = :recipientId AND m.isRead = false")
     void markAsRead(@Param("senderId") Long senderId, @Param("recipientId") Long recipientId);
+
+
+    @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.senderId = :senderId AND m.recipientId = :recipientId AND m.isRead = false")
+    long countUnreadMessages(@Param("senderId") Long senderId, @Param("recipientId") Long recipientId);
+
 }
 

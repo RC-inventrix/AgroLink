@@ -96,5 +96,15 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
+    // ChatController.java
+    @GetMapping("/unread-count/{senderId}")
+    public ResponseEntity<Long> getUnreadCount(HttpServletRequest request, @PathVariable Long senderId) {
+        // Get currently logged-in user ID (the recipient)
+        Long myId = (Long) request.getAttribute("userId");
+
+        // Logic: Count messages sent BY senderId TO me that are unread
+        long count = chatMessageRepository.countUnreadMessages(senderId, myId);
+        return ResponseEntity.ok(count);
+    }
 
 }
