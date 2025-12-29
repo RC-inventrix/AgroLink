@@ -42,7 +42,7 @@ export default function MyProductsPage() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">My Listed Products</h1>
-                    <Link href="/farmer/add-product">
+                    <Link href="/add-product">
                         <Button className="gap-2 bg-emerald-700 text-white">
                             <Plus className="h-4 w-4" /> Add New Product
                         </Button>
