@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import Link from "next/link"
 
 export default function VegetableForm() {
   const [formData, setFormData] = useState({
@@ -81,10 +82,13 @@ export default function VegetableForm() {
           <div>
             <h1 className="text-4xl font-bold text-foreground">Add Vegetable Item</h1>
           </div>
-          <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-            <Eye className="w-5 h-5" />
-            View My Products
-          </Button>
+            <Link href={"/vegetableList/farmer/my-product"}>
+                <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                    <Eye className="w-5 h-5" />
+                    View My Products
+                </Button>
+            </Link>
+
         </div>
 
         {/* Form */}
