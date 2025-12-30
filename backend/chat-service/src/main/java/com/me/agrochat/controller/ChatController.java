@@ -10,42 +10,44 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.Authentication; // CORRECT IMPORT
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@RestController // Changed to RestController for better JSON handling
+@RestController
 @RequestMapping("/api/chat")
-@RequiredArgsConstructor // Automatically creates constructor for all final fields
+@RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ChatController {
 
     private final EncryptionUtil encryptionUtil;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatService chatService; // Now properly included and final
+    private final ChatService chatService;
 
     /**
      * Real-time WebSocket message handler
-     * Encrypts data for DB storage but sends plain text to recipient
      */
     @MessageMapping("/chat.send")
     public void processMessage(@Payload ChatMessage chatMessage) {
-
         chatMessage.setIsRead(false);
-        // 1. Preserve the plain text for the live push
+
+        // Ensure soft-delete flags are false for new messages
+        chatMessage.setDeletedBySender(false);
+        chatMessage.setDeletedByRecipient(false);
+
         String plainText = chatMessage.getContent();
 
-        // 2. Encrypt the content before saving to the database
+        // Encrypt for DB storage
         String encryptedContent = encryptionUtil.encrypt(plainText);
         chatMessage.setContent(encryptedContent);
         chatMessage.setTimestamp(LocalDateTime.now());
 
-        chatMessageRepository.save(chatMessage); // DB Admin sees encrypted text
+        chatMessageRepository.save(chatMessage);
 
-        // 3. Send the plain text to the recipient's private queue
+        // Send plain text to recipient
         chatMessage.setContent(plainText);
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(chatMessage.getRecipientId()), "/queue/messages", chatMessage);
@@ -57,68 +59,72 @@ public class ChatController {
     @GetMapping("/contacts")
     public ResponseEntity<?> getContacts(HttpServletRequest request, Authentication auth) {
         if (auth == null) return ResponseEntity.status(401).build();
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) return ResponseEntity.status(400).body("User ID missing");
 
-        // Retrieve the ID we just put in the request attribute
-        Object userIdObj = request.getAttribute("userId");
-
-        if (userIdObj == null) {
-            return ResponseEntity.status(400).body("User ID missing from token");
-        }
-
-        Long userId = Long.valueOf(userIdObj.toString());
-
-        // Pass the numeric ID to your service for the database query
         return ResponseEntity.ok(chatService.getContactList(userId));
     }
 
     /**
-     * GET the full history with a specific person
+     * GET the full history with a specific person (Respects Soft Delete)
      */
     @GetMapping("/history/{recipientId}")
-    public ResponseEntity<List<ChatMessage>> getHistory(
-            HttpServletRequest request, // Add this to get the attribute
-            Authentication auth,
-            @PathVariable Long recipientId) {
-
-        if (auth == null) return ResponseEntity.status(401).build();
-
-        // 1. Get your numeric ID from the filter's attribute
+    public ResponseEntity<List<ChatMessage>> getHistory(HttpServletRequest request, @PathVariable Long recipientId) {
         Long myId = (Long) request.getAttribute("userId");
 
-        // 2. Fetch history using two numeric IDs
-        return ResponseEntity.ok(chatService.getChatHistory(myId, recipientId));
+        // Use the new repository method that checks 'deletedBySender/Recipient' flags
+        List<ChatMessage> history = chatMessageRepository.findActiveChatHistory(myId, recipientId);
+
+        // Decrypt messages for the UI
+        history.forEach(m -> {
+            try {
+                m.setContent(encryptionUtil.decrypt(m.getContent()));
+            } catch (Exception e) {
+                m.setContent("[Decryption Error]");
+            }
+        });
+
+        return ResponseEntity.ok(history);
+    }
+
+    /**
+     * DELETE (Soft Delete): Hide conversation for the current user only
+     */
+    @DeleteMapping("/conversation/{contactId}")
+    public ResponseEntity<Void> deleteForMe(HttpServletRequest request, @PathVariable Long contactId) {
+        Long myId = (Long) request.getAttribute("userId");
+
+        // 1. Messages I SENT: Set deletedBySender = true
+        chatMessageRepository.markAsDeletedBySender(myId, contactId);
+
+        // 2. Messages I RECEIVED: Set deletedByRecipient = true
+        chatMessageRepository.markAsDeletedByRecipient(myId, contactId);
+
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/read/{senderId}/{recipientId}")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long senderId,@PathVariable Long recipientId) {
-        // In production, get currentUserId from the SecurityContext or Token
+    public ResponseEntity<Void> markAsRead(@PathVariable Long senderId, @PathVariable Long recipientId) {
         chatService.markMessagesAsRead(senderId, recipientId);
         return ResponseEntity.ok().build();
     }
 
-    // ChatController.java
     @GetMapping("/unread-count/{senderId}")
     public ResponseEntity<Long> getUnreadCount(HttpServletRequest request, @PathVariable Long senderId) {
-        // Get currently logged-in user ID (the recipient)
         Long myId = (Long) request.getAttribute("userId");
-
-        // Logic: Count messages sent BY senderId TO me that are unread
         long count = chatMessageRepository.countUnreadMessages(senderId, myId);
         return ResponseEntity.ok(count);
+    }
+
+    @GetMapping("/total-unread")
+    public ResponseEntity<Long> getTotalUnreadCount(HttpServletRequest request) {
+        Long myId = (Long) request.getAttribute("userId");
+        long total = chatMessageRepository.countAllUnreadForRecipient(myId);
+        return ResponseEntity.ok(total);
     }
 
     @GetMapping("/status/{userId}")
     public ResponseEntity<Boolean> getUserStatus(@PathVariable Long userId) {
         return ResponseEntity.ok(chatService.isUserOnline(userId));
-    }
-
-    // ChatController.java
-    @GetMapping("/total-unread")
-    public ResponseEntity<Long> getTotalUnreadCount(HttpServletRequest request) {
-        Long myId = (Long) request.getAttribute("userId"); //
-
-        // Count ALL messages sent TO me where isRead is false
-        long total = chatMessageRepository.countAllUnreadForRecipient(myId);
-        return ResponseEntity.ok(total);
     }
 }

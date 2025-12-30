@@ -10,6 +10,34 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import "../globals-buyer-dashboard.css"
 
 export default function ChatPage() {
+
+
+  const handleDeleteConversation = async (contactId: string) => {
+  const token = sessionStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${baseUrl}/api/chat/conversation/${contactId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      // 1. Remove from the left sidebar list
+      setConversations((prev) => prev.filter((conv) => conv.id !== contactId));
+
+      // 2. If the deleted chat was currently open, clear the message window
+      if (selectedConversationId === contactId) {
+        setSelectedConversationId("");
+        setMessages([]);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to delete conversation:", err);
+  }
+};
+
+
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [selectedConversationId, setSelectedConversationId] = useState<string>("")
@@ -208,6 +236,7 @@ export default function ChatPage() {
   const handleSendMessage = (content: string) => {
     if (stompClient?.connected && selectedConversationId) {
       const myId = sessionStorage.getItem("id");
+      const token = sessionStorage.getItem("token");
       const currentTime = new Date().toISOString();
       const chatMessage = {
         senderId: Number(myId), 
@@ -256,6 +285,7 @@ export default function ChatPage() {
                 conversations={conversations} 
                 selectedId={selectedConversationId} 
                 onSelect={setSelectedConversationId} 
+                onDelete={handleDeleteConversation}
               />
               <div className="flex-1 flex flex-col relative bg-white">
                 {selectedConversation ? (
