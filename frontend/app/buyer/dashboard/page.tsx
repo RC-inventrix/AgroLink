@@ -22,7 +22,6 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import Link from "next/link"
 
 // Static Mock Data for UI placeholders
 const cartItems = [
@@ -92,34 +91,6 @@ export default function BuyerDashboard() {
                 }
             } catch (err) { console.error("Name fetch failed:", err); }
         };
-                    {/* Quick Access Cards */}
-                    <div className="mb-8 grid gap-6 md:grid-cols-2">
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg font-semibold">My Cart</CardTitle>
-                                <ShoppingCart className="h-5 w-5 text-accent" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold text-primary mb-4">{cartItems.length} items</div>
-                                <div className="flex gap-2">
-                                    {cartItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="relative h-16 w-16 rounded-lg overflow-hidden border-2 border-accent/20"
-                                        >
-                                            <img
-                                                src={item.image || "/buyer-dashboard/placeholder.svg"}
-                                                alt={item.name}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                                <Link href="/cart">
-                                    <Button className="mt-4 w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Cart</Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
 
         // 2. Fetch Unread Count & Recent Chats
         const syncDashboardData = async () => {

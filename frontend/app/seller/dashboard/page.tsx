@@ -5,8 +5,6 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
 // Project Colors
 const theme = {
     primaryYellow: '#EEC044',
@@ -96,8 +94,8 @@ export default function SellerDashboard() {
                 <h2 style={styles.logo}>AgroLink<span style={{color: theme.primaryYellow}}>.</span></h2>
                 <nav style={styles.nav}>
                     <a style={{...styles.navItem, ...styles.activeNav}} href="#">Dashboard</a>
-                    <a style={styles.navItem} href="/vegetableList/farmer/my-product">My Products</a>
-                    <a style={styles.navItem} href="/seller/toBeCompleted">Orders</a>
+                    <a style={styles.navItem} href="#">My Products</a>
+                    <a style={styles.navItem} href="#">Orders</a>
                     <a style={styles.navItem} href="#">Bargains</a>
                     
                     {/* CHAT ITEM WITH YOUR LOGIC-BASED BADGE */}
@@ -119,10 +117,7 @@ export default function SellerDashboard() {
                         <h1 style={styles.title}>Welcome back, Farmer! 👨‍🌾</h1>
                         <p style={styles.subtitle}>Here is what’s happening with your store today.</p>
                     </div>
-                    <Link href="/add-product">
-                        <button style={styles.createBtn}>+ Add New Product</button>
-                    </Link>
-
+                    <button style={styles.createBtn}>+ Add New Product</button>
                 </header>
 
                 <div style={styles.statsGrid}>
