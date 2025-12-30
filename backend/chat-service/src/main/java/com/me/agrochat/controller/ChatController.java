@@ -107,4 +107,18 @@ public class ChatController {
         return ResponseEntity.ok(count);
     }
 
+    @GetMapping("/status/{userId}")
+    public ResponseEntity<Boolean> getUserStatus(@PathVariable Long userId) {
+        return ResponseEntity.ok(chatService.isUserOnline(userId));
+    }
+
+    // ChatController.java
+    @GetMapping("/total-unread")
+    public ResponseEntity<Long> getTotalUnreadCount(HttpServletRequest request) {
+        Long myId = (Long) request.getAttribute("userId"); //
+
+        // Count ALL messages sent TO me where isRead is false
+        long total = chatMessageRepository.countAllUnreadForRecipient(myId);
+        return ResponseEntity.ok(total);
+    }
 }

@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useEffect, useState } from "react";
+import React from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 // Project Colors
 const theme = {
@@ -14,28 +17,69 @@ const theme = {
 };
 
 export default function SellerDashboard() {
-    // Mock Data
-    const stats = {
-        revenue: "Rs. 45,000",
-        pendingOrders: 12,
-        activeListings: 8,
-        soldItems: 150
-    };
-
-    const aiInsight = {
-        suggestion: "Best to grow: Red Onions",
-        reason: "Based on upcoming rainy weather and high market demand in your area.",
-        icon: "🌱"
-    };
-
+    const [navUnread, setNavUnread] = useState(0); 
     const [activeTab, setActiveTab] = useState('pending');
+    const baseUrl = "http://localhost:8083";
 
+    // 1. Initial Logic: Fetch unread counts using your specific API endpoint
+    useEffect(() => {
+        const token = sessionStorage.getItem("token");
+        const myId = sessionStorage.getItem("id");
+        if (!token || !myId) return;
+
+        const syncGlobalUnread = async () => {
+            try {
+                // First, get all people the farmer has chatted with
+                const contactsRes = await fetch(`${baseUrl}/api/chat/contacts`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                
+                if (contactsRes.ok) {
+                    const ids: number[] = await contactsRes.json();
+                    
+                    // Call your specific unread-count API for every contact
+                    const unreadCounts = await Promise.all(ids.map(async (senderId) => {
+                        const res = await fetch(`${baseUrl}/api/chat/unread-count/${senderId}`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+                        return res.ok ? await res.json() : 0;
+                    }));
+
+                    // Sum individual counts to show the total badge
+                    const total = unreadCounts.reduce((acc, count) => acc + count, 0);
+                    setNavUnread(total);
+                }
+            } catch (err) {
+                console.error("Unread sync failed:", err);
+            }
+        };
+
+        syncGlobalUnread();
+
+        // 2. Real-time updates via WebSockets
+        const socket = new SockJS(`${baseUrl}/ws`); 
+        const client = new Client({
+            webSocketFactory: () => socket,
+            onConnect: () => {
+                client.subscribe(`/user/${myId}/queue/messages`, (message) => {
+                    // Increment the badge live when a message hits the dashboard
+                    setNavUnread((prev) => prev + 1);
+                });
+            },
+        });
+
+        client.activate();
+        return () => { void client.deactivate(); };
+    }, []);
+
+    // Mock Data
+    const stats = { revenue: "Rs. 45,000", pendingOrders: 12, activeListings: 8, soldItems: 150 };
+    const aiInsight = { suggestion: "Best to grow: Red Onions", reason: "Based on rainy weather.", icon: "🌱" };
     const orders = [
         { id: 'ORD-101', item: 'Carrots 5kg', price: 'Rs. 2,500', status: 'pending', buyer: 'Sunil Perera' },
         { id: 'ORD-102', item: 'Leeks 2kg', price: 'Rs. 800', status: 'pending', buyer: 'Nimali Silva' },
         { id: 'ORD-103', item: 'Potatoes 10kg', price: 'Rs. 4,000', status: 'completed', buyer: 'Kasun Raj' },
     ];
-
     const notifications = [
         { id: 1, text: "New question on 'Fresh Carrots'", time: "2 mins ago" },
         { id: 2, text: "Bargain request: Rs. 2000 for Potatoes", time: "1 hour ago" }
@@ -45,7 +89,6 @@ export default function SellerDashboard() {
 
     return (
         <div style={styles.container}>
-
             {/* Sidebar */}
             <aside style={styles.sidebar}>
                 <h2 style={styles.logo}>AgroLink<span style={{color: theme.primaryYellow}}>.</span></h2>
@@ -54,13 +97,21 @@ export default function SellerDashboard() {
                     <a style={styles.navItem} href="#">My Products</a>
                     <a style={styles.navItem} href="#">Orders</a>
                     <a style={styles.navItem} href="#">Bargains</a>
+                    
+                    {/* CHAT ITEM WITH YOUR LOGIC-BASED BADGE */}
+                    <a style={{...styles.navItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} href="/chat">
+                        <span>Chat</span>
+                        {navUnread > 0 && (
+                            <span style={styles.badge}>
+                                {navUnread > 99 ? "99+" : navUnread}
+                            </span>
+                        )}
+                    </a>
                 </nav>
             </aside>
 
             {/* Main Content */}
             <main style={styles.main}>
-
-                {/* Header */}
                 <header style={styles.header}>
                     <div>
                         <h1 style={styles.title}>Welcome back, Farmer! 👨‍🌾</h1>
@@ -69,7 +120,6 @@ export default function SellerDashboard() {
                     <button style={styles.createBtn}>+ Add New Product</button>
                 </header>
 
-                {/* Stats Grid */}
                 <div style={styles.statsGrid}>
                     <StatCard label="Total Revenue" value={stats.revenue} icon="💰" highlight={false} />
                     <StatCard label="Pending Orders" value={stats.pendingOrders} icon="📦" highlight={true} />
@@ -77,17 +127,10 @@ export default function SellerDashboard() {
                     <StatCard label="Total Sold" value={stats.soldItems} icon="📈" highlight={false} />
                 </div>
 
-                {/* Widgets Grid */}
                 <div style={styles.widgetsGrid}>
-
-                    {/* Left Column */}
                     <div style={styles.leftCol}>
-
-                        {/* AI Insight */}
                         <div style={styles.card}>
-                            <div style={styles.cardHeader}>
-                                <h3>AI Smart Insight ✨</h3>
-                            </div>
+                            <div style={styles.cardHeader}><h3>AI Smart Insight ✨</h3></div>
                             <div style={styles.aiContent}>
                                 <span style={{fontSize: '40px'}}>{aiInsight.icon}</span>
                                 <div>
@@ -97,49 +140,34 @@ export default function SellerDashboard() {
                             </div>
                         </div>
 
-                        {/* Orders */}
                         <div style={styles.card}>
                             <div style={styles.cardHeader}>
                                 <h3>Recent Orders</h3>
                                 <div style={styles.tabs}>
-                                    <button
-                                        style={activeTab === 'pending' ? styles.activeTab : styles.tab}
-                                        onClick={() => setActiveTab('pending')}
-                                    >To Do</button>
-                                    <button
-                                        style={activeTab === 'completed' ? styles.activeTab : styles.tab}
-                                        onClick={() => setActiveTab('completed')}
-                                    >Completed</button>
+                                    <button style={activeTab === 'pending' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('pending')}>To Do</button>
+                                    <button style={activeTab === 'completed' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('completed')}>Completed</button>
                                 </div>
                             </div>
                             <div style={styles.list}>
-                                {filteredOrders.length > 0 ? (
-                                    filteredOrders.map(order => (
-                                        <div key={order.id} style={styles.listItem}>
-                                            <div>
-                                                <div style={{fontWeight: 'bold'}}>{order.item}</div>
-                                                <div style={{fontSize: '12px', color: '#888'}}>{order.id} • {order.buyer}</div>
-                                            </div>
-                                            <div style={{textAlign: 'right'}}>
-                                                <div style={{fontWeight: 'bold', color: theme.darkGreen}}>{order.price}</div>
-                                                <button style={styles.actionBtn}>View</button>
-                                            </div>
+                                {filteredOrders.map(order => (
+                                    <div key={order.id} style={styles.listItem}>
+                                        <div>
+                                            <div style={{fontWeight: 'bold'}}>{order.item}</div>
+                                            <div style={{fontSize: '12px', color: '#888'}}>{order.id} • {order.buyer}</div>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p style={{padding: '20px', textAlign: 'center', color: '#999'}}>No orders found.</p>
-                                )}
+                                        <div style={{textAlign: 'right'}}>
+                                            <div style={{fontWeight: 'bold', color: theme.darkGreen}}>{order.price}</div>
+                                            <button style={styles.actionBtn}>View</button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-
                     </div>
 
-                    {/* Right Column */}
                     <div style={styles.rightCol}>
                         <div style={styles.card}>
-                            <div style={styles.cardHeader}>
-                                <h3>Notifications 🔔</h3>
-                            </div>
+                            <div style={styles.cardHeader}><h3>Notifications 🔔</h3></div>
                             <div style={styles.list}>
                                 {notifications.map(notif => (
                                     <div key={notif.id} style={styles.notifItem}>
@@ -150,7 +178,6 @@ export default function SellerDashboard() {
                             </div>
                         </div>
                     </div>
-
                 </div>
             </main>
         </div>
@@ -174,147 +201,39 @@ function StatCard({ label, value, icon, highlight }: { label: string, value: str
 
 // Styles
 const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        display: 'flex',
-        minHeight: '100vh',
-        fontFamily: "'Inter', sans-serif",
-        backgroundColor: theme.lightGray
-    },
-    sidebar: {
-        width: '250px',
-        backgroundColor: theme.darkGreen,
-        color: theme.white,
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column'
-    },
-    logo: {
-        fontSize: '24px',
-        marginBottom: '40px',
-        color: theme.white
-    },
+    container: { display: 'flex', minHeight: '100vh', fontFamily: "'Inter', sans-serif", backgroundColor: theme.lightGray },
+    sidebar: { width: '250px', backgroundColor: theme.darkGreen, color: theme.white, padding: '20px', display: 'flex', flexDirection: 'column' },
+    logo: { fontSize: '24px', marginBottom: '40px', color: theme.white },
     nav: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    navItem: {
-        padding: '12px 15px',
-        color: '#ccc',
-        textDecoration: 'none',
-        borderRadius: '8px',
-        fontSize: '15px',
-        display: 'block'
+    navItem: { padding: '12px 15px', color: '#ccc', textDecoration: 'none', borderRadius: '8px', fontSize: '15px', display: 'block' },
+    activeNav: { backgroundColor: 'rgba(255, 255, 255, 0.1)', color: theme.primaryYellow, fontWeight: 'bold' },
+    badge: {
+        backgroundColor: '#FF4D4D',
+        color: 'white',
+        fontSize: '10px',
+        fontWeight: 'bold',
+        padding: '2px 6px',
+        borderRadius: '10px',
+        marginLeft: '10px'
     },
-    activeNav: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        color: theme.primaryYellow,
-        fontWeight: 'bold'
-    },
-    main: {
-        flex: 1,
-        padding: '30px',
-        overflowY: 'auto'
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px'
-    },
+    main: { flex: 1, padding: '30px', overflowY: 'auto' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
     title: { margin: 0, fontSize: '28px', color: theme.darkGreen },
     subtitle: { margin: '5px 0 0 0', color: theme.textLight },
-    createBtn: {
-        backgroundColor: theme.primaryYellow,
-        color: theme.darkGreen,
-        border: 'none',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        fontSize: '14px'
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        marginBottom: '30px'
-    },
-    statCard: {
-        padding: '20px',
-        borderRadius: '12px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center'
-    },
-    widgetsGrid: {
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: '20px'
-    },
+    createBtn: { backgroundColor: theme.primaryYellow, color: theme.darkGreen, border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' },
+    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' },
+    statCard: { padding: '20px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
+    widgetsGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' },
     leftCol: { display: 'flex', flexDirection: 'column', gap: '20px' },
     rightCol: { display: 'flex', flexDirection: 'column', gap: '20px' },
-    card: {
-        backgroundColor: theme.white,
-        borderRadius: '12px',
-        padding: '20px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-    },
-    cardHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        borderBottom: `1px solid ${theme.lightGray}`,
-        paddingBottom: '10px'
-    },
-    aiContent: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-        backgroundColor: '#F0FFF4',
-        padding: '15px',
-        borderRadius: '8px',
-        border: '1px solid #C6F6D5'
-    },
+    card: { backgroundColor: theme.white, borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' },
+    cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${theme.lightGray}`, paddingBottom: '10px' },
+    aiContent: { display: 'flex', alignItems: 'center', gap: '20px', backgroundColor: '#F0FFF4', padding: '15px', borderRadius: '8px', border: '1px solid #C6F6D5' },
     tabs: { display: 'flex', gap: '10px' },
-    tab: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: '#888',
-        paddingBottom: '5px',
-        fontSize: '14px'
-    },
-    activeTab: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: theme.darkGreen,
-        fontWeight: 'bold',
-        borderBottom: `2px solid ${theme.primaryYellow}`,
-        paddingBottom: '5px',
-        fontSize: '14px'
-    },
+    tab: { background: 'none', border: 'none', cursor: 'pointer', color: '#888', paddingBottom: '5px', fontSize: '14px' },
+    activeTab: { background: 'none', border: 'none', cursor: 'pointer', color: theme.darkGreen, fontWeight: 'bold', borderBottom: `2px solid ${theme.primaryYellow}`, paddingBottom: '5px', fontSize: '14px' },
     list: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    listItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '10px 0',
-        borderBottom: '1px solid #f0f0f0'
-    },
-    actionBtn: {
-        fontSize: '12px',
-        color: theme.darkGreen,
-        backgroundColor: theme.primaryYellow,
-        border: 'none',
-        padding: '5px 10px',
-        borderRadius: '4px',
-        marginTop: '5px',
-        cursor: 'pointer'
-    },
-    notifItem: {
-        padding: '10px',
-        backgroundColor: '#FAFAFA',
-        borderRadius: '6px',
-        borderLeft: `4px solid ${theme.primaryYellow}`
-    }
+    listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f0f0f0' },
+    actionBtn: { fontSize: '12px', color: theme.darkGreen, backgroundColor: theme.primaryYellow, border: 'none', padding: '5px 10px', borderRadius: '4px', marginTop: '5px', cursor: 'pointer' },
+    notifItem: { padding: '10px', backgroundColor: '#FAFAFA', borderRadius: '6px', borderLeft: `4px solid ${theme.primaryYellow}` }
 };

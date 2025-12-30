@@ -50,4 +50,15 @@ public class ChatService {
         // Use the instance variable 'repository', not the Interface name
         repository.markAsRead(senderId, recipientId);
     }
+
+    // ChatService.java
+    public boolean isUserOnline(Long userId) {
+        ChatMessage lastMsg = repository.findFirstBySenderIdOrderByTimestampDesc(userId);
+        if (lastMsg == null) return false;
+
+        // Check if the last sent message was within 10 minutes
+        return lastMsg.getTimestamp().isAfter(LocalDateTime.now().minusMinutes(10));
+    }
+
+
 }
