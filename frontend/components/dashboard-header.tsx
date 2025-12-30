@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Bell, MessageSquare, Package, AlertCircle } from "lucide-react"
+import { Search, Bell, MessageSquare } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -15,23 +15,63 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 
 export function DashboardHeader() {
   const router = useRouter();
-  
-  // Mock notification data - you can later fetch this from your backend
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "New Message", description: "Farmer Sunil sent you a message", icon: MessageSquare, time: "2m ago", unread: true },
-    { id: 2, title: "Order Shipped", description: "Your order #ORD-101 has been shipped", icon: Package, time: "1h ago", unread: true },
-    { id: 3, title: "Stock Alert", description: "Fresh Carrots are back in stock!", icon: AlertCircle, time: "5h ago", unread: false },
-  ]);
+  const [unreadCount, setUnreadCount] = useState(0); // Dynamic unread message count
+  const chatBaseUrl = "http://localhost:8083";
+
+  // 1. WebSocket & Initial Fetch Logic
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    const myId = sessionStorage.getItem("id");
+    if (!token || !myId) return;
+
+    // A. Initial Sync: Calculate total unread using your specific endpoint
+    const syncUnreadCount = async () => {
+      try {
+        const contactsRes = await fetch(`${chatBaseUrl}/api/chat/contacts`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (contactsRes.ok) {
+          const ids: number[] = await contactsRes.json();
+          const unreadCounts = await Promise.all(ids.map(async (senderId) => {
+            const res = await fetch(`${chatBaseUrl}/api/chat/unread-count/${senderId}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : 0;
+          }));
+          setUnreadCount(unreadCounts.reduce((acc, count) => acc + count, 0));
+        }
+      } catch (err) {
+        console.error("Header unread sync failed:", err);
+      }
+    };
+    syncUnreadCount();
+
+    // B. Real-Time Updates: WebSocket listener
+    const socket = new SockJS(`${chatBaseUrl}/ws`);
+    const client = new Client({
+      webSocketFactory: () => socket,
+      onConnect: () => {
+        client.subscribe(`/user/${myId}/queue/messages`, (message) => {
+          // Increment count immediately when a new message hits
+          setUnreadCount((prev) => prev + 1);
+        });
+      },
+    });
+
+    client.activate();
+    return () => { void client.deactivate(); };
+  }, []);
 
   const handleLogout = () => {
     sessionStorage.clear(); 
     router.push("/login"); 
   }
-
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-[#2d5016] text-white">
@@ -52,7 +92,7 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Notification Dropdown */}
+          {/* Real-time Chat Notification Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -62,40 +102,37 @@ export function DashboardHeader() {
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-orange-500 text-[10px] flex items-center justify-center font-bold">
-                    {unreadCount}
+                  <span className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-orange-500 text-[10px] flex items-center justify-center font-bold border-2 border-[#2d5016]">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel className="flex justify-between items-center">
-                <span>Notifications</span>
-                <span className="text-xs font-normal text-gray-500 cursor-pointer hover:underline">Mark all as read</span>
-              </DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? (
-                  notifications.map((n) => (
-                    <DropdownMenuItem key={n.id} className="flex gap-3 p-3 cursor-pointer focus:bg-gray-50">
-                      <div className={`p-2 rounded-full ${n.unread ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
-                        <n.icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <p className={`text-sm ${n.unread ? 'font-semibold' : 'font-normal'}`}>{n.title}</p>
-                        <p className="text-xs text-gray-500 line-clamp-1">{n.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{n.time}</p>
-                      </div>
-                      {n.unread && <div className="h-2 w-2 rounded-full bg-orange-500 self-center" />}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-sm text-gray-500">No new notifications</div>
-                )}
-              </div>
+              {unreadCount > 0 ? (
+                <DropdownMenuItem 
+                  onClick={() => router.push("/chat")}
+                  className="flex gap-3 p-3 cursor-pointer focus:bg-gray-50"
+                >
+                  <div className="p-2 rounded-full bg-orange-100 text-orange-600">
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">New Messages</p>
+                    <p className="text-xs text-gray-500">You have {unreadCount} unread messages</p>
+                  </div>
+                </DropdownMenuItem>
+              ) : (
+                <div className="p-4 text-center text-sm text-gray-500">No new messages</div>
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="justify-center text-xs text-[#2d5016] font-semibold cursor-pointer">
-                View all notifications
+              <DropdownMenuItem 
+                onClick={() => router.push("/chat")}
+                className="justify-center text-xs text-[#2d5016] font-semibold cursor-pointer"
+              >
+                Go to Chat Center
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -103,10 +140,7 @@ export function DashboardHeader() {
           {/* User Account Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex items-center gap-2 text-white hover:bg-white/10 px-2"
-              >
+              <Button variant="ghost" className="flex items-center gap-2 text-white hover:bg-white/10 px-2">
                 <Avatar className="h-8 w-8 border border-white/20">
                   <AvatarImage src="/buyer-dashboard/diverse-user-avatars.png" />
                   <AvatarFallback>BU</AvatarFallback>
@@ -117,16 +151,8 @@ export function DashboardHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Orders</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleLogout} 
-                className="text-red-600 focus:text-red-600 cursor-pointer font-medium"
-              >
-                Log out
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/user-profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 font-medium">Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
