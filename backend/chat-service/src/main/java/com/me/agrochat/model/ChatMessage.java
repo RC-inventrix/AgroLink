@@ -33,5 +33,9 @@ public class ChatMessage {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
+    @Column(nullable = false,name = "deleted_by_sender")
+    private Boolean deletedBySender = false;
 
+    @Column(nullable = false,name = "deleted_by_recipient")
+    private Boolean deletedByRecipient = false;
 }
