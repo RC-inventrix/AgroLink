@@ -18,6 +18,19 @@ export default function ChatPage() {
 
   const baseUrl = "http://localhost:8083"
   const selectedIdRef = useRef(selectedConversationId);
+  
+  // Ref for Auto-Scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Function to move the view to the latest message
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Scroll to bottom whenever messages update or a new chat is selected
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, selectedConversationId]);
 
   // 1. SYNC FUNCTION: Updates PostgreSQL that messages are read
   const syncReadStatus = useCallback(async (senderId: string) => {
@@ -50,7 +63,7 @@ export default function ChatPage() {
     }
   }, [selectedConversationId, messages.length, syncReadStatus]);
 
-  // 3. WebSocket Setup
+  // 3. WebSocket Setup with Real-Time Sorting
   useEffect(() => {
     const socket = new SockJS(`${baseUrl}/ws`); 
     const client = new Client({
@@ -74,8 +87,9 @@ export default function ChatPage() {
               return prev;
             });
 
-            setConversations((prev) => 
-              prev.map(conv => {
+            // Update data and Sort: Move active chat to the top
+            setConversations((prev) => {
+              const updated = prev.map(conv => {
                 if (conv.id.toString() === newMessage.senderId.toString()) {
                   const isChatNotOpen = currentActiveId !== newMessage.senderId.toString();
                   return { 
@@ -83,12 +97,18 @@ export default function ChatPage() {
                     lastMessage: newMessage.content, 
                     timestamp: newMessage.timestamp,
                     unread: isChatNotOpen,
-                    unreadCount: isChatNotOpen ? (conv.unreadCount || 0) + 1 : 0
+                    unreadCount: isChatNotOpen ? (conv.unreadCount || 0) + 1 : 0,
+                    online: true 
                   };
                 }
                 return conv;
-              })
-            );
+              });
+              
+              // Sorting logic: descending by timestamp
+              return [...updated].sort((a, b) => 
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+            });
           });
         }
       },
@@ -99,11 +119,10 @@ export default function ChatPage() {
     return () => { void client.deactivate(); };
   }, [baseUrl]);
 
-  // 4. Fetch Contacts: UPDATED to fetch unread counts per user
+  // 4. Fetch Contacts
   useEffect(() => {
     const fetchContacts = async () => {
       const token = sessionStorage.getItem("token"); 
-      const myId = sessionStorage.getItem("id");
       if (!token) return;
       
       try {
@@ -113,34 +132,39 @@ export default function ChatPage() {
         
         if (res.ok) {
           const ids: number[] = await res.json();
-          
-          // Fetch names from Identity Service
           const nameRes = await fetch(`http://localhost:8081/auth/fullnames?ids=${ids.join(',')}`, {
             method: "GET", headers: { "Authorization": `Bearer ${token}` }
           });
           const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-          // NEW LOGIC: Map contacts and fetch their specific unread counts
           const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
             const unreadRes = await fetch(`${baseUrl}/api/chat/unread-count/${id}`, {
               headers: { "Authorization": `Bearer ${token}` }
             });
             const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
 
+            const statusRes = await fetch(`${baseUrl}/api/chat/status/${id}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            const statusData = statusRes.ok ? await statusRes.json() : { online: false, lastSeen: null };
+
             return {
               id: id.toString(),
               name: fullNameMap[id] || `User ${id}`, 
               lastMessage: "Click to start chatting", 
               avatar: "/buyer-dashboard/farmer-portrait.png",
-              online: !!id, 
-              timestamp: new Date().toISOString(),
+              online: statusData.online,
+              timestamp: statusData.lastSeen || new Date().toISOString(), 
               unread: dbCount > 0,
-              unreadCount: dbCount, // Verified from PostgreSQL
+              unreadCount: dbCount,
               starred: false,
             };
           }));
 
-          setConversations(mapped);
+          // Sort the initial list by most recent
+          setConversations(mapped.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          ));
         }
       } catch (err) { 
         console.error("Fetch contacts error:", err); 
@@ -180,15 +204,16 @@ export default function ChatPage() {
     fetchHistory();
   }, [selectedConversationId, baseUrl]);
 
-  // 6. Handle Sending
+  // 6. Handle Sending with Sorting
   const handleSendMessage = (content: string) => {
     if (stompClient?.connected && selectedConversationId) {
       const myId = sessionStorage.getItem("id");
+      const currentTime = new Date().toISOString();
       const chatMessage = {
         senderId: Number(myId), 
         recipientId: Number(selectedConversationId), 
         content: content,
-        timestamp: new Date().toISOString(),
+        timestamp: currentTime,
         isRead: false 
       };
 
@@ -198,12 +223,17 @@ export default function ChatPage() {
       });
 
       setMessages((prev) => [...prev, { ...chatMessage, id: Date.now().toString(), isCurrentUser: true }]);
-      setConversations((prev) => 
-        prev.map(conv => conv.id === selectedConversationId 
-          ? { ...conv, lastMessage: content, timestamp: chatMessage.timestamp } 
+      
+      // Update local state and move this chat to the top
+      setConversations((prev) => {
+        const updated = prev.map(conv => conv.id === selectedConversationId 
+          ? { ...conv, lastMessage: content, timestamp: currentTime } 
           : conv
-        )
-      );
+        );
+        return [...updated].sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+      });
     }
   };
 
@@ -215,19 +245,35 @@ export default function ChatPage() {
       <DashboardHeader />
       <div className="flex">
         <DashboardNav unreadCount={totalUnread} />
-        <div className="flex h-[calc(100vh-4rem)] flex-1">
+        <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="animate-pulse text-primary font-medium">Loading chats...</div>
+              <div className="animate-pulse text-[#2d5016] font-medium">Loading chats...</div>
             </div>
           ) : (
             <>
-              <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} />
-              {selectedConversation ? (
-                <MessageView conversation={selectedConversation} messages={messages} onSendMessage={handleSendMessage} />
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a contact to start messaging</div>
-              )}
+              <ConversationList 
+                conversations={conversations} 
+                selectedId={selectedConversationId} 
+                onSelect={setSelectedConversationId} 
+              />
+              <div className="flex-1 flex flex-col relative bg-white">
+                {selectedConversation ? (
+                  <div className="flex-1 flex flex-col overflow-y-auto p-4">
+                    <MessageView 
+                      conversation={selectedConversation} 
+                      messages={messages} 
+                      onSendMessage={handleSendMessage} 
+                    />
+                    {/* Empty div acting as the scroll target */}
+                    <div ref={messagesEndRef} className="h-1" />
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    Select a contact to start messaging
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

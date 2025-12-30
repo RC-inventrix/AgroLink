@@ -3,10 +3,12 @@ package com.agrolink.indentityanduserservice.controller;
 import com.agrolink.indentityanduserservice.dto.AuthResponse;
 import com.agrolink.indentityanduserservice.dto.LoginRequest;
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
+import com.agrolink.indentityanduserservice.dto.UserUpdateDTO;
 import com.agrolink.indentityanduserservice.model.User;
 import com.agrolink.indentityanduserservice.services.AuthService;
 import com.agrolink.indentityanduserservice.services.JwtService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,7 @@ public class AuthController {
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
+
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
@@ -128,5 +131,13 @@ public class AuthController {
                 ));
 
         return ResponseEntity.ok(fullNameMap);
+    }
+
+    @PutMapping("/profile/update")
+    public ResponseEntity<?> updateProfile(@RequestBody UserUpdateDTO updateDTO, HttpServletRequest request) {
+        // Resolve 'getAttribute' error by importing HttpServletRequest
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(authService.updateUserDetails(userId, updateDTO));
     }
 }

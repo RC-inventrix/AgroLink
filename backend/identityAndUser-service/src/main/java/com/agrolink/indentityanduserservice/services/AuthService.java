@@ -1,6 +1,7 @@
 package com.agrolink.indentityanduserservice.services;
 
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
+import com.agrolink.indentityanduserservice.dto.UserUpdateDTO;
 import com.agrolink.indentityanduserservice.model.Role;
 import com.agrolink.indentityanduserservice.model.User;
 import com.agrolink.indentityanduserservice.repository.UserRepository;
@@ -19,6 +20,8 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+
 
     public  Long getUserIdByEmail(@NotBlank(message = "Username/Email is required") String identifier) {
         // 1. Query the repository for the user by their email/identifier
@@ -70,5 +73,25 @@ public class AuthService {
 
     public List<User> findAllById(List<Long> ids) {
         return userRepository.findAllById(ids);
+    }
+
+    // Inside AuthService.java
+    // Inside AuthService.java
+    public User updateUserDetails(Long userId, UserUpdateDTO updateDTO) {
+        // 1. Find user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 2. Update existing attributes
+        if (updateDTO.getFullname() != null) user.setFullname(updateDTO.getFullname());
+        if (updateDTO.getPhone() != null) user.setPhone(updateDTO.getPhone());
+        if (updateDTO.getAddress() != null) user.setAddress(updateDTO.getAddress());
+        if (updateDTO.getBusinessName() != null) user.setBusinessName(updateDTO.getBusinessName());
+        if (updateDTO.getDistrict() != null) user.setDistrict(updateDTO.getDistrict());
+        if (updateDTO.getZipcode() != null) user.setZipcode(updateDTO.getZipcode());
+        if (updateDTO.getAvatarUrl() != null) user.setAvatarUrl(updateDTO.getAvatarUrl());
+
+        // 3. Save the updated entity to the database
+        return userRepository.save(user);
     }
 }
