@@ -23,6 +23,7 @@
         <module name="orderPayment-service" />
         <module name="config-server" />
         <module name="productCatalog-service" />
+        <module name="identityAndUser-service" />
         <module name="service-discovery" />
       </profile>
       <profile name="Annotation profile for identityAndUser-service" enabled="true">

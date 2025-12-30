@@ -1,67 +1,137 @@
-import React from 'react';
-import { Button } from "@/components/ui/button"; // ඔබේ UI components භාවිතා කිරීම
-import { Card } from "@/components/ui/card";
+"use client"
 
-export default function CartPage() {
-    const cartItems = [
-        { id: 1, name: 'Fresh Carrots', price: 250, qty: '2kg' },
-        { id: 2, name: 'Organic Leeks', price: 180, qty: '1kg' },
-    ];
+import { useState } from "react"
+import { Checkbox } from "@/components/ui/checkbox"
+import Header from "@/components/header"
+import CartItem from "@/components/cart-item"
+import CartSummary from "@/components/cart-summary"
 
-    const subtotal = 680.00;
-    const deliveryFee = 150.00; // Dynamic delivery fee [cite: 89]
-    const total = subtotal + deliveryFee;
+interface Vegetable {
+  id: string
+  name: string
+  image: string
+  pricePerKg: number
+  quantity: number
+  seller: string
+  selected: boolean
+}
 
-    return (
-        <div className="min-h-screen bg-[#04000B] text-white p-6">
-            <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8 text-[#FFFFFF]">Shopping Cart</h1>
+const vegetables: Vegetable[] = [
+  {
+    id: "1",
+    name: "Fresh Tomatoes",
+    image: "/fresh-red-tomatoes.jpg",
+    pricePerKg: 120,
+    quantity: 2.5,
+    seller: "Green Valley Farms",
+    selected: false,
+  },
+  {
+    id: "2",
+    name: "Organic Carrots",
+    image: "/fresh-orange-carrots.jpg",
+    pricePerKg: 80,
+    quantity: 1.8,
+    seller: "Nature's Harvest",
+    selected: false,
+  },
+  {
+    id: "3",
+    name: "Fresh Spinach",
+    image: "/fresh-green-spinach-leaves.jpg",
+    pricePerKg: 150,
+    quantity: 1.2,
+    seller: "Organic Greens Co.",
+    selected: false,
+  },
+  {
+    id: "4",
+    name: "Bell Peppers",
+    image: "/fresh-colorful-bell-peppers.jpg",
+    pricePerKg: 200,
+    quantity: 2.0,
+    seller: "Farm Fresh Direct",
+    selected: false,
+  },
+  {
+    id: "5",
+    name: "Broccoli",
+    image: "/fresh-green-broccoli.jpg",
+    pricePerKg: 110,
+    quantity: 1.5,
+    seller: "Green Valley Farms",
+    selected: false,
+  },
+  {
+    id: "6",
+    name: "Onions",
+    image: "/fresh-yellow-onions.jpg",
+    pricePerKg: 60,
+    quantity: 3.0,
+    seller: "Nature's Harvest",
+    selected: false,
+  },
+]
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Cart Items List */}
-                    <div className="lg:col-span-2 space-y-4">
-                        {cartItems.map((item) => (
-                            <Card key={item.id} className="bg-[#03230F] border-gray-800 p-4 flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-gray-700 rounded-md"></div>
-                                    <div>
-                                        <h3 className="text-xl font-semibold text-white">{item.name}</h3>
-                                        <p className="text-gray-400">Quantity: {item.qty}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[#EEC044] font-bold text-lg text-[#EEC044]">Rs. {item.price}.00</p>
-                                    <button className="text-red-500 text-sm hover:underline">Remove</button>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
+export default function Cart() {
+  const [items, setItems] = useState<Vegetable[]>(vegetables)
 
-                    {/* Order Summary Section [cite: 76, 139] */}
-                    <Card className="bg-[#03230F] p-6 border-[#EEC044]/20 h-fit">
-                        <h2 className="text-2xl font-semibold mb-6 text-white">Order Summary</h2>
-                        <div className="space-y-4 text-gray-300">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>Rs. {subtotal}.00</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Delivery Fee</span>
-                                <span>Rs. {deliveryFee}.00</span>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4 flex justify-between text-xl font-bold text-white">
-                                <span>Total</span>
-                                <span className="text-[#EEC044]">Rs. {total}.00</span>
-                            </div>
-                        </div>
-                        {/* Custom Button Color [cite: 88] */}
-                        <Button className="w-full bg-[#EEC044] text-[#04000B] hover:bg-[#d4ac3d] font-bold mt-8">
-                            PROCEED TO CHECKOUT
-                        </Button>
-                    </Card>
-                </div>
+  const toggleItem = (id: string) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)))
+  }
+
+  const selectedItems = items.filter((item) => item.selected)
+  const totalPrice = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
+
+  const handleSelectAll = (checked: boolean) => {
+    setItems(items.map((item) => ({ ...item, selected: checked })))
+  }
+
+  const handleCheckout = () => {
+    if (selectedItems.length === 0) {
+      alert("Please select at least one item")
+      return
+    }
+    alert(`Proceeding to checkout with Rs. ${totalPrice.toFixed(2)}`)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">Your Cart</h1>
+        <p className="mb-8 text-gray-600">Select items and review your order</p>
+
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Cart Items Section */}
+          <div className="lg:col-span-2">
+            <div className="rounded-lg border border-gray-200 bg-white p-6">
+              {/* Select All */}
+              <div className="mb-6 flex items-center gap-3 pb-6 border-b border-gray-200">
+                <Checkbox
+                  id="select-all"
+                  checked={items.length > 0 && selectedItems.length === items.length}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all" className="cursor-pointer font-semibold text-gray-900">
+                  Select All Items ({items.length})
+                </label>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <CartItem key={item.id} item={item} onToggle={toggleItem} />
+                ))}
+              </div>
             </div>
+          </div>
 
+          {/* Summary Section */}
+          <CartSummary selectedItems={selectedItems} totalPrice={totalPrice} onCheckout={handleCheckout} />
         </div>
-    );
+      </main>
+    </div>
+  )
 }
