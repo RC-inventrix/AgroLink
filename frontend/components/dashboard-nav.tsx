@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/buyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/buyer/browse", label: "Browse Products", icon: ShoppingBag },
-  { href: "/buyer/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/listingsVeg", label: "Browse Products", icon: ShoppingBag },
+  { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/buyer/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/buyer/orders", label: "My Orders", icon: Package },
+  { href: "/buyer/order-history", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
   { href: "/chat", label: "Chat", icon: MessageSquare },
