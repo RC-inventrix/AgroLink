@@ -1,6 +1,7 @@
 package com.agrolink.orderpaymentservice.Controller;
 
 import com.agrolink.orderpaymentservice.model.Order;
+import com.agrolink.orderpaymentservice.model.OrderStatus;
 import com.agrolink.orderpaymentservice.service.OrderService;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
@@ -68,7 +69,7 @@ public class PaymentController {
             order.setStripeId(session.getId());
             order.setAmount(session.getAmountTotal());
             order.setCurrency(session.getCurrency());
-            order.setStatus("CREATED");
+            order.setStatus(OrderStatus.CREATED);
             order.setItemsJson(dynamicItemsJson); // <--- Saving real details
 
             orderService.createOrder(order);
