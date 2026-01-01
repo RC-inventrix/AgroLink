@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -32,39 +33,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF for stateful JWT communication
                 .csrf(AbstractHttpConfigurer::disable)
-                // Re-enable CORS with the custom configuration source defined below
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // FIX: The .cors() line is REMOVED completely because the API Gateway handles it now.
                 .authorizeHttpRequests(auth -> auth
-                        // Permit all auth-related endpoints (login/register)
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // Standard JWT filter implementation
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Explicitly allow your React frontend origin
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        // Allow common HTTP methods used in your agricultural platform
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // Allow all headers to prevent preflight check failures
-        configuration.setAllowedHeaders(List.of("*"));
-        // Allow credentials (like cookies or auth headers)
-        configuration.setAllowCredentials(true);
-        // Expose the Authorization header so React can read the JWT if needed
-        configuration.setExposedHeaders(List.of("Authorization"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean
