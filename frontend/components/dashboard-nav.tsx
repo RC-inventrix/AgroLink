@@ -3,29 +3,26 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard,
-  ShoppingBag,
-  ShoppingCart,
-  Heart,
-  Package,
-  TrendingUp,
-  FileText,
-  MessageSquare,
+  LayoutDashboard, ShoppingBag, ShoppingCart, Heart, Package, TrendingUp, FileText, MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/buyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/listingsVeg", label: "Browse Products", icon: ShoppingBag },
-  { href: "/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/buyer/browse", label: "Browse Products", icon: ShoppingBag },
+  { href: "/buyer/cart", label: "Cart", icon: ShoppingCart },
   { href: "/buyer/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/buyer/order-history", label: "My Orders", icon: Package },
+  { href: "/buyer/orders", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
-  { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
 ]
 
-export function DashboardNav() {
+interface DashboardNavProps {
+  unreadCount?: number;
+}
+
+export function DashboardNav({ unreadCount = 0 }: DashboardNavProps) {
   const pathname = usePathname()
 
   return (
@@ -46,7 +43,15 @@ export function DashboardNav() {
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
-              <Icon className="h-5 w-5" />
+              <div className="relative">
+                <Icon className="h-5 w-5" />
+                {/* Unread badge logic */}
+                {item.label === "Chat" && unreadCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </div>
               {item.label}
             </Link>
           )
