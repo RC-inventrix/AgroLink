@@ -1,71 +1,54 @@
 package com.agrolink.orderpaymentservice.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-
 
 @Entity
-@Table(name = "orders")
+@Table(name = "shop_orders") // "orders" is a reserved SQL keyword; "shop_orders" is safer.
+@Data // Generates Getters, Setters, ToString, EqualsAndHashCode automatically
+@NoArgsConstructor // Required by JPA
+@AllArgsConstructor
+@Builder // Allows you to build objects like: Order.builder().amount(100).build();
 public class Order {
-    @Setter
-    @Getter
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Setter
-    @Getter
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     // Stripe payment/checkout/session id
-    @Setter
-    @Getter
     @Column(name = "stripe_id", nullable = false, unique = true)
     private String stripeId;
 
-    @Setter
-    @Getter
     @Column(nullable = false)
-    private Long amount; // cents
+    private Long amount; // stored in cents (e.g., $10.00 -> 1000)
 
-    @Setter
-    @Getter
     @Column(nullable = false)
     private String currency;
 
-    @Setter
-    @Getter
     @Column(name = "customer_email")
     private String customerEmail;
 
-    // Inside Order.java
-    @Setter
-    @Getter
     @Column(name = "customer_name")
     private String customerName;
 
-    // JSON representation of order items (or replace with relation)
-    @Setter
-    @Getter
-    @Column(name = "items_json", columnDefinition = "text")
+    // Stores items as a JSON string (e.g., "[{'id':1, 'qty':2}, ...]")
+    @Column(name = "items_json", columnDefinition = "TEXT")
     private String itemsJson;
 
-    @Setter
-    @Getter
-    @Column(name = "status")
-    private String status; // e.g. CREATED, PAID, CONFIRMED
+    // FIX: Use Enum instead of String for type safety
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status;
 
-    @Setter
-    @Getter
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = ZonedDateTime.now(ZoneId.of("Asia/Colombo")).toLocalDateTime();
-
+    // FIX: Use Hibernate's @CreationTimestamp or JPA's @CreatedDate
+    // This automatically sets the time when saved.
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 }
-
