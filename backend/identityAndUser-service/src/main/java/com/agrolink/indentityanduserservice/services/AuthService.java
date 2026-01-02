@@ -5,6 +5,7 @@ import com.agrolink.indentityanduserservice.dto.UserUpdateDTO;
 import com.agrolink.indentityanduserservice.model.Role;
 import com.agrolink.indentityanduserservice.model.User;
 import com.agrolink.indentityanduserservice.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -75,23 +76,22 @@ public class AuthService {
         return userRepository.findAllById(ids);
     }
 
-    // Inside AuthService.java
-    // Inside AuthService.java
+    @Transactional
     public User updateUserDetails(Long userId, UserUpdateDTO updateDTO) {
         // 1. Find user by ID
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Update existing attributes
+
         if (updateDTO.getFullname() != null) user.setFullname(updateDTO.getFullname());
         if (updateDTO.getPhone() != null) user.setPhone(updateDTO.getPhone());
         if (updateDTO.getAddress() != null) user.setAddress(updateDTO.getAddress());
         if (updateDTO.getBusinessName() != null) user.setBusinessName(updateDTO.getBusinessName());
         if (updateDTO.getDistrict() != null) user.setDistrict(updateDTO.getDistrict());
         if (updateDTO.getZipcode() != null) user.setZipcode(updateDTO.getZipcode());
-        if (updateDTO.getAvatarUrl() != null) user.setAvatarUrl(updateDTO.getAvatarUrl());
+//        if (updateDTO.getAvatarUrl() != null) user.setAvatarUrl(updateDTO.getAvatarUrl());
 
-        // 3. Save the updated entity to the database
+
         return userRepository.save(user);
     }
 }

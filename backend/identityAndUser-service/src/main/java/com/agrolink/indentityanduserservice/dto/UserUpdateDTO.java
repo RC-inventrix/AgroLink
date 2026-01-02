@@ -13,7 +13,7 @@ public class UserUpdateDTO {
     private String businessName;
     private String district;
     private String zipcode;
-    private String AvatarUrl;
+//    private String AvatarUrl;
 
 
 }

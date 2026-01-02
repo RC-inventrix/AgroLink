@@ -133,11 +133,36 @@ public class AuthController {
         return ResponseEntity.ok(fullNameMap);
     }
 
+    @GetMapping("/user/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        // We use the existing AuthService to find the user by ID
+        // Since you already have a findAllById method, we can use it like this:
+        return service.findAllById(java.util.Collections.singletonList(id))
+                .stream()
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PutMapping("/profile/update")
     public ResponseEntity<?> updateProfile(@RequestBody UserUpdateDTO updateDTO, HttpServletRequest request) {
-        // Resolve 'getAttribute' error by importing HttpServletRequest
-        Long userId = (Long) request.getAttribute("userId");
+        // 1. Safely extract and convert the userId from the request attribute
+        Object userIdObj = request.getAttribute("userId");
 
-        return ResponseEntity.ok(authService.updateUserDetails(userId, updateDTO));
+        if (userIdObj == null) {
+            return ResponseEntity.status(401).body("User ID not found in security context");
+        }
+
+        // Use Number to handle potential Integer-to-Long casting issues
+        Long userId = Long.valueOf(userIdObj.toString());
+
+        try {
+            User updatedUser = service.updateUserDetails(userId, updateDTO);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            // Log the actual error to your terminal to see specific DB or mapping issues
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Update failed: " + e.getMessage());
+        }
     }
 }
