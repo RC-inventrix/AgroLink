@@ -1,7 +1,8 @@
 package com.agrolink.productcatalogservice.service;
 
 import com.agrolink.productcatalogservice.dto.ProductRequestDTO;
-import com.agrolink.productcatalogservice.model.PricingType;
+import com.agrolink.productcatalogservice.model.PriceType;
+
 import com.agrolink.productcatalogservice.model.Product;
 import com.agrolink.productcatalogservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,7 @@ public class ProductService {
                 .category(request.getCategory())
                 .quantity(request.getQuantity())
                 // Convert String "FIXED" -> Enum FIXED
-                .pricingType(PricingType.valueOf(request.getPricingType().toUpperCase()))
+                .pricingType(PriceType.valueOf(request.getPricingType().toUpperCase()))
                 .fixedPrice(request.getFixedPrice())
                 .biddingPrice(request.getBiddingPrice())
                 .description(request.getDescription())
