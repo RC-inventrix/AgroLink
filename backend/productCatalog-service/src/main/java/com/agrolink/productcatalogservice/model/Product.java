@@ -24,7 +24,7 @@ public class Product {
     private double quantity;
 
     @Enumerated(EnumType.STRING)
-    private PricingType pricingType;
+    private PriceType pricingType;
 
     private Double fixedPrice;
     private Double biddingPrice;
