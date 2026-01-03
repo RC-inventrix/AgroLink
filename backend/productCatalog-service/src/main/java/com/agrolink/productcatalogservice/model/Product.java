@@ -2,18 +2,18 @@ package com.agrolink.productcatalogservice.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Builder;
-import java.time.LocalDateTime; // Correct type for Dates
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
 @Table(name = "products")
-@Data // Generates Getters, Setters, toString, equals, and hashCode automatically
-@NoArgsConstructor // Generates a constructor with no arguments (Required by JPA)
-@AllArgsConstructor // Generates a constructor with all arguments
-@Builder // Helps you create objects easily in testing
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,17 +24,20 @@ public class Product {
     private double quantity;
 
     @Enumerated(EnumType.STRING)
-    private PriceType pricingType;
+    private PriceType pricingType; // FIXED or BIDDING
 
     private Double fixedPrice;
     private Double biddingPrice;
-
-    // FIX: Use LocalDateTime instead of String for date math/sorting
     private LocalDateTime biddingStartDate;
     private LocalDateTime biddingEndDate;
 
     @Column(length = 1000)
     private String description;
+
+    // --- NEW DELIVERY FIELDS ---
+    private Boolean deliveryAvailable; // True if seller delivers
+    private Double deliveryFeeFirst3Km; // Price for first 3 km
+    private Double deliveryFeePerKm;    // Price per extra km
 
     @ElementCollection
     private List<String> images;
