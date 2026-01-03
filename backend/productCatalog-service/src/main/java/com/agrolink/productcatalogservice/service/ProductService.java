@@ -43,6 +43,9 @@ public class ProductService {
                 .fixedPrice(request.getFixedPrice())
                 .biddingPrice(request.getBiddingPrice())
                 .description(request.getDescription())
+                .deliveryAvailable(request.getDeliveryAvailable())
+                .deliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km())
+                .deliveryFeePerKm(request.getDeliveryFeePerKm())
                 .images(imageUrls) // Save S3 URLs
                 .build();
 
@@ -77,6 +80,8 @@ public class ProductService {
         product.setBiddingStartDate(updated.getBiddingStartDate());
         product.setBiddingEndDate(updated.getBiddingEndDate());
         product.setDescription(updated.getDescription());
+        product.setDeliveryFeeFirst3Km(updated.getDeliveryFeeFirst3Km());
+        product.setDeliveryFeePerKm(updated.getDeliveryFeePerKm());
 
         // Only update images if the new list is not null (optional logic)
         if (updated.getImages() != null) {
