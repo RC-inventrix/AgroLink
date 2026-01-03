@@ -21,64 +21,45 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final S3Service s3Service; // <--- Inject S3Service
 
-    // 1. INJECT THE UPLOAD DIRECTORY PATH
-    // (Make sure you have file.upload-dir=... in application.properties)
-    @Value("${file.upload-dir}")
-    private String uploadDir;
-
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
-    }
-
-    // 2. THE NEW CREATE METHOD (Handles DTOs + Files)
     public Product createProduct(ProductRequestDTO request) throws IOException {
+        List<String> imageUrls = new ArrayList<>();
 
-        // A. Handle Image Uploads
-        List<String> imageFilenames = new ArrayList<>();
-
+        // 1. Upload Images to S3
         if (request.getImages() != null && !request.getImages().isEmpty()) {
-            // Ensure the directory exists
-            File directory = new File(uploadDir);
-            if (!directory.exists()) {
-                directory.mkdirs(); // Create the folder if it's missing
-            }
-
-            for (MultipartFile image : request.getImages()) {
-                // Generate a unique name to prevent overwriting
-                String filename = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-                // Save to disk
-                image.transferTo(new File(uploadDir + filename));
-                // Add the path to our list
-                imageFilenames.add("/images/" + filename);
+            for (MultipartFile file : request.getImages()) {
+                String url = s3Service.uploadFile(file); // <--- Call S3
+                imageUrls.add(url);
             }
         }
 
-        // B. Map DTO to Entity (Manual Mapping)
+        // 2. Create Product
         Product product = Product.builder()
                 .vegetableName(request.getVegetableName())
                 .category(request.getCategory())
                 .quantity(request.getQuantity())
-                // Convert String "FIXED" -> Enum FIXED
                 .pricingType(PriceType.valueOf(request.getPricingType().toUpperCase()))
                 .fixedPrice(request.getFixedPrice())
                 .biddingPrice(request.getBiddingPrice())
                 .description(request.getDescription())
-                .images(imageFilenames)
+                .deliveryAvailable(request.getDeliveryAvailable())
+                .deliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km())
+                .deliveryFeePerKm(request.getDeliveryFeePerKm())
+                .images(imageUrls) // Save S3 URLs
                 .build();
 
-        // C. Parse Dates Safely
-        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty()) {
+        // 3. Handle Dates
+        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty())
             product.setBiddingStartDate(LocalDateTime.parse(request.getBiddingStartDate()));
-        }
-        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty()) {
-            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
-        }
 
-        // D. Save to DB
+        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
+            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
+
         return productRepository.save(product);
     }
 
+    public List<Product> getAllProducts() { return productRepository.findAll(); }
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new RuntimeException("Product not found with id: " + id);
@@ -99,6 +80,8 @@ public class ProductService {
         product.setBiddingStartDate(updated.getBiddingStartDate());
         product.setBiddingEndDate(updated.getBiddingEndDate());
         product.setDescription(updated.getDescription());
+        product.setDeliveryFeeFirst3Km(updated.getDeliveryFeeFirst3Km());
+        product.setDeliveryFeePerKm(updated.getDeliveryFeePerKm());
 
         // Only update images if the new list is not null (optional logic)
         if (updated.getImages() != null) {
