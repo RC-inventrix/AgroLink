@@ -37,7 +37,16 @@ export default function LoginForm() {
             });
 
             // Parse as JSON to match the AuthResponse DTO from the backend
-            const data = await response.json();
+            let data;
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(text || "Login failed");
+            }
+
 
             if(response.ok){
                 sessionStorage.setItem("token", data.token); 

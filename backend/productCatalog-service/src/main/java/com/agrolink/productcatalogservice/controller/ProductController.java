@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/products")
 @CrossOrigin(origins = "http://localhost:3000") // The VIP Guest List
 @RequiredArgsConstructor // Lombok handles the constructor injection
 public class ProductController {
