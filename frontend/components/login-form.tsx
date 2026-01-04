@@ -2,9 +2,9 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Eye, EyeOff, Leaf, AlertCircle } from "lucide-react" // Added AlertCircle for error icon
+import { Eye, EyeOff, Leaf, AlertCircle } from "lucide-react"
 import RoleSelect from "./role-select"
-import { useRouter } from "next/navigation" // For redirection after login
+import { useRouter } from "next/navigation"
 
 export default function LoginForm() {
     const router = useRouter()
@@ -13,72 +13,77 @@ export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
     const [selectedRole, setSelectedRole] = useState("farmer")
     const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState("") // State to store error messages
+    const [error, setError] = useState("")
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsLoading(true)
-        setError("")
+        e.preventDefault();
+        setIsLoading(true);
+        setError("");
 
         try {
-            const isAdmins = selectedRole === "admin"
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-
-            // Determine endpoint based on role
-            const endpoint = isAdmins ? "/api/admin/login" : "/auth/login"
-
-            // Construct payload matching the Backend DTOs
-            // Admin expects "username", User expects "identifier"
-            const payload = isAdmins
-                ? { username: email, password: password }
-                : { identifier: email, password: password }
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+            const isAdmins = selectedRole === "admin";
+            const endpoint = isAdmins ? "/api/admin/login" : "/auth/login";
+            
+            const payload = isAdmins 
+                ? { username: email, password: password } 
+                : { identifier: email, password: password };
 
             const response = await fetch(`${baseUrl}${endpoint}`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
-            })
+                
+            });
 
-            const responseText = await response.text()
+            // Parse as JSON to match the AuthResponse DTO from the backend
+            let data;
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(text || "Login failed");
+            }
+
+
+            if(response.ok){
+                sessionStorage.setItem("token", data.token); 
+    sessionStorage.setItem("userRole", data.role);
+    sessionStorage.setItem("userEmail", data.email);
+    sessionStorage.setItem("id", data.id);
+            }
 
             if (!response.ok) {
-                // If backend returns 401/403/500, throw error with the message
-                throw new Error(responseText || "Invalid credentials")
+                throw new Error(data.message || "Invalid credentials");
             }
 
-            // LOGIN SUCCESSFUL
-            console.log("Login success:", responseText)
+            // SUCCESSFUL LOGIN
+            // Note: We no longer manually save the token in sessionStorage. 
+            // The browser automatically handles the HttpOnly cookie.
 
-            // Store token if it's a user login (AuthController returns a JWT string)
             if (!isAdmins) {
-                // Ideally store this in a secure HttpOnly cookie, but for now localStorage works for prototypes
-                localStorage.setItem("token", responseText)
-                localStorage.setItem("userRole", selectedRole)
+                // Save the role to help with frontend UI logic/routing
+                sessionStorage.setItem("userRole", data.role);
+                
+                // ROLE-BASED REDIRECTION: Sends user to their specific dashboard
+                if (data.role.toLowerCase() === "buyer") {
+                    router.push("/buyer/dashboard");
+                } else if (data.role.toLowerCase() === "farmer") {
+                    router.push("/seller/dashboard");
+                }
             } else {
-                // AdminController just returns "Login successful" string
-                localStorage.setItem("adminSession", "true")
+                sessionStorage.setItem("adminSession", "true");
+                router.push("/admin/dashboard");
             }
-
-            if(selectedRole == "farmer"){
-                router.push(`/seller/dashboard`)
-            }else if(selectedRole == "buyer"){
-                router.push(`/buyer/dashboard`)
-            }else{
-                router.push(`/admin/dashboard`)
-            }
-            // Redirect user to their dashboard/home
-
-
         } catch (err: any) {
-            console.error("Login failed", err)
-            // Display the error message from the backend (e.g., "Invalid Access")
-            setError(err.message || "Something went wrong. Please try again.")
+            console.error("Login failed", err);
+            setError(err.message || "Something went wrong. Please try again.");
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     return (
         <div className="w-full max-w-md">
@@ -111,20 +116,18 @@ export default function LoginForm() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Role Selection */}
                     <div>
                         <label className="block text-sm font-semibold text-white mb-3">I am a</label>
                         <RoleSelect value={selectedRole} onChange={setSelectedRole} />
                     </div>
 
-                    {/* Email Input */}
                     <div>
                         <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
                             Email Address / Username
                         </label>
                         <input
                             id="email"
-                            type="text" // Changed to text to allow usernames if needed
+                            type="text"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="you@example.com"
@@ -139,7 +142,6 @@ export default function LoginForm() {
                         />
                     </div>
 
-                    {/* Password Input */}
                     <div>
                         <label htmlFor="password" className="block text-sm font-semibold text-white mb-2">
                             Password
@@ -164,14 +166,12 @@ export default function LoginForm() {
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white transition-colors"
-                                aria-label={showPassword ? "Hide password" : "Show password"}
                             >
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                         </div>
                     </div>
 
-                    {/* Forgot Password Link */}
                     <div className="text-right">
                         <a
                             href="#forgot-password"
@@ -182,7 +182,6 @@ export default function LoginForm() {
                         </a>
                     </div>
 
-                    {/* Login Button */}
                     <button
                         type="submit"
                         disabled={isLoading}
@@ -192,7 +191,6 @@ export default function LoginForm() {
                         {isLoading ? "Signing in..." : "Login"}
                     </button>
 
-                    {/* Divider */}
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-600"></div>
@@ -202,7 +200,6 @@ export default function LoginForm() {
                         </div>
                     </div>
 
-                    {/* Registration Link */}
                     <div className="text-center">
                         <p className="text-sm text-gray-300">
                             Don't have an account?{" "}
@@ -218,7 +215,6 @@ export default function LoginForm() {
                 </form>
             </div>
 
-            {/* Footer */}
             <div className="mt-8 text-center text-xs text-muted-foreground">
                 <p>Protected by industry-leading security</p>
             </div>
