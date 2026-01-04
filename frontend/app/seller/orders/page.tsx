@@ -1,4 +1,4 @@
-import { Header } from "@/components/header"
+import Header from "@/app/seller/orders/header"
 import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
 
