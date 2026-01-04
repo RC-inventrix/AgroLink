@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AgroLink Real-Time Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        #messageArea { border: 1px solid #ccc; height: 200px; overflow-y: scroll; padding: 10px; margin-top: 10px; }
+        .received { color: blue; }
+        .sent { color: green; text-align: right; }
+    </style>
+</head>
+<body>
+<h2>AgroChat Tester (Port 8083)</h2>
+<div>
+    <input type="text" id="myId" placeholder="Your Name (Alice)">
+    <button onclick="connect()">1. Connect</button>
+</div>
+<br>
+<div>
+    <input type="text" id="toId" placeholder="Recipient (Bob)">
+    <input type="text" id="message" placeholder="Message...">
+    <button onclick="sendMessage()">2. Send Message</button>
+</div>
+
+<div id="messageArea"></div>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var myId = document.getElementById('myId').value;
+        var socket = new SockJS('http://localhost:8083/ws');
+        stompClient = Stomp.over(socket);
+
+        // Ensure the key is 'user', matching UserInterceptor.java
+        stompClient.connect({ 'user': myId }, function (frame) {
+            console.log('Connected as: ' + myId);
+
+            stompClient.subscribe('/user/queue/messages', function (msg) {
+                console.log("INCOMING PACKET:", msg.body);
+                var chatMessage = JSON.parse(msg.body);
+                displayMessage(chatMessage, 'received');
+            });
+        });
+    }
+
+    function sendMessage() {
+        var senderId = document.getElementById('myId').value;
+        var recipientId = document.getElementById('toId').value;
+        var content = document.getElementById('message').value;
+
+        var payload = {
+            senderId: senderId,
+            recipientId: recipientId,
+            content: content
+        };
+
+        stompClient.send("/app/chat.send", {}, JSON.stringify(payload));
+        displayMessage(payload, 'sent'); // Show on our own screen too
+    }
+
+    function displayMessage(msg, type) {
+        var area = document.getElementById("messageArea");
+        var div = document.createElement("div");
+        div.className = type;
+        div.innerHTML = "<b>" + msg.senderId + ":</b> " + msg.content;
+        area.appendChild(div);
+        area.scrollTop = area.scrollHeight;
+    }
+</script>
+</body>
+</html>
