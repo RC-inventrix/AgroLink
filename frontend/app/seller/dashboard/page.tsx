@@ -95,7 +95,7 @@ export default function SellerDashboard() {
                 <h2 style={styles.logo}>AgroLink<span style={{color: theme.primaryYellow}}>.</span></h2>
                 <nav style={styles.nav}>
                     <a style={{...styles.navItem, ...styles.activeNav}} href="#">Dashboard</a>
-                    <a style={styles.navItem} href="#">My Products</a>
+                    <a style={styles.navItem} href="/seller/my-products">My Products</a>
                     <a style={styles.navItem} href="/seller/orders">Orders</a>
                     <a style={styles.navItem} href="#">Bargains</a>
                     
