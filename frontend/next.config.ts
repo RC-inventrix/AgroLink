@@ -1,16 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // 1. Allow images from AWS S3
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'agrolink-dev-images.s3.amazonaws.com',
+                port: '',
+                pathname: '/**',
+            },
+        ],
+    },
+
+    // 2. Your existing API redirects
     async rewrites() {
         return [
             {
-                // 1. Redirect calls from /api/x to http://localhost:8080/x
-                // Example: /api/auth/login -> http://localhost:8080/auth/login
                 source: '/api/:path*',
                 destination: 'http://localhost:8080/:path*',
             },
             {
-                // 2. Catch direct calls to /auth/x just in case
                 source: '/auth/:path*',
                 destination: 'http://localhost:8080/auth/:path*',
             },

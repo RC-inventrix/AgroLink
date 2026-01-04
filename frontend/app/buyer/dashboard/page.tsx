@@ -9,9 +9,6 @@ import {
     MessageSquare,
     TrendingUp,
     Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +20,9 @@ import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Static Mock Data for UI placeholders
+// ... (Keep your Static Mock Data: cartItems, wishlistItems, orders, bargains, itemRequests, notifications as they were) ...
+// (I am omitting the mock data here to save space, keep it exactly as you had it)
+
 const cartItems = [
     { id: 1, name: "Fresh Tomatoes", image: "/buyer-dashboard/red-tomatoes.jpg", quantity: 5 },
     { id: 2, name: "Carrots", image: "/buyer-dashboard/orange-carrots.jpg", quantity: 3 },
@@ -54,25 +53,16 @@ const bargains = {
     rejected: [{ id: 3, product: "Potatoes", image: "/buyer-dashboard/fresh-potatoes.png", offeredPrice: "LKR 300", quantity: "10 kg", status: "rejected" }],
 }
 
-const itemRequests = [
-    { id: 1, farmer: "Emma Organics", farmerAvatar: "/buyer-dashboard/farmer-portrait.png", product: "Organic Spinach", productImage: "/buyer-dashboard/fresh-spinach.png" },
-    { id: 2, farmer: "David Fresh", farmerAvatar: "/buyer-dashboard/farmer-portrait-male.jpg", product: "Cherry Tomatoes", productImage: "/buyer-dashboard/cherry-tomatoes.jpg" },
-]
-
-const notifications = [
-    { id: 1, type: "success", message: "Your bargain for Cabbage was approved!" },
-    { id: 2, type: "info", message: "Emma Organics responded to your item request" },
-    { id: 3, type: "warning", message: "Your order #1234 is pending payment" },
-]
-
 export default function BuyerDashboard() {
     const [firstName, setFirstName] = useState("User")
     const [navUnread, setNavUnread] = useState(0)
     const [liveChats, setLiveChats] = useState<any[]>([])
     const [isLoadingChats, setIsLoadingChats] = useState(true)
 
-    const authBaseUrl = "http://localhost:8081"
-    const chatBaseUrl = "http://localhost:8083"
+    // --- FIX: Point EVERYTHING to the API Gateway (Port 8080) ---
+    const authBaseUrl = "http://localhost:8080"
+    const chatBaseUrl = "http://localhost:8080"
+    // ------------------------------------------------------------
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -82,6 +72,7 @@ export default function BuyerDashboard() {
         // 1. Fetch User Name
         const fetchUserName = async () => {
             try {
+                // Gateway forwards "/auth/me" -> Identity Service
                 const response = await fetch(`${authBaseUrl}/auth/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -95,10 +86,11 @@ export default function BuyerDashboard() {
         // 2. Fetch Unread Count & Recent Chats
         const syncDashboardData = async () => {
             try {
+                // Gateway forwards "/api/chat/..." -> Chat Service
                 const res = await fetch(`${chatBaseUrl}/api/chat/contacts`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                
+
                 if (res.ok) {
                     const ids: number[] = await res.json();
                     if (ids.length === 0) {
@@ -121,10 +113,8 @@ export default function BuyerDashboard() {
                         return { id: senderId, name: fullNameMap[senderId] || `Farmer ${senderId}`, count };
                     }));
 
-                    // Set Sidebar Badge
                     setNavUnread(data.reduce((acc, curr) => acc + curr.count, 0));
 
-                    // Set Chat Widget Previews (limit to top 3)
                     setLiveChats(data.slice(0, 3).map(chat => ({
                         id: chat.id.toString(),
                         farmer: chat.name,
@@ -218,7 +208,6 @@ export default function BuyerDashboard() {
                                             </div>
                                         ))}
                                     </TabsContent>
-                                    {/* Additional Tabs (Completed/Cancelled) mapping... */}
                                 </Tabs>
                             </CardContent>
                         </Card>
