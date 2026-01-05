@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ProtectedRoute from "@/components/protected-route"
+import Image from "next/image";
 
 export default function BuyerRegistration() {
     const router = useRouter()
@@ -82,6 +83,15 @@ export default function BuyerRegistration() {
             <div className="h-screen flex bg-white overflow-hidden">
                 <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
                     <div className="relative z-10 flex flex-col px-8 pt-2 md:px-12 md:pt-3 max-w-md mx-auto w-full">
+                        <div className="mb-8 flex justify-center items-left">
+                            <Image
+                                src="/images/Group-6.png"
+                                alt="AgroLink Logo"
+                                width={280}
+                                height={48}
+                                className="h-8 sm:h-12 w-auto"
+                            />
+                        </div>
                         <div className="mb-6">
                             <h1 className="text-4xl font-bold text-white mb-2">Buyer Registration</h1>
                             <p className="text-[#EEC044] text-sm">Step 2: Finish Profile</p>
