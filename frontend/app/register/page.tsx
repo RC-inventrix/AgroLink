@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link" // Added for navigation
 import { Mail, Linkedin, Twitter } from "lucide-react"
+import Image from "next/image";
 
 export default function RegistrationStep1() {
     const router = useRouter()
@@ -63,9 +64,20 @@ export default function RegistrationStep1() {
         <div className="h-screen flex bg-white overflow-hidden">
             <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
                 <div className="relative z-10 flex flex-col px-8 pt-2 md:px-12 md:pt-3 max-w-md mx-auto w-full">
+
+                        <div className="mb-8 flex justify-center items-left">
+                            <Image
+                                src="/images/Group-6.png"
+                                alt="AgroLink Logo"
+                                width={280}
+                                height={48}
+                                className="h-8 sm:h-12 w-auto"
+                            />
+                    </div>
                     <div className="mb-6">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 leading-tight">Registration</h1>
+                        <h3 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h3>
                         <p className="text-[#EEC044] text-sm font-medium">Step 1: Create your account</p>
+
                     </div>
 
                     <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">

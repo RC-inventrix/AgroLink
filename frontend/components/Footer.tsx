@@ -1,10 +1,20 @@
+import Image from "next/image";
+import React from "react";
+
 export default function Footer() {
     return (
-        <footer className="bg-black text-white mt-16">
+        <footer className= "text-white" style={{ backgroundColor: "#03230F" }}>
             <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 px-6 py-10 text-sm">
                 <div>
-                    <h3 className="font-bold mb-2">AgroLink</h3>
-                    <p>There are many variations of passages of lorem ipsum available.</p>
+                    <Image
+                        src="/images/Group-6.png"
+                        alt="AgroLink Logo"
+                        width={150}
+                        height={50}
+                        className="object-contain"
+                        style={{ width: "150px" }}
+                    />
+
                 </div>
 
                 <div>

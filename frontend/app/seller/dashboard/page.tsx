@@ -5,6 +5,7 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
+import Image from "next/image";
 
 // Project Colors
 const theme = {
@@ -18,7 +19,7 @@ const theme = {
 };
 
 export default function SellerDashboard() {
-    const [navUnread, setNavUnread] = useState(0); 
+    const [navUnread, setNavUnread] = useState(0);
     const [activeTab, setActiveTab] = useState('pending');
     const baseUrl = "http://localhost:8083";
 
@@ -34,10 +35,10 @@ export default function SellerDashboard() {
                 const contactsRes = await fetch(`${baseUrl}/api/chat/contacts`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-                
+
                 if (contactsRes.ok) {
                     const ids: number[] = await contactsRes.json();
-                    
+
                     // Call your specific unread-count API for every contact
                     const unreadCounts = await Promise.all(ids.map(async (senderId) => {
                         const res = await fetch(`${baseUrl}/api/chat/unread-count/${senderId}`, {
@@ -58,7 +59,7 @@ export default function SellerDashboard() {
         syncGlobalUnread();
 
         // 2. Real-time updates via WebSockets
-        const socket = new SockJS(`${baseUrl}/ws`); 
+        const socket = new SockJS(`${baseUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
             onConnect: () => {
@@ -92,13 +93,23 @@ export default function SellerDashboard() {
         <div style={styles.container}>
             {/* Sidebar */}
             <aside style={styles.sidebar}>
-                <h2 style={styles.logo}>AgroLink<span style={{color: theme.primaryYellow}}>.</span></h2>
+                <Image
+                    src="/images/Group-6.png"
+                    alt="AgroLink Logo"
+                    width={150}
+                    height={50}
+                    className="object-contain"
+                    style={{ width: "150px", paddingBottom: "20px" , alignItems:"center"}}
+                />
+
+
+
                 <nav style={styles.nav}>
                     <a style={{...styles.navItem, ...styles.activeNav}} href="#">Dashboard</a>
                     <a style={styles.navItem} href="/seller/my-products">My Products</a>
                     <a style={styles.navItem} href="/seller/orders">Orders</a>
                     <a style={styles.navItem} href="#">Bargains</a>
-                    
+
                     {/* CHAT ITEM WITH YOUR LOGIC-BASED BADGE */}
                     <a style={{...styles.navItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} href="/chat">
                         <span>Chat</span>
@@ -182,6 +193,7 @@ export default function SellerDashboard() {
                             </div>
                         </div>
                     </div>
+
                 </div>
             </main>
         </div>
