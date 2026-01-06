@@ -19,12 +19,10 @@ export default function Header() {
                 {/* Navigation */}
                 <nav className="space-x-6 text-sm">
                     <a href="/" className="hover:text-yellow-300 transition">Home</a>
-                    <a href="#" className="hover:text-yellow-300 transition">About</a>
-                    <a href="#" className="hover:text-yellow-300 transition">Services</a>
-                    <a href="#" className="hover:text-yellow-300 transition">Projects</a>
-                    <a href="#" className="hover:text-yellow-300 transition">News</a>
-                    <a href="#" className="hover:text-yellow-300 transition">Shop</a>
-                    <a href="#" className="hover:text-yellow-300 transition">Contact</a>
+                    <a href="#" className="hover:text-yellow-300 transition">Features</a>
+                    <a href="#" className="hover:text-yellow-300 transition">About Us</a>
+
+
                 </nav>
 
             </div>

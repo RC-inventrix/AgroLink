@@ -6,6 +6,10 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
 import Image from "next/image";
+import DashboardHeader from "@/app/seller/dashboard/Header";
+
+
+
 
 // Project Colors
 const theme = {
@@ -90,9 +94,15 @@ export default function SellerDashboard() {
     const filteredOrders = orders.filter(order => order.status === activeTab);
 
     return (
+
+
+<div>
+    <DashboardHeader/>
         <div style={styles.container}>
+
             {/* Sidebar */}
             <aside style={styles.sidebar}>
+
                 <Image
                     src="/images/Group-6.png"
                     alt="AgroLink Logo"
@@ -122,8 +132,10 @@ export default function SellerDashboard() {
                 </nav>
             </aside>
 
+
             {/* Main Content */}
             <main style={styles.main}>
+
                 <header style={styles.header}>
                     <div>
                         <h1 style={styles.title}>Welcome back, Farmer! 👨‍🌾</h1>
@@ -197,6 +209,7 @@ export default function SellerDashboard() {
                 </div>
             </main>
         </div>
+</div>
     );
 }
 
@@ -213,7 +226,9 @@ function StatCard({ label, value, icon, highlight }: { label: string, value: str
             <div style={{fontSize: '13px', opacity: 0.8}}>{label}</div>
         </div>
     );
+
 }
+
 
 // Styles
 const styles: { [key: string]: React.CSSProperties } = {
