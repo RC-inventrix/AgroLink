@@ -74,10 +74,10 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-[#2d5016] text-white">
+    <header className="sticky top-0 z-50 border-b bg-[#03230F] text-white">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-2">
-          <Image src="/buyer-dashboard/agro-logo.png" alt="Agro Logo" width={120} height={40} className="h-10 w-auto" />
+          <Image src="/buyer-dashboard/Group-6.png" alt="Agro Logo" width={120} height={40} className="h-10 w-auto" />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-8">
