@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ProtectedRoute from "@/components/protected-route"
 import { X, Check, AlertCircle } from "lucide-react"

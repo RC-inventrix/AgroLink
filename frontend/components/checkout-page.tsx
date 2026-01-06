@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Edit2, ShoppingBag, X, Check, AlertCircle, Loader2 } from "lucide-react"
 import { VegetableItem } from "@/components/vegetable-item"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export function CheckoutPage() {
     // State for items loaded from Cart
@@ -16,6 +17,10 @@ export function CheckoutPage() {
         message: string;
         type: 'success' | 'error' | 'loading';
     } | null>(null);
+    // State for Payment Method (Default to 'card')
+    const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card")
+
+    const router = useRouter()
 
     const [address] = useState({
         street: "123 Farm Road, Green Valley",
@@ -55,7 +60,7 @@ export function CheckoutPage() {
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.pricePerKg, 0)
     const total = subtotal + 30 
 
-    // 2. Handle Payment Trigger
+    // 2. Handle Payment Trigger (Logic for BOTH Card and Cash)
     const handleProceedToPayment = async () => {
         setLoading(true)
         setNotification({ message: "Preparing your secure payment session...", type: 'loading' });
@@ -63,9 +68,27 @@ export function CheckoutPage() {
         const userId = sessionStorage.getItem("id") || "1"
 
         try {
+            // --- OPTION A: CASH ON DELIVERY ---
+            if (paymentMethod === "cash") {
+                // Call Backend to create order & clear cart FIRST
+                const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
+                    method: "POST",
+                })
+
+                if (response.ok) {
+                    // Only redirect if backend saved it successfully
+                    router.push("/buyer/order-success")
+                } else {
+                    console.error("Failed to place COD order")
+                    alert("Failed to place order. Please try again.")
+                }
+                return
+            }
+
+            // --- OPTION B: CARD PAYMENT (STRIPE) ---
             const response = await fetch(`http://localhost:8080/api/payment/create-checkout-session?userId=${userId}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
             })
 
             if (response.ok) {
@@ -155,19 +178,15 @@ export function CheckoutPage() {
                     </div>
                     <div className="space-y-4">
                         {cartItems.length === 0 ? (
-                            <div className="text-center py-10 bg-muted/20 rounded-lg border border-dashed">
-                                <p className="text-muted-foreground">No items to checkout. Go back to cart?</p>
-                            </div>
+                            <p>No items to checkout.</p>
                         ) : (
-                            cartItems.map((item) => (
-                                <VegetableItem key={item.id} item={item} />
-                            ))
+                            cartItems.map((item) => <VegetableItem key={item.id} item={item} />)
                         )}
                     </div>
                 </div>
 
-                {/* Summary Section */}
-                <Card className="p-6 border-2 bg-card shadow-lg">
+                {/* Order Summary & Payment Method */}
+                <Card className="p-6 border-2 bg-card">
                     <h2 className="text-xl font-semibold text-foreground mb-4">Order Summary</h2>
                     <div className="space-y-3 mb-6">
                         <div className="flex justify-between text-muted-foreground">
@@ -185,22 +204,55 @@ export function CheckoutPage() {
                         </div>
                     </div>
 
+                    <div className="mb-6 p-4 border border-border rounded-lg">
+                        <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
+                        <div className="space-y-3">
+                            {/* Card Payment Option */}
+                            <label
+                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
+                                style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="card"
+                                    checked={paymentMethod === "card"}
+                                    onChange={(e) => setPaymentMethod(e.target.value as "card")}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <p className="font-semibold text-foreground">Credit/Debit Card</p>
+                                </div>
+                            </label>
+
+                            {/* Cash on Delivery Option */}
+                            <label
+                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
+                                style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="cash"
+                                    checked={paymentMethod === "cash"}
+                                    onChange={(e) => setPaymentMethod(e.target.value as "card" | "cash")}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <p className="font-semibold text-foreground">Cash on Delivery</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <Button
                         onClick={handleProceedToPayment}
                         disabled={loading || cartItems.length === 0}
                         className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold py-7 text-lg shadow-xl active:scale-95 transition-all"
                         size="lg"
                     >
-                        {loading ? (
-                            <div className="flex items-center gap-2">
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                Processing Payment...
-                            </div>
-                        ) : "Proceed to Payment"}
+                        {loading ? "Processing..." : `Proceed to ${paymentMethod === "card" ? "Payment" : "Order Confirmation"}`}
                     </Button>
-                    <p className="text-center text-xs text-muted-foreground mt-4">
-                        Secure transaction powered by Stripe Encryption
-                    </p>
                 </Card>
             </div>
         </div>

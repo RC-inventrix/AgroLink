@@ -160,7 +160,7 @@ export default function ChatPage() {
         
         if (res.ok) {
           const ids: number[] = await res.json();
-          const nameRes = await fetch(`http://localhost:8081/auth/fullnames?ids=${ids.join(',')}`, {
+          const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${ids.join(',')}`, {
             method: "GET", headers: { "Authorization": `Bearer ${token}` }
           });
           const fullNameMap = nameRes.ok ? await nameRes.json() : {};
