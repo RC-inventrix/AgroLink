@@ -109,6 +109,7 @@ export default function DashboardHeader() {
                         <Link href="/" className="hover:text-yellow-300 transition-colors">Home</Link>
                         <Link href="/features" className="hover:text-yellow-300 transition-colors">Features</Link>
                         <Link href="/about" className="hover:text-yellow-300 transition-colors">About Us</Link>
+                        <Link href="/market" className="hover:text-yellow-300 transition-colors">Marketplace</Link>
                     </div>
                 </nav>
 

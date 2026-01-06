@@ -5,7 +5,8 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import Header from "@/components/Header";
+import Image from "next/image";
+import Header from "@/components/header";
 // Project Colors
 const theme = {
     primaryYellow: '#EEC044',
@@ -96,14 +97,14 @@ export default function SellerDashboard() {
             {/* Sidebar */}
             <aside style={styles.sidebar}>
 
-                <Image
+                {/* <Image
                     src="/images/Group-6.png"
                     alt="AgroLink Logo"
                     width={150}
                     height={50}
                     className="object-contain"
                     style={{ width: "150px", paddingBottom: "20px" , alignItems:"center"}}
-                />
+                /> */}
 
 
 
