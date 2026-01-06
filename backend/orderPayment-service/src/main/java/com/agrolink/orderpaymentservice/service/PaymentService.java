@@ -6,6 +6,8 @@ import com.agrolink.orderpaymentservice.model.Order;
 import com.agrolink.orderpaymentservice.model.OrderStatus;
 import com.agrolink.orderpaymentservice.repository.CartRepository;
 import com.agrolink.orderpaymentservice.repository.OrderRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
@@ -27,9 +29,10 @@ public class PaymentService {
 
     private final String FRONTEND_URL = "http://localhost:3000";
 
-    // 1. INJECT THE REPOSITORIES HERE
+    // 1. INJECT REPOSITORIES & OBJECT MAPPER
     private final CartRepository cartRepository;
-    private final OrderRepository orderRepository; // <--- You were missing this line!
+    private final OrderRepository orderRepository;
+    private final ObjectMapper objectMapper; // Spring Boot automatically provides this
 
     @PostConstruct
     public void init() {
@@ -37,12 +40,21 @@ public class PaymentService {
     }
 
     public CheckoutResponse initiateCheckout(Long userId) throws StripeException {
+        // 1. Fetch Cart Items
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
-
         if (cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
+        // 2. Convert Items to JSON String (The Fix)
+        String itemsJson;
+        try {
+            itemsJson = objectMapper.writeValueAsString(cartItems);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error converting cart items to JSON", e);
+        }
+
+        // 3. Build Stripe Session
         SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(FRONTEND_URL + "/buyer/order-success?payment=success")
@@ -65,6 +77,7 @@ public class PaymentService {
                             .build());
         }
 
+        // Add Delivery Fee
         paramsBuilder.addLineItem(
                 SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
@@ -111,7 +124,51 @@ public class PaymentService {
 
         // 2. USE THE INJECTED INSTANCE (lowercase 'o')
         orderRepository.save(order);
+        cartRepository.deleteAll(cartItems);
 
+        return CheckoutResponse.builder()
+                .sessionId(session.getId())
+                .url(session.getUrl())
+                .build();
+        
+    }
+
+    public void processCashOnDelivery(Long userId) {
+        // 1. Fetch Cart Items
+        List<CartItem> cartItems = cartRepository.findByUserId(userId);
+        if (cartItems.isEmpty()) {
+            throw new RuntimeException("Cart is empty");
+        }
+
+        // 2. Convert Items to JSON String (The Fix)
+        String itemsJson;
+        try {
+            itemsJson = objectMapper.writeValueAsString(cartItems);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error converting cart items to JSON", e);
+        }
+
+        // 3. Calculate Total
+        double totalAmount = cartItems.stream()
+                .mapToDouble(item -> item.getPricePerKg() * item.getQuantity())
+                .sum();
+        totalAmount += 30.0; // Delivery Fee
+
+        String fakeStripeId = "COD-" + UUID.randomUUID().toString();
+
+        // 4. Create Order
+        Order order = Order.builder()
+                .userId(userId)
+                .stripeId(fakeStripeId)
+                .amount((long) (totalAmount * 100))
+                .currency("lkr")
+                .status(OrderStatus.COD_CONFIRMED)
+                .itemsJson(itemsJson) // <--- SAVING REAL JSON HERE
+                .build();
+
+        orderRepository.save(order);
+
+        // 5. Clear Cart
         cartRepository.deleteAll(cartItems);
     }
 }
