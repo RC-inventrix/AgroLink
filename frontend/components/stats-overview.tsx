@@ -11,12 +11,12 @@ export function StatsOverview() {
       value: "12",
       color: "bg-blue-50 text-blue-600",
     },
-    {
-      icon: Clock,
-      label: "Average Days Remaining",
-      value: "4.2",
-      color: "bg-orange-50 text-orange-600",
-    },
+    // {
+    //   icon: Clock,
+    //   label: "Average Days Remaining",
+    //   value: "4.2",
+    //   color: "bg-orange-50 text-orange-600",
+    // },
     {
       icon: TrendingUp,
       label: "Total Value",

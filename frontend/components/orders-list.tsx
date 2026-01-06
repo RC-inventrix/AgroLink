@@ -52,21 +52,21 @@ const mockOrders = [
     status: "pending",
     orderNotes: "Fresh picking required",
   },
-  {
-    id: "ORD-004",
-    vegetable: "Red Onions",
-    image: "/red-onions.jpg",
-    quantity: 30,
-    unit: "kg",
-    pricePerUnit: 50,
-    totalPrice: 1500,
-    buyerName: "Neha Gupta",
-    buyerProfile: "neha.gupta@veggie.in",
-    orderedDate: "2025-01-17",
-    completionDeadline: "2025-01-25",
-    status: "delayed",
-    orderNotes: "Bulk order for restaurant",
-  },
+  // {
+  //   id: "ORD-004",
+  //   vegetable: "Red Onions",
+  //   image: "/red-onions.jpg",
+  //   quantity: 30,
+  //   unit: "kg",
+  //   pricePerUnit: 50,
+  //   totalPrice: 1500,
+  //   buyerName: "Neha Gupta",
+  //   buyerProfile: "neha.gupta@veggie.in",
+  //   orderedDate: "2025-01-17",
+  //   completionDeadline: "2025-01-25",
+  //   status: "delayed",
+  //   orderNotes: "Bulk order for restaurant",
+  // },
   {
     id: "ORD-005",
     vegetable: "Bell Peppers (Mixed)",
@@ -143,13 +143,13 @@ export function OrdersList() {
           >
             Processing
           </Button>
-          <Button
-            variant={filterStatus === "delayed" ? "default" : "outline"}
-            onClick={() => setFilterStatus("delayed")}
-            className={filterStatus === "delayed" ? "bg-[#1a5f3f]" : ""}
-          >
-            Delayed
-          </Button>
+          {/*<Button*/}
+          {/*  variant={filterStatus === "delayed" ? "default" : "outline"}*/}
+          {/*  onClick={() => setFilterStatus("delayed")}*/}
+          {/*  className={filterStatus === "delayed" ? "bg-[#1a5f3f]" : ""}*/}
+          {/*>*/}
+          {/*  Delayed*/}
+          {/*</Button>*/}
         </div>
 
         <div className="flex gap-2 items-center">

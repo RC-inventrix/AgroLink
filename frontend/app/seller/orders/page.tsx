@@ -1,6 +1,7 @@
-import Header from "@/app/seller/orders/header"
+
 import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
+import Header from "@/components/header";
 
 export const metadata = {
   title: "Pending Orders - AgroLink",
@@ -10,7 +11,7 @@ export const metadata = {
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header/>
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
