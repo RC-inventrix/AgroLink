@@ -2,14 +2,20 @@
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MapPin, Edit2, ShoppingBag } from "lucide-react"
+import { MapPin, ShoppingBag } from "lucide-react"
 import { VegetableItem } from "@/components/vegetable-item"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export function CheckoutPage() {
     // State for items loaded from Cart
     const [cartItems, setCartItems] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
+
+    // State for Payment Method (Default to 'card')
+    const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card")
+
+    const router = useRouter()
 
     const [address] = useState({
         street: "123 Farm Road, Green Valley",
@@ -21,15 +27,14 @@ export function CheckoutPage() {
     useEffect(() => {
         const storedItems = sessionStorage.getItem("checkoutItems")
         if (storedItems) {
-            // Map the cart data to the structure VegetableItem expects
             const parsedItems = JSON.parse(storedItems)
             const formattedItems = parsedItems.map((item: any) => ({
                 id: item.id,
-                name: item.productName || item.name, // Handle inconsistent naming
+                name: item.productName || item.name,
                 quantity: item.quantity,
                 pricePerKg: item.pricePerKg,
                 deliveryFee: 30, // Default fee
-                image: item.imageUrl || item.image || "/placeholder.svg"
+                image: item.imageUrl || item.image || "/placeholder.svg",
             }))
             setCartItems(formattedItems)
         }
@@ -37,19 +42,35 @@ export function CheckoutPage() {
 
     // Calculate totals
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.pricePerKg, 0)
-    const totalDeliveryFee = cartItems.reduce((sum, item) => sum + (item.deliveryFee || 0), 0) // Should match backend logic
-    const total = subtotal + 30 // Assuming fixed delivery for now, adjust as needed
+    const total = subtotal + 30
 
-    // 2. Handle Payment Trigger
+    // 2. Handle Payment Trigger (Logic for BOTH Card and Cash)
     const handleProceedToPayment = async () => {
         setLoading(true)
         const userId = sessionStorage.getItem("id") || "1"
 
         try {
-            // Call your Spring Boot Gateway -> Payment Service
+            // --- OPTION A: CASH ON DELIVERY ---
+            if (paymentMethod === "cash") {
+                // Call Backend to create order & clear cart FIRST
+                const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
+                    method: "POST",
+                })
+
+                if (response.ok) {
+                    // Only redirect if backend saved it successfully
+                    router.push("/buyer/order-success")
+                } else {
+                    console.error("Failed to place COD order")
+                    alert("Failed to place order. Please try again.")
+                }
+                return
+            }
+
+            // --- OPTION B: CARD PAYMENT (STRIPE) ---
             const response = await fetch(`http://localhost:8080/api/payment/create-checkout-session?userId=${userId}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
             })
 
             if (response.ok) {
@@ -88,7 +109,7 @@ export function CheckoutPage() {
                     <h1 className="text-3xl font-bold text-foreground mb-2">Complete Your Order</h1>
                 </div>
 
-                {/* Address Section (Same as before) */}
+                {/* Address Section */}
                 <Card className="p-6 mb-6 border-2">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -113,13 +134,15 @@ export function CheckoutPage() {
                         <h2 className="text-xl font-semibold text-foreground">Your Items ({cartItems.length})</h2>
                     </div>
                     <div className="space-y-4">
-                        {cartItems.length === 0 ? <p>No items to checkout.</p> : cartItems.map((item) => (
-                            <VegetableItem key={item.id} item={item} />
-                        ))}
+                        {cartItems.length === 0 ? (
+                            <p>No items to checkout.</p>
+                        ) : (
+                            cartItems.map((item) => <VegetableItem key={item.id} item={item} />)
+                        )}
                     </div>
                 </div>
 
-                {/* Summary Section */}
+                {/* Order Summary & Payment Method */}
                 <Card className="p-6 border-2 bg-card">
                     <h2 className="text-xl font-semibold text-foreground mb-4">Order Summary</h2>
                     <div className="space-y-3 mb-6">
@@ -138,15 +161,55 @@ export function CheckoutPage() {
                         </div>
                     </div>
 
+                    <div className="mb-6 p-4 border border-border rounded-lg">
+                        <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
+                        <div className="space-y-3">
+                            {/* Card Payment Option */}
+                            <label
+                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
+                                style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="card"
+                                    checked={paymentMethod === "card"}
+                                    onChange={(e) => setPaymentMethod(e.target.value as "card")}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <p className="font-semibold text-foreground">Credit/Debit Card</p>
+                                </div>
+                            </label>
+
+                            {/* Cash on Delivery Option */}
+                            <label
+                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
+                                style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="cash"
+                                    checked={paymentMethod === "cash"}
+                                    onChange={(e) => setPaymentMethod(e.target.value as "card" | "cash")}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <p className="font-semibold text-foreground">Cash on Delivery</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <Button
                         onClick={handleProceedToPayment}
                         disabled={loading || cartItems.length === 0}
                         className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold py-6"
                         size="lg"
                     >
-                        {loading ? "Processing..." : "Proceed to Payment"}
+                        {loading ? "Processing..." : `Proceed to ${paymentMethod === "card" ? "Payment" : "Order Confirmation"}`}
                     </Button>
-
                 </Card>
             </div>
         </div>
