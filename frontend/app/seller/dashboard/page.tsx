@@ -5,12 +5,7 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import Image from "next/image";
-import DashboardHeader from "@/app/seller/dashboard/Header";
-
-
-
-
+import Header from "@/components/Header";
 // Project Colors
 const theme = {
     primaryYellow: '#EEC044',
@@ -94,12 +89,10 @@ export default function SellerDashboard() {
     const filteredOrders = orders.filter(order => order.status === activeTab);
 
     return (
-
-
-<div>
-    <DashboardHeader/>
+        <>
+        <Header/>
         <div style={styles.container}>
-
+            
             {/* Sidebar */}
             <aside style={styles.sidebar}>
 
@@ -209,7 +202,7 @@ export default function SellerDashboard() {
                 </div>
             </main>
         </div>
-</div>
+        </>
     );
 }
 

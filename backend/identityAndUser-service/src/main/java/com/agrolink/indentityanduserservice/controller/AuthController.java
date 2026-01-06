@@ -57,29 +57,33 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> getToken(@RequestBody LoginRequest authRequest, HttpServletResponse response) {
         try {
+            // 1. Attempt Authentication
             Authentication authenticate = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(authRequest.getIdentifier(), authRequest.getPassword())
             );
 
-            // Inside AuthController.java -> getToken()
-            // Inside AuthController.java -> getToken()
             if (authenticate.isAuthenticated()) {
                 Long userId = service.getUserIdByEmail(authRequest.getIdentifier());
                 UserDetails userDetails = (UserDetails) authenticate.getPrincipal();
                 String role = userDetails.getAuthorities().iterator().next().getAuthority();
                 if(role.startsWith("ROLE_")) role = role.substring(5);
 
-                String token = jwtService.generateToken(authRequest.getIdentifier(),role, (long) userId);
+                String token = jwtService.generateToken(authRequest.getIdentifier(), role, userId);
 
-                // 1. Remove the cookie logic
-                // 2. Return the token in the body
-                return ResponseEntity.ok(new AuthResponse(token, role, authRequest.getIdentifier(),userId));
-
+                return ResponseEntity.ok(new AuthResponse(token, role, authRequest.getIdentifier(), userId));
             } else {
-                return ResponseEntity.status(401).body("Authentication failed");
+                // This part is rarely reached as authenticationManager throws an exception on failure
+                return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password."));
             }
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            // SPECIFIC ERROR: Wrong password or email
+            return ResponseEntity.status(401).body(Map.of("message", "The email or password you entered is incorrect."));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            // GENERAL ERROR: Account locked, disabled, etc.
+            return ResponseEntity.status(403).body(Map.of("message", "Your account is temporarily disabled. Please contact support."));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Invalid credentials: " + e.getMessage());
+            // SERVER ERROR
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected server error occurred. Please try again later."));
         }
     }
 
