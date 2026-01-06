@@ -1,7 +1,9 @@
+"use client"
 
 import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
 import Header from "@/components/header";
+import { useEffect, useState } from "react"
 
 export default function Home() {
     const [orders, setOrders] = useState<any[]>([])
@@ -13,6 +15,7 @@ export default function Home() {
             if (res.ok) {
                 const data = await res.json()
                 setOrders(data)
+                
             }
         } catch (error) {
             console.error("Failed to fetch orders", error)

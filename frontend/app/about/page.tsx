@@ -6,7 +6,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
       
-
+      <Header />
       {/* Hero Section */}
       <section className="bg-[#03230F] text-white py-20">
         <div className="container mx-auto px-4 lg:px-8">
@@ -139,7 +139,7 @@ export default function AboutPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-background">
+      {/* <section className="py-16 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -162,7 +162,7 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-[#03230F]">
@@ -176,12 +176,7 @@ export default function AboutPage() {
                 "Be part of a thriving community connecting farmers and buyers for sustainable, fair-trade agriculture. Start your journey now."
               }
             </p>
-            <Button
-              size="lg"
-              className="bg-[#EEC044] text-[#004d2b] hover:bg-[#c99840] text-lg px-8 py-6 transition-colors"
-            >
-              {"Create an Account"}
-            </Button>
+            
           </div>
         </div>
       </section>

@@ -144,9 +144,7 @@ export default function AgroLinkHome() {
                                         Get Started
                                     </button>
                                 </Link>
-                                <button className="px-6 sm:px-8 py-2 sm:py-3 border-2 border-white text-white rounded-lg font-semibold hover:bg-white/10 transition shadow-lg w-fit text-sm sm:text-base">
-                                    Explore Marketplace
-                                </button>
+                                
                             </div>
                         </div>
                     </div>
