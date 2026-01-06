@@ -1,4 +1,4 @@
-import Header from "@/components/header"
+import Header from "@/components/Header"
 import ProductList from "@/components/product-list"
 
 export default function Page() {
