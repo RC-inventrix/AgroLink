@@ -1,67 +1,65 @@
 package com.agrolink.orderpaymentservice.Controller;
 
-import com.agrolink.orderpaymentservice.service.OrderService;
-import com.stripe.exception.SignatureVerificationException;
+import com.agrolink.orderpaymentservice.model.CartItem;
+import com.agrolink.orderpaymentservice.repository.CartRepository;
 import com.stripe.model.Event;
-import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/stripe")
+@RequestMapping("/api/webhook")
 @RequiredArgsConstructor
-@Slf4j // Adds a logger automatically
 public class StripeWebhookController {
 
-    private final OrderService orderService;
-
     @Value("${STRIPE_WEBHOOK_SECRET}")
-    private String webhookSecret;
+    private String endpointSecret;
 
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(
-            @RequestBody String payload,
-            @RequestHeader("Stripe-Signature") String sigHeader) {
+    private final CartRepository cartRepository;
+
+    @PostMapping
+    public ResponseEntity<String> handleStripeEvent(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader) {
+        if (sigHeader == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing Stripe-Signature Header");
+        }
 
         Event event;
 
         try {
-            // 1. Verify the call is actually from Stripe
-            event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
-        } catch (SignatureVerificationException e) {
-            log.error("Invalid Stripe Signature: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
+            event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
         } catch (Exception e) {
-            log.error("Webhook error: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook error");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook error: " + e.getMessage());
         }
 
-        // 2. Check which event happened
+        // Handle the event
         if ("checkout.session.completed".equals(event.getType())) {
+            Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
 
-            // Extract the session object safely
-            // We cast to StripeObject first, then checking instanceof is safer
-            // but for simplicity, we use the Stripe logic:
-
-            if (event.getDataObjectDeserializer().getObject().isPresent()) {
-                Session session = (Session) event.getDataObjectDeserializer().getObject().get();
-
-                log.info("Payment received for Session ID: {}", session.getId());
-
-                String email = (session.getCustomerDetails() != null) ? session.getCustomerDetails().getEmail() : "unknown@user.com";
-                String name = (session.getCustomerDetails() != null) ? session.getCustomerDetails().getName() : "Unknown User";
-
-                // 3. Update the Database
-                orderService.markAsPaid(session.getId(), email, name);
+            if (session != null) {
+                handlePaymentSuccess(session);
             }
         }
 
         return ResponseEntity.ok("Received");
+    }
+
+    private void handlePaymentSuccess(Session session) {
+        // 1. Get User ID from Client Reference ID
+        String userIdStr = session.getClientReferenceId();
+
+        if (userIdStr != null) {
+            Long userId = Long.parseLong(userIdStr);
+            System.out.println("Payment successful for User ID: " + userId + ". Clearing cart...");
+
+            // 2. Clear the User's Cart
+            List<CartItem> items = cartRepository.findByUserId(userId);
+            cartRepository.deleteAll(items);
+        }
     }
 }
