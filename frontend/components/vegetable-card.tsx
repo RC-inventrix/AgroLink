@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Star, ShoppingCart, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Star, ShoppingCart, Loader2, X, Check, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -18,10 +18,25 @@ interface Vegetable {
 
 export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
     const [adding, setAdding] = useState(false)
+    
+    // --- Custom Notification State ---
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'success' | 'error';
+    } | null>(null);
+
+    // Auto-hide notification after 3 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const handleAddToCart = async () => {
         setAdding(true)
-        const userId = sessionStorage.getItem("id") || "1" // Fallback to "1" for testing if not logged in
+        setNotification(null)
+        const userId = sessionStorage.getItem("id") || "1"
 
         try {
             const res = await fetch("http://localhost:8080/cart/add", {
@@ -32,27 +47,55 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     productId: vegetable.id,
                     productName: vegetable.name,
                     pricePerKg: vegetable.price1kg,
-                    quantity: 1, // Default to 1kg for now
+                    quantity: 1,
                     imageUrl: vegetable.image,
                     sellerName: vegetable.seller
                 })
             })
 
             if (res.ok) {
-                alert("Added to cart!")
+                setNotification({ 
+                    message: `${vegetable.name} added to cart!`, 
+                    type: 'success' 
+                });
             } else {
-                alert("Failed to add to cart")
+                setNotification({ 
+                    message: "Failed to add item. Try again.", 
+                    type: 'error' 
+                });
             }
         } catch (error) {
-            console.error(error)
-            alert("Error connecting to server")
+            setNotification({ 
+                message: "Connection error to cart service.", 
+                type: 'error' 
+            });
         } finally {
             setAdding(false)
         }
     }
 
     return (
-        <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative">
+            
+            {/* --- COMPACT FLOATING NOTIFICATION --- */}
+            {notification && (
+                <div className={`absolute top-2 right-2 z-50 flex items-center gap-2 p-2 px-3 rounded-md shadow-lg border animate-in fade-in slide-in-from-top-2 duration-300 ${
+                    notification.type === 'success' 
+                    ? "bg-[#03230F] border-green-500 text-white" 
+                    : "bg-red-950 border-red-500 text-white"
+                }`}>
+                    {notification.type === 'success' ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                    ) : (
+                        <AlertCircle className="h-4 w-4 text-red-400" />
+                    )}
+                    <span className="text-xs font-medium whitespace-nowrap">{notification.message}</span>
+                    <button onClick={() => setNotification(null)} className="ml-1 opacity-70 hover:opacity-100">
+                        <X className="h-3 w-3" />
+                    </button>
+                </div>
+            )}
+
             <div className="relative h-48 bg-muted overflow-hidden rounded-t-lg">
                 <img
                     src={vegetable.image || "/placeholder.svg"}
@@ -95,7 +138,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                 <Button
                     onClick={handleAddToCart}
                     disabled={adding}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 transition-all active:scale-95"
                 >
                     {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
                     {adding ? "Adding..." : "Add to Cart"}

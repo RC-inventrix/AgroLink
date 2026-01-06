@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation" // For redirection
-import { Eye, Upload, X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Eye, Upload, X, Check, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -15,14 +15,28 @@ export default function VegetableForm() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
 
+    // --- Custom Notification State ---
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'success' | 'error';
+    } | null>(null);
+
+    // Auto-hide notification after 4 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
     // --- Form State ---
     const [formData, setFormData] = useState({
         vegetableName: "",
         category: "",
-        quantity: "", // Added Quantity field state
+        quantity: "",
         pricingType: "fixed",
         fixedPrice: "",
-        biddingPrice: "",      // Added Bidding fields
+        biddingPrice: "",
         biddingStartDate: "",
         biddingEndDate: "",
         description: "",
@@ -35,7 +49,6 @@ export default function VegetableForm() {
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
 
     // --- Handlers ---
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData((prev) => ({ ...prev, [name]: value }))
@@ -68,12 +81,19 @@ export default function VegetableForm() {
         setImagePreviews((prev) => prev.filter((_, i) => i !== index))
     }
 
-    // --- Submit Logic (Connecting to Backend) ---
+    // --- Submit Logic ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
+        setNotification(null)
 
-        // 1. Prepare FormData
+        // Basic Client-side Validation
+        if (images.length === 0) {
+            setNotification({ message: "Please upload at least one image.", type: 'error' });
+            setIsLoading(false);
+            return;
+        }
+
         const data = new FormData()
         data.append("vegetableName", formData.vegetableName)
         data.append("category", formData.category)
@@ -81,7 +101,6 @@ export default function VegetableForm() {
         data.append("pricingType", formData.pricingType.toUpperCase())
         data.append("description", formData.description)
 
-        // 2. Pricing Logic
         if (formData.pricingType === "fixed") {
             data.append("fixedPrice", formData.fixedPrice)
         } else {
@@ -90,7 +109,6 @@ export default function VegetableForm() {
             if (formData.biddingEndDate) data.append("biddingEndDate", formData.biddingEndDate)
         }
 
-        // 3. Delivery Logic
         if (formData.willDeliver === "yes") {
             data.append("deliveryAvailable", "true")
             data.append("deliveryFeeFirst3Km", formData.deliveryCharge3km)
@@ -99,44 +117,68 @@ export default function VegetableForm() {
             data.append("deliveryAvailable", "false")
         }
 
-        // 4. Append Images
         images.forEach((image) => {
             data.append("images", image)
         })
 
-        // 5. Send to API
         try {
-            const res = await fetch("http://localhost:8082/products", {
+            const res = await fetch("http://localhost:8080/products", {
                 method: "POST",
                 body: data,
+                // Note: Don't set Content-Type header when sending FormData
             })
 
             if (res.ok) {
-                alert("Product Added Successfully!")
-                router.push("/seller/dashboard") // Redirect to dashboard
+                setNotification({ message: "Product listed successfully!", type: 'success' });
+                setTimeout(() => router.push("/seller/dashboard"), 2000);
             } else {
-                const errorText = await res.text()
-                alert("Failed to add product: " + errorText)
+                const errorData = await res.json().catch(() => null);
+                const message = errorData?.message || "Failed to add product. Please check your inputs.";
+                setNotification({ message, type: 'error' });
             }
         } catch (error) {
-            console.error("Error submitting form:", error)
-            alert("Error connecting to server.")
+            setNotification({ message: "Connection error. Is the server running?", type: 'error' });
         } finally {
             setIsLoading(false)
         }
     }
 
     return (
-        <main className="min-h-screen bg-background">
+        <main className="min-h-screen bg-background relative overflow-x-hidden">
+            
+            {/* CUSTOM NOTIFICATION COMPONENT */}
+            {notification && (
+                <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
+                    notification.type === 'success' 
+                    ? "bg-[#03230F] border-green-500 text-white" 
+                    : "bg-red-950 border-red-500 text-white"
+                }`}>
+                    <div className="flex items-center gap-3">
+                        {notification.type === 'success' ? (
+                            <Check className="w-5 h-5 text-green-400" />
+                        ) : (
+                            <AlertCircle className="w-5 h-5 text-red-400" />
+                        )}
+                        <p className="font-medium pr-4">{notification.message}</p>
+                    </div>
+                    <button 
+                        onClick={() => setNotification(null)} 
+                        className="ml-auto hover:bg-white/10 p-1 rounded transition-colors"
+                    >
+                        <X className="w-4 h-4 opacity-70" />
+                    </button>
+                </div>
+            )}
+
             <div className="max-w-4xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-between mb-12">
                     <h1 className="text-4xl font-bold text-foreground">Add Vegetable Item</h1>
-                    <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                    <Button variant="outline" className="flex items-center gap-2 bg-transparent" onClick={() => router.push('/seller/products')}>
                         <Eye className="w-5 h-5" /> View My Products
                     </Button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="bg-card rounded-lg p-8 border border-border">
+                <form onSubmit={handleSubmit} className="bg-card rounded-lg p-8 border border-border shadow-sm">
 
                     {/* Vegetable Name */}
                     <div className="mb-8">
@@ -189,32 +231,32 @@ export default function VegetableForm() {
                         <RadioGroup value={formData.pricingType} onValueChange={(value) => handleRadioChange(value, "pricingType")}>
                             <div className="flex items-center gap-2 mb-3">
                                 <RadioGroupItem value="fixed" id="fixed" />
-                                <Label htmlFor="fixed">Fixed Price</Label>
+                                <Label htmlFor="fixed" className="cursor-pointer">Fixed Price</Label>
                             </div>
                             <div className="flex items-center gap-2">
                                 <RadioGroupItem value="bidding" id="bidding" />
-                                <Label htmlFor="bidding">Bidding</Label>
+                                <Label htmlFor="bidding" className="cursor-pointer">Bidding</Label>
                             </div>
                         </RadioGroup>
                     </div>
 
                     {/* Conditional Pricing Fields */}
                     {formData.pricingType === "fixed" ? (
-                        <div className="mb-8">
+                        <div className="mb-8 animate-in fade-in duration-300">
                             <Label htmlFor="fixedPrice" className="text-base font-semibold mb-2 block">Fixed Price (LKR)</Label>
                             <Input
                                 required
                                 id="fixedPrice"
                                 name="fixedPrice"
                                 type="number"
-                                placeholder="Enter price"
+                                placeholder="Enter price per kg"
                                 value={formData.fixedPrice}
                                 onChange={handleInputChange}
                                 className="w-full"
                             />
                         </div>
                     ) : (
-                        <div className="mb-8 space-y-4 bg-muted/30 p-4 rounded-lg">
+                        <div className="mb-8 space-y-4 bg-muted/30 p-4 rounded-lg animate-in slide-in-from-left-2 duration-300">
                             <div>
                                 <Label htmlFor="biddingPrice" className="text-base font-semibold mb-2 block">Starting Bid (LKR)</Label>
                                 <Input
@@ -228,7 +270,7 @@ export default function VegetableForm() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label className="mb-2 block">Start Date</Label>
+                                    <Label className="mb-2 block text-sm">Start Date</Label>
                                     <Input
                                         type="datetime-local"
                                         name="biddingStartDate"
@@ -237,7 +279,7 @@ export default function VegetableForm() {
                                     />
                                 </div>
                                 <div>
-                                    <Label className="mb-2 block">End Date</Label>
+                                    <Label className="mb-2 block text-sm">End Date</Label>
                                     <Input
                                         type="datetime-local"
                                         name="biddingEndDate"
@@ -255,7 +297,7 @@ export default function VegetableForm() {
                         <Textarea
                             id="description"
                             name="description"
-                            placeholder="Describe your product..."
+                            placeholder="Describe freshness, origin, etc..."
                             value={formData.description}
                             onChange={handleInputChange}
                             className="w-full min-h-24"
@@ -268,18 +310,18 @@ export default function VegetableForm() {
                         <RadioGroup value={formData.willDeliver} onValueChange={(value) => handleRadioChange(value, "willDeliver")}>
                             <div className="flex items-center gap-2 mb-3">
                                 <RadioGroupItem value="yes" id="deliver-yes" />
-                                <Label htmlFor="deliver-yes">Yes, I will deliver</Label>
+                                <Label htmlFor="deliver-yes" className="cursor-pointer">Yes, I will deliver</Label>
                             </div>
                             <div className="flex items-center gap-2">
                                 <RadioGroupItem value="no" id="deliver-no" />
-                                <Label htmlFor="deliver-no">No, I won't deliver</Label>
+                                <Label htmlFor="deliver-no" className="cursor-pointer">No, I won't deliver</Label>
                             </div>
                         </RadioGroup>
                     </div>
 
                     {/* Conditional Delivery Charges */}
                     {formData.willDeliver === "yes" && (
-                        <div className="bg-muted/30 rounded-lg p-6 mb-8">
+                        <div className="bg-muted/30 rounded-lg p-6 mb-8 animate-in zoom-in-95 duration-300">
                             <h3 className="text-base font-semibold mb-6 text-foreground">Delivery Charges</h3>
                             <div className="mb-6">
                                 <Label htmlFor="deliveryCharge3km" className="text-base font-semibold mb-2 block">Delivery Charge for First 3 km (LKR)</Label>
@@ -309,9 +351,9 @@ export default function VegetableForm() {
                     {/* Image Upload */}
                     <div className="mb-8">
                         <Label className="text-base font-semibold mb-4 block">Product Photos</Label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
+                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors bg-muted/10">
                             <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground mb-2">Drag and drop or click to select</p>
+                            <p className="text-sm text-muted-foreground mb-2">Upload clear photos of your vegetables</p>
                             <Input
                                 type="file"
                                 multiple
@@ -331,12 +373,16 @@ export default function VegetableForm() {
                         {imagePreviews.length > 0 && (
                             <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="relative group">
-                                        <img src={preview || "/placeholder.svg"} className="w-full h-24 object-cover rounded-lg border border-border" />
+                                    <div key={index} className="relative group aspect-square">
+                                        <img 
+                                            src={preview} 
+                                            alt="Preview" 
+                                            className="w-full h-full object-cover rounded-lg border border-border" 
+                                        />
                                         <button
                                             type="button"
                                             onClick={() => removeImage(index)}
-                                            className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -346,12 +392,22 @@ export default function VegetableForm() {
                         )}
                     </div>
 
-                    {/* Buttons */}
+                    {/* Action Buttons */}
                     <div className="flex gap-4">
-                        <Button disabled={isLoading} type="submit" size="lg">
+                        <Button 
+                            disabled={isLoading} 
+                            type="submit" 
+                            size="lg" 
+                            className="flex-1 sm:flex-none min-w-[150px]"
+                        >
                             {isLoading ? "Adding Item..." : "Add Item"}
                         </Button>
-                        <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="lg" 
+                            onClick={() => router.back()}
+                        >
                             Cancel
                         </Button>
                     </div>

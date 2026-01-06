@@ -44,7 +44,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [stompClient, setStompClient] = useState<any>(null)
 
-  const baseUrl = "http://localhost:8083"
+  const baseUrl = "http://localhost:8080"
   const selectedIdRef = useRef(selectedConversationId);
   
   // Ref for Auto-Scrolling

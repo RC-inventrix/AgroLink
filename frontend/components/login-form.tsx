@@ -16,74 +16,72 @@ export default function LoginForm() {
     const [error, setError] = useState("")
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError("");
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
-        try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-            const isAdmins = selectedRole === "admin";
-            const endpoint = isAdmins ? "/api/admin/login" : "/auth/login";
-            
-            const payload = isAdmins 
-                ? { username: email, password: password } 
-                : { identifier: email, password: password };
+    try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const isAdmins = selectedRole === "admin";
+        const endpoint = isAdmins ? "/api/admin/login" : "/auth/login";
+        
+        const payload = isAdmins 
+            ? { username: email, password: password } 
+            : { identifier: email, password: password };
 
-            const response = await fetch(`${baseUrl}${endpoint}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-                
-            });
+        const response = await fetch(`${baseUrl}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
 
-            // Parse as JSON to match the AuthResponse DTO from the backend
-            let data;
-            const contentType = response.headers.get("content-type");
+        const data = await response.json();
 
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
-            } else {
-                const text = await response.text();
-                throw new Error(text || "Login failed");
+        if (!response.ok) {
+            // Handle specific HTTP Status Codes if message isn't in JSON
+            if (response.status === 401) {
+                throw new Error(data.message || "Incorrect email or password.");
+            } else if (response.status === 404) {
+                throw new Error("No account found with this email.");
+            } else if (response.status === 500) {
+                throw new Error("Server is currently down. Please try again later.");
             }
+            throw new Error(data.message || "Login failed. Please check your connection.");
+        }
 
+        // SUCCESS LOGIC: Store user data
+            sessionStorage.setItem("token", data.token); 
+            sessionStorage.setItem("userRole", data.role);
+            sessionStorage.setItem("userEmail", data.email);
+            sessionStorage.setItem("id", data.id);
 
-            if(response.ok){
-                sessionStorage.setItem("token", data.token); 
-    sessionStorage.setItem("userRole", data.role);
-    sessionStorage.setItem("userEmail", data.email);
-    sessionStorage.setItem("id", data.id);
-            }
-
-            if (!response.ok) {
-                throw new Error(data.message || "Invalid credentials");
-            }
-
-            // SUCCESSFUL LOGIN
-            // Note: We no longer manually save the token in sessionStorage. 
-            // The browser automatically handles the HttpOnly cookie.
-
-            if (!isAdmins) {
-                // Save the role to help with frontend UI logic/routing
-                sessionStorage.setItem("userRole", data.role);
-                
-                // ROLE-BASED REDIRECTION: Sends user to their specific dashboard
-                if (data.role.toLowerCase() === "buyer") {
-                    router.push("/buyer/dashboard");
-                } else if (data.role.toLowerCase() === "farmer") {
-                    router.push("/seller/dashboard");
-                }
-            } else {
+            // REDIRECTION LOGIC
+            if (isAdmins) {
                 sessionStorage.setItem("adminSession", "true");
                 router.push("/admin/dashboard");
+            } else {
+                const role = data.role.toLowerCase();
+                if (role === "buyer") {
+                    router.push("/buyer/dashboard");
+                } else if (role === "farmer") {
+                    router.push("/seller/dashboard");
+                } else {
+                    // Fallback if role doesn't match
+                    router.push("/dashboard");
+                }
             }
-        } catch (err: any) {
-            console.error("Login failed", err);
-            setError(err.message || "Something went wrong. Please try again.");
-        } finally {
-            setIsLoading(false);
+        
+    } catch (err: any) {
+        // If it's a network error (server not reachable)
+        if (err.message === "Failed to fetch") {
+            setError("Unable to connect to the server. Please check your internet.");
+        } else {
+            setError(err.message);
         }
-    };
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     return (
         <div className="w-full max-w-md">
@@ -116,10 +114,7 @@ export default function LoginForm() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-semibold text-white mb-3">I am a</label>
-                        <RoleSelect value={selectedRole} onChange={setSelectedRole} />
-                    </div>
+                    
 
                     <div>
                         <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
@@ -204,7 +199,7 @@ export default function LoginForm() {
                         <p className="text-sm text-gray-300">
                             Don't have an account?{" "}
                             <a
-                                href="#register"
+                                href="/register"
                                 className="font-semibold transition-colors hover:opacity-80"
                                 style={{ color: "#EEC044" }}
                             >
