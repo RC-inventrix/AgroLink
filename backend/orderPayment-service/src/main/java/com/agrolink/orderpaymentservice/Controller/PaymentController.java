@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/payment")
-@CrossOrigin("http://localhost:3000") // VIP List
+//@CrossOrigin("http://localhost:3000") // VIP List
 @RequiredArgsConstructor
 public class PaymentController {
 
