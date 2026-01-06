@@ -1,6 +1,6 @@
 "use client"
 
-import Header from "@/components/header"
+import Header from "@/components/Header"
 import VegetableListings from "@/components/vegetable-listings"
 
 export default function Home() {

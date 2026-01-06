@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation" // <--- Import Router
+import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
-import Header from "@/components/header"
+import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react" // Added icons
+import Header from "@/components/Header"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
 
@@ -21,9 +22,22 @@ interface CartItemData {
 export default function Cart() {
     const [items, setItems] = useState<CartItemData[]>([])
     const [loading, setLoading] = useState(true)
-    const router = useRouter() // <--- Initialize Router
+    const router = useRouter()
 
-    // 1. Fetch Cart (No changes here)
+    // --- Custom Notification State (Bottom Style) ---
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'success' | 'error' | 'info';
+    } | null>(null);
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
+    // 1. Fetch Cart
     useEffect(() => {
         const fetchCart = async () => {
             const userId = sessionStorage.getItem("id") || "1"
@@ -44,7 +58,7 @@ export default function Cart() {
                     setItems(mappedItems)
                 }
             } catch (error) {
-                console.error("Failed to load cart", error)
+                setNotification({ message: "Failed to load your cart. Please refresh.", type: 'error' });
             } finally {
                 setLoading(false)
             }
@@ -66,58 +80,98 @@ export default function Cart() {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
 
-    // --- UPDATED CHECKOUT HANDLER ---
+    // --- UPDATED CHECKOUT HANDLER WITH NOTIFICATION ---
     const handleCheckout = () => {
         if (selectedItems.length === 0) {
-            alert("Please select at least one item")
+            setNotification({ message: "Select items in your cart to proceed to checkout.", type: 'info' });
             return
         }
 
-        // 1. Save selected items to Session Storage so Checkout page can read them
-        sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems));
-
-        // 2. Navigate to Checkout Page
-        router.push("/buyer/checkout");
+        try {
+            sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems));
+            setNotification({ message: "Redirecting to checkout...", type: 'success' });
+            
+            setTimeout(() => {
+                router.push("/buyer/checkout");
+            }, 800);
+        } catch (err) {
+            setNotification({ message: "An error occurred. Please try again.", type: 'error' });
+        }
     }
-    // -------------------------------
 
-    if (loading) return <div className="text-center py-20">Loading Cart...</div>
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-screen">
+            <div className="w-10 h-10 border-4 border-[#03230F] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading your fresh picks...</p>
+        </div>
+    )
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 relative">
             <Header />
+
+            {/* --- CUSTOM BOTTOM NOTIFICATION UI --- */}
+            {notification && (
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
+                    <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
+                        notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
+                        notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
+                        "bg-[#03230F] border-gray-700 text-white"
+                    }`}>
+                        {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                        {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
+                        {notification.type === 'info' && <ShoppingBag className="w-5 h-5 text-[#EEC044]" />}
+                        
+                        <p className="text-sm font-semibold flex-1">{notification.message}</p>
+                        
+                        <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100 transition-opacity">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
                 <h1 className="mb-2 text-3xl font-bold text-gray-900">Your Cart</h1>
+                <p className="text-gray-500 mb-8">Manage your selected agricultural products</p>
+                
                 <div className="grid gap-8 lg:grid-cols-3">
                     <div className="lg:col-span-2">
-                        {/* Cart List Logic (Same as before) */}
-                        <div className="rounded-lg border border-gray-200 bg-white p-6">
-                            <div className="mb-6 flex items-center gap-3 pb-6 border-b border-gray-200">
+                        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                            <div className="bg-gray-50/50 px-6 py-4 flex items-center gap-3 border-b border-gray-200">
                                 <Checkbox
                                     id="select-all"
                                     checked={items.length > 0 && selectedItems.length === items.length}
                                     onCheckedChange={handleSelectAll}
                                 />
-                                <label htmlFor="select-all" className="cursor-pointer font-semibold text-gray-900">
+                                <label htmlFor="select-all" className="cursor-pointer font-bold text-gray-700 text-sm uppercase tracking-wider">
                                     Select All Items ({items.length})
                                 </label>
                             </div>
-                            <div className="space-y-4">
-                                {items.length === 0 ? <p>Your cart is empty.</p> : items.map((item) => (
-                                    <CartItem
-                                        key={item.id}
-                                        item={{
-                                            id: item.id.toString(),
-                                            name: item.productName,
-                                            image: item.imageUrl,
-                                            seller: item.sellerName,
-                                            pricePerKg: item.pricePerKg,
-                                            quantity: item.quantity,
-                                            selected: item.selected
-                                        }}
-                                        onToggle={toggleItem}
-                                    />
-                                ))}
+                            
+                            <div className="p-6 space-y-4">
+                                {items.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                        <p className="text-gray-500 font-medium">Your cart is feeling light. Add some fresh produce!</p>
+                                    </div>
+                                ) : (
+                                    items.map((item) => (
+                                        <CartItem
+                                            key={item.id}
+                                            item={{
+                                                id: item.id.toString(),
+                                                name: item.productName,
+                                                image: item.imageUrl,
+                                                seller: item.sellerName,
+                                                pricePerKg: item.pricePerKg,
+                                                quantity: item.quantity,
+                                                selected: item.selected
+                                            }}
+                                            onToggle={toggleItem}
+                                        />
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -127,7 +181,7 @@ export default function Cart() {
                         selectedItems={selectedItems.map(item => ({
                             id: item.id.toString(),
                             name: item.productName,
-                            image: item.imageUrl, // Pass image for summary if needed
+                            image: item.imageUrl,
                             pricePerKg: item.pricePerKg,
                             quantity: item.quantity,
                             seller: item.sellerName,

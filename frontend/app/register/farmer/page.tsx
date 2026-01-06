@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { X, Check, AlertCircle } from "lucide-react"
 
 export default function FarmerRegistration() {
     const router = useRouter()
@@ -14,10 +15,24 @@ export default function FarmerRegistration() {
     })
     const [isLoading, setIsLoading] = useState(false)
 
+    // --- Custom Notification State ---
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'success' | 'error';
+    } | null>(null);
+
+    // Auto-hide notification after 4 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
     useEffect(() => {
         if (!sessionStorage.getItem("registerDataStep1")) {
-            alert("Please fill step 1 first.")
-            router.push("/register")
+            setNotification({ message: "Please fill step 1 first.", type: 'error' });
+            setTimeout(() => router.push("/register"), 1500);
         }
     }, [router])
 
@@ -28,6 +43,7 @@ export default function FarmerRegistration() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
+        setNotification(null)
 
         try {
             // 1. Retrieve Step 1 Data
@@ -45,7 +61,6 @@ export default function FarmerRegistration() {
             }
 
             // 3. API Call to Spring Boot Backend
-            // FIX: Point directly to backend URL
             const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
             const response = await fetch(`${API_URL}/auth/register`, {
@@ -55,54 +70,118 @@ export default function FarmerRegistration() {
             })
 
             if (response.ok) {
-                // 4. Success! Redirect to FRONTEND Login Page
-                alert("Registration Successful!")
+                // 4. Success Logic
+                setNotification({ message: "Registration Successful! Welcome to AgroLink.", type: 'success' });
                 sessionStorage.removeItem("registerDataStep1")
 
-                // This redirects to app/login/page.tsx
-                router.push("/login")
+                // Redirect to Login after a short delay to show the message
+                setTimeout(() => {
+                    router.push("/login")
+                }, 2000);
             } else {
                 const msg = await response.text()
-                alert("Registration Failed: " + msg)
+                setNotification({ message: "Registration Failed: " + msg, type: 'error' });
             }
         } catch (error: any) {
             console.error("Full Registration Error:", error);
 
-            // FIX: Detailed error reporting
             if (error.message === "Failed to fetch") {
-                alert("CONNECTION ERROR: Browser cannot reach http://localhost:8080. \n\n1. Check if Docker 'api-gateway' is running.\n2. Open http://localhost:8080/auth/login in your browser to test connectivity.");
+                setNotification({ 
+                    message: "CONNECTION ERROR: Cannot reach server. Please check your connection.", 
+                    type: 'error' 
+                });
             } else {
-                alert("ERROR: " + error.message);
+                setNotification({ message: "ERROR: " + error.message, type: 'error' });
             }
+        } finally {
+            setIsLoading(false)
         }
     }
 
     return (
-        <div className="h-screen flex bg-white overflow-hidden">
-            <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                <div className="relative z-10 flex flex-col px-8 pt-4 md:px-12 md:pt-6 lg:pt-8 max-w-md mx-auto w-full">
-                    <div className="mb-6">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h1>
-                        <p className="text-[#EEC044] text-sm font-medium">Step 2: Farm Details</p>
+        <main className="min-h-screen bg-white relative overflow-hidden">
+            
+            {/* --- CUSTOM NOTIFICATION UI --- */}
+            {notification && (
+                <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
+                    notification.type === 'success' 
+                    ? "bg-[#03230F] border-green-500 text-white" 
+                    : "bg-red-950 border-red-500 text-white"
+                }`}>
+                    <div className="flex items-center gap-3">
+                        {notification.type === 'success' ? (
+                            <Check className="w-5 h-5 text-green-400" />
+                        ) : (
+                            <AlertCircle className="w-5 h-5 text-red-400" />
+                        )}
+                        <p className="font-medium pr-4">{notification.message}</p>
                     </div>
+                    <button 
+                        onClick={() => setNotification(null)} 
+                        className="ml-auto hover:bg-white/10 p-1 rounded transition-colors"
+                    >
+                        <X className="w-4 h-4 opacity-70" />
+                    </button>
+                </div>
+            )}
 
-                    <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">
-                        <input type="text" name="businessName" placeholder="Business Name" onChange={handleInputChange} className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#EEC044]" required />
-                        <input type="text" name="streetAddress" placeholder="Street Address" onChange={handleInputChange} className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#EEC044]" required />
-                        <input type="text" name="district" placeholder="District" onChange={handleInputChange} className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#EEC044]" required />
-                        <input type="text" name="zipCode" placeholder="ZIP Code" onChange={handleInputChange} className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#EEC044]" required />
-                        <input type="text" name="registrationNumber" placeholder="Business Reg / NIC" onChange={handleInputChange} className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#EEC044]" required />
+            <div className="h-screen flex">
+                <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
+                    <div className="relative z-10 flex flex-col px-8 pt-4 md:px-12 md:pt-6 lg:pt-8 max-w-md mx-auto w-full h-full justify-center">
+                        <div className="mb-6">
+                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h1>
+                            <p className="text-[#EEC044] text-sm font-medium tracking-wide">Step 2: Farm Details</p>
+                        </div>
 
-                        <button type="submit" disabled={isLoading} className="w-full py-4 px-5 mt-2 bg-[#EEC044] text-[#03230F] font-bold rounded-xl shadow-lg hover:bg-yellow-300 transition-colors">
-                            {isLoading ? "Registering..." : "Complete Registration"}
-                        </button>
-                    </form>
+                        <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">
+                            <div className="space-y-1">
+                                <label className="text-white/70 text-xs font-semibold ml-1">Farm/Business Name</label>
+                                <input type="text" name="businessName" placeholder="e.g. Green Valley Farm" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-white/70 text-xs font-semibold ml-1">Street Address</label>
+                                <input type="text" name="streetAddress" placeholder="123 Farm Road" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-white/70 text-xs font-semibold ml-1">District</label>
+                                    <input type="text" name="district" placeholder="District" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-white/70 text-xs font-semibold ml-1">ZIP Code</label>
+                                    <input type="text" name="zipCode" placeholder="ZIP Code" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-white/70 text-xs font-semibold ml-1">Identification Number</label>
+                                <input type="text" name="registrationNumber" placeholder="Business Reg No / NIC" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={isLoading} 
+                                className="w-full py-4 px-5 mt-4 bg-[#EEC044] text-[#03230F] font-bold rounded-xl shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <div className="w-5 h-5 border-2 border-[#03230F] border-t-transparent rounded-full animate-spin"></div>
+                                        Processing...
+                                    </span>
+                                ) : "Complete Registration"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Background Image */}
+                <div className="hidden lg:flex w-1/2 relative">
+                    <img src="/farmer-background.png" alt="Farming background" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/10"></div>
                 </div>
             </div>
-            {/* Background Image */}
-            <div className="hidden lg:flex w-1/2 relative">
-                <img src="/farmer-background.png" alt="Farming background" className="w-full h-full object-cover" />
-            </div>
-        </div>
+        </main>
     )
 }
