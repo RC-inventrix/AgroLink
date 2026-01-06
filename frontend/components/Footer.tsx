@@ -20,8 +20,7 @@ export default function Footer() {
                 <div>
                     <h3 className="font-bold mb-2">Explore</h3>
                     <p>About</p>
-                    <p>Services</p>
-                    <p>Projects</p>
+                    <p>Features</p>
                     <p>Meet the Farmers</p>
                 </div>
 
@@ -33,9 +32,9 @@ export default function Footer() {
 
                 <div>
                     <h3 className="font-bold mb-2">Contact</h3>
-                    <p>📞 666 888 0000</p>
-                    <p>✉️ needhelp@company.com</p>
-                    <p>📍 New York, USA</p>
+                    <p>📞 +94 70 322 4356</p>
+                    <p>✉️ Agrolink@gmail.com</p>
+                    <p>📍 Matara, Srilanka</p>
                 </div>
             </div>
         </footer>
