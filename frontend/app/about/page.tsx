@@ -5,15 +5,15 @@ import { Card, CardContent } from "@/components/ui/card"
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
 
       {/* Hero Section */}
-      <section className="bg-[#004d2b] text-white py-20">
+      <section className="bg-[#03230F] text-white py-20">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance">
               {"Empowering "}
-              <span className="text-[#D4A650]">{"Sustainable Agriculture"}</span>
+              <span className="text-[#EEC044]">{"Sustainable Agriculture"}</span>
               {" Through Technology"}
             </h1>
             <p className="text-lg md:text-xl text-white/90 leading-relaxed text-pretty">
@@ -31,7 +31,7 @@ export default function AboutPage() {
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold text-[#004d2b] mb-6">{"Our Mission"}</h2>
+                <h2 className="text-3xl md:text-4xl font-bold text-[#03230F] mb-6">{"Our Mission"}</h2>
                 <p className="text-lg text-foreground/80 leading-relaxed mb-4">
                   {
                     "We believe in creating a direct connection between those who grow our food and those who consume it. By eliminating intermediaries, we ensure farmers receive fair compensation while buyers access fresh, quality produce."
@@ -43,7 +43,7 @@ export default function AboutPage() {
                   }
                 </p>
               </div>
-              <div className="relative h-[400px] rounded-lg overflow-hidden bg-[#004d2b]/10">
+              <div className="relative h-[400px] rounded-lg overflow-hidden bg-[#03230F]/10">
                 <img
                   src="about-us/farmers-working-in-green-agricultural-fields.jpg"
                   alt="Farmers working in fields"
@@ -165,7 +165,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-[#004d2b]">
+      <section className="py-20 bg-[#03230F]">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 text-balance">
@@ -178,7 +178,7 @@ export default function AboutPage() {
             </p>
             <Button
               size="lg"
-              className="bg-[#D4A650] text-[#004d2b] hover:bg-[#c99840] text-lg px-8 py-6 transition-colors"
+              className="bg-[#EEC044] text-[#004d2b] hover:bg-[#c99840] text-lg px-8 py-6 transition-colors"
             >
               {"Create an Account"}
             </Button>
@@ -187,7 +187,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#004d2b] border-t border-[#D4A650]/20 py-8">
+      <footer className="bg-[#03230F] border-t border-[#D4A650]/20 py-8">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="text-center text-white/70">
             <p>{"© 2026 AgroLink. All rights reserved."}</p>

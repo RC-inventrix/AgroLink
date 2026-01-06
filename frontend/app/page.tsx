@@ -50,21 +50,16 @@ export default function AgroLinkHome() {
                             <a href="#" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
                                 Home
                             </a>
-                            <a href="#about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
+                            <a href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
                                 About
                             </a>
                             <a
-                                href="#features"
+                                href="/features"
                                 className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base"
                             >
                                 Features
                             </a>
-                            <a
-                                href="#contact"
-                                className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base"
-                            >
-                                Contact
-                            </a>
+                            
                         </div>
 
                         {/* Auth Buttons - Desktop */}
