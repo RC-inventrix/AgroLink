@@ -141,7 +141,7 @@ export default function BuyerDashboard() {
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
                         {/* Welcome Banner */}
-                        <div className="relative mb-8 overflow-hidden rounded-xl bg-[#2d5016] p-8 text-white">
+                        <div className="relative mb-8 overflow-hidden rounded-xl bg-[#03230F] p-8 text-white">
                             <h1 className="mb-2 text-3xl font-bold">Welcome back, {firstName} 👋</h1>
                             <p className="text-lg opacity-90">Manage your orders, bargains, and requests in one place</p>
                         </div>

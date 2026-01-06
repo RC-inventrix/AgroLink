@@ -106,7 +106,7 @@ export default function VegetableForm() {
 
         // 5. Send to API
         try {
-            const res = await fetch("http://localhost:8082/products", {
+            const res = await fetch("http://localhost:8080/products", {
                 method: "POST",
                 body: data,
             })
