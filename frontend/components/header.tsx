@@ -89,20 +89,14 @@ export default function DashboardHeader() {
             )}
 
             <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-                {/* LOGO */}
-                <Link href="/" className="flex items-center gap-2 group">
-                    <Image className="w-100" src={logo} alt="Agrolink Logo" />
-                    
-                </Link>
 
                 {/* SEARCH BAR (Matching Dashboard Style) */}
                 <div className="hidden md:flex flex-1 items-center justify-center px-8">
                     <div className="relative w-full max-w-md">
                         <nav className="hidden md:flex items-center gap-8">
                     <Link href="/seller/dashboard" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Home</Link>
-                    <Link href="/sellers" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Our Farmers</Link>
+                    <Link href="/sellers" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Features</Link>
                     <Link href="/about" className="text-sm font-medium hover:text-[#EEC044] transition-colors">About Us</Link>
-                    <Link href="/contact" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Support</Link>
                 </nav>
                     </div>
                 </div>
