@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Eye, EyeOff, Leaf, AlertCircle } from "lucide-react"
 import RoleSelect from "./role-select"
 import { useRouter } from "next/navigation"
+import Image from "next/image";
 
 export default function LoginForm() {
     const router = useRouter()
@@ -87,15 +88,16 @@ export default function LoginForm() {
         <div className="w-full max-w-md">
             {/* Logo Section */}
             <div className="mb-8 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-md">
-                        <Leaf className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-white">AgroLink</h1>
+                <div className="mb-8 flex justify-center items-center">
+                    <Image
+                        src="/images/Group-6.png"
+                        alt="AgroLink Logo"
+                        width={280}
+                        height={64}
+                        className="h-8 sm:h-12 w-auto"
+                    />
                 </div>
-                <p className="text-sm" style={{ color: "#EEC044" }}>
-                    Agricultural Marketplace Platform
-                </p>
+
             </div>
 
             {/* Login Card */}
@@ -187,9 +189,9 @@ export default function LoginForm() {
                     </button>
 
                     <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-600"></div>
-                        </div>
+                        {/*<div className="absolute inset-0 flex items-center">*/}
+                        {/*    <div className="w-full border-t border-gray-600"></div>*/}
+                        {/*</div>*/}
                         <div className="relative flex justify-center text-xs uppercase">
                             <span className="px-2 text-gray-400">New to AgroLink?</span>
                         </div>
@@ -210,9 +212,9 @@ export default function LoginForm() {
                 </form>
             </div>
 
-            <div className="mt-8 text-center text-xs text-muted-foreground">
-                <p>Protected by industry-leading security</p>
-            </div>
+            {/*<div className="mt-8 text-center text-xs text-muted-foreground">*/}
+            {/*    <p>Protected by industry-leading security</p>*/}
+            {/*</div>*/}
         </div>
     )
 }

@@ -92,11 +92,22 @@ export default function DashboardHeader() {
 
                 {/* SEARCH BAR (Matching Dashboard Style) */}
                 <div className="hidden md:flex flex-1 items-center justify-center px-8">
+                   <Image
+                    src="/images/Group-6.png"
+                    alt="AgroLink Logo"
+                    width={150}
+                    height={50}
+                    className="object-contain"
+                    style={{ width: "150px" }}
+                />
+                  
                     <div className="relative w-full max-w-md">
-                        <nav className="hidden md:flex items-center gap-8">
-                    <Link href="/seller/dashboard" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Home</Link>
-                    <Link href="/sellers" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Features</Link>
-                    <Link href="/about" className="text-sm font-medium hover:text-[#EEC044] transition-colors">About Us</Link>
+                        <nav className="space-x-6 text-sm">
+                    <a href="/" className="hover:text-yellow-300 transition">Home</a>
+                    <a href="#" className="hover:text-yellow-300 transition">Features</a>
+                    <a href="#" className="hover:text-yellow-300 transition">About Us</a>
+
+
                 </nav>
                     </div>
                 </div>

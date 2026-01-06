@@ -89,7 +89,7 @@ export default function VegetableListings() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header Section */}
-            <div className="bg-[#2d5016] text-white py-12">
+            <div className="bg-[#f8f8f8] #EEC044 py-12">
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
                     <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables directly from farmers.</p>
