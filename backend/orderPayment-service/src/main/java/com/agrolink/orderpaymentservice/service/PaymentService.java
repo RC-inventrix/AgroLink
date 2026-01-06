@@ -94,24 +94,43 @@ public class PaymentService {
 
         Session session = Session.create(paramsBuilder.build());
 
-        // 4. Save Initial Order to DB (Status: CREATED)
-        // This ensures the order exists in history even before the webhook fires.
-        // The Webhook will later update this order's status to PAID.
+        return CheckoutResponse.builder()
+                .sessionId(session.getId())
+                .url(session.getUrl())
+                .build();
+    }
+
+    public void processCashOnDelivery(Long userId) {
+        List<CartItem> cartItems = cartRepository.findByUserId(userId);
+        if (cartItems.isEmpty()) {
+            throw new RuntimeException("Cart is empty");
+        }
+
+        double totalAmount = cartItems.stream()
+                .mapToDouble(item -> item.getPricePerKg() * item.getQuantity())
+                .sum();
+        totalAmount += 30.0;
+
+        String fakeStripeId = "COD-" + UUID.randomUUID().toString();
+
         Order order = Order.builder()
                 .userId(userId)
-                .stripeId(session.getId())
-                .amount(session.getAmountTotal())
-                .currency(session.getCurrency())
-                .status(OrderStatus.CREATED)
-                .itemsJson(itemsJson) // <--- SAVING REAL JSON HERE
+                .stripeId(fakeStripeId)
+                .amount((long) (totalAmount * 100))
+                .currency("lkr")
+                .status(OrderStatus.COD_CONFIRMED)
+                .itemsJson("Items from Cart")
                 .build();
 
+        // 2. USE THE INJECTED INSTANCE (lowercase 'o')
         orderRepository.save(order);
+        cartRepository.deleteAll(cartItems);
 
         return CheckoutResponse.builder()
                 .sessionId(session.getId())
                 .url(session.getUrl())
                 .build();
+        
     }
 
     public void processCashOnDelivery(Long userId) {

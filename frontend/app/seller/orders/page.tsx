@@ -1,9 +1,7 @@
-"use client"
 
-import { useState, useEffect } from "react"
-import Header from "@/app/seller/orders/header"
 import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
+import Header from "@/components/header";
 
 export default function Home() {
     const [orders, setOrders] = useState<any[]>([])

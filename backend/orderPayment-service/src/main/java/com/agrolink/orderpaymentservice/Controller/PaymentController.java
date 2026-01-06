@@ -26,4 +26,13 @@ public class PaymentController {
             return ResponseEntity.status(500).build();
         }
     }
+    @PostMapping("/cod")
+    public ResponseEntity<String> processCashOnDelivery(@RequestParam Long userId) {
+        try {
+            paymentService.processCashOnDelivery(userId);
+            return ResponseEntity.ok("Order placed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error processing COD: " + e.getMessage());
+        }
+    }
 }
