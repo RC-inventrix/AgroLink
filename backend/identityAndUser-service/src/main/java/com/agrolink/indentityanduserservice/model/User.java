@@ -32,7 +32,7 @@ public class User {
     private String nic;
     private String AvatarUrl;
 
-    @OneToOne(mappedBy = "users")
+    @OneToOne(mappedBy = "user")
     private ForgotPassword forgotPassword;
 
 

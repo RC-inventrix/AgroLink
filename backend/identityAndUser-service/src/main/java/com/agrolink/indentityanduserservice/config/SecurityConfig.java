@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 // FIX: The .cors() line is REMOVED completely because the API Gateway handles it now.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/**","/forgotPassword/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
