@@ -19,6 +19,7 @@ public class User {
     private Long id;
 
     private String fullname;
+
     private String email;
     private String phone;
     private String password;
@@ -30,6 +31,9 @@ public class User {
     private String zipcode;
     private String nic;
     private String AvatarUrl;
+
+    @OneToOne(mappedBy = "users")
+    private ForgotPassword forgotPassword;
 
 
 }
