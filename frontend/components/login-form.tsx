@@ -171,7 +171,7 @@ export default function LoginForm() {
 
                     <div className="text-right">
                         <a
-                            href="#forgot-password"
+                            href="/forgot-password"
                             className="text-sm font-medium transition-colors hover:opacity-80"
                             style={{ color: "#EEC044" }}
                         >
