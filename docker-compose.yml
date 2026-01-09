@@ -82,6 +82,16 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
+
+        # Email SMTP Settings
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD:  ${SPRING_MAIL_PASSWORD}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,6 +100,9 @@ services:
         # <--- FIXED: Removed stray build/ports config that was here
     networks:
       - agro-net
+
+
+
 
   # 6. Product Catalog Service
   product-service:
