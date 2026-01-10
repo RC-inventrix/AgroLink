@@ -39,11 +39,11 @@ export default function RegistrationStep1() {
         setFormData({ ...formData, role: e.target.value })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setNotification(null)
 
-        // 1. Validation Logic
+        // 1. Client-Side Validation Logic
         if (Object.values(formData).some((x) => x.trim() === "")) {
             setNotification({ message: "Please fill in all fields", type: 'error' });
             return
@@ -61,8 +61,23 @@ export default function RegistrationStep1() {
 
         setIsLoading(true)
 
-        // 2. Save Data & Redirect Logic
+        // 2. Backend Email Uniqueness Check
         try {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+            
+            // Note: We use the auth/check-email endpoint to verify uniqueness before proceeding
+            const checkResponse = await fetch(`${baseUrl}/auth/check-email?email=${formData.email}`);
+            
+            if (checkResponse.status === 409 || checkResponse.status === 400) {
+                const errorMsg = await checkResponse.text();
+                throw new Error(errorMsg || "This email is already registered.");
+            }
+
+            if (!checkResponse.ok) {
+                throw new Error("Connection failed. Please try again.");
+            }
+
+            // 3. Save Data & Redirect Logic (Only if unique)
             sessionStorage.setItem("registerDataStep1", JSON.stringify(formData))
             
             setNotification({ message: "Step 1 complete! Moving to next step...", type: 'success' });
@@ -74,8 +89,13 @@ export default function RegistrationStep1() {
                     router.push("/register/buyer")
                 }
             }, 1000)
-        } catch (err) {
-            setNotification({ message: "An error occurred. Please try again.", type: 'error' });
+
+        } catch (err: any) {
+            // Display the "Email already exists" error in your custom notification UI
+            setNotification({ 
+                message: err.message || "An unexpected error occurred.", 
+                type: 'error' 
+            });
             setIsLoading(false)
         }
     }
@@ -147,7 +167,6 @@ export default function RegistrationStep1() {
                     </div>
                 </div>
 
-                {/* Right Side Image */}
                 <div className="hidden lg:flex w-1/2 relative">
                     <img src="/farmer-background.png" alt="Farming background" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/10"></div>

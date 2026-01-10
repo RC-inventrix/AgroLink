@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Mail, KeyRound, Lock, Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 
+import logo from "../../public/images/Group-6.png"
 const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   const [email, setEmail] = useState('');
@@ -21,24 +23,38 @@ const ForgotPassword = () => {
   const BASE_URL = "http://localhost:8080/forgotPassword";
 
   // Step 1: Send OTP to Email
+  // Step 1: Send OTP to Email
   const handleSendEmail = async (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch(`${BASE_URL}/verifyMail/${email}`, {
-        method: 'POST'
-      });
-      const data = await response.text();
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+  try {
+    const response = await fetch(`${BASE_URL}/verifyMail/${email}`, {
+      method: 'POST'
+    });
 
-      if (!response.ok) throw new Error(data || "Failed to send email");
-      setStep(2);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      // 1. Check if the response is JSON
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        // 2. Extract the specific detail field from your screenshot
+        throw new Error(errorData.detail || "User not found");
+      } else {
+        // Fallback for plain text errors
+        const textError = await response.text();
+        throw new Error(textError || "Failed to send email");
+      }
     }
-  };
+
+    setStep(2);
+  } catch (err) {
+    // 3. This will now show only the clean string in your red box
+    setError(err instanceof Error ? err.message : "An error occurred");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Step 2: Verify the 6-digit OTP
   const handleVerifyOtp = async (e: { preventDefault: () => void; }) => {
@@ -96,14 +112,7 @@ const ForgotPassword = () => {
       {/* Left Column: Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-24 lg:px-32 relative">
         {/* Brand Logo */}
-        <div className="absolute top-12 left-8 md:left-24">
-          <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-[#facc15] rounded-sm transform -rotate-12 flex items-center justify-center shadow-lg">
-                <span className="text-black font-black italic">A</span>
-             </div>
-             <span className="text-2xl font-bold text-white tracking-tighter italic">Agrolink</span>
-          </div>
-        </div>
+        <Image src={logo} alt="Agrolink Logo" className='w-35' />
 
         <div className="max-w-md w-full mt-12">
           <button 
@@ -235,9 +244,7 @@ const ForgotPassword = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#061c0e] to-transparent w-1/2" />
         <div className="absolute bottom-12 left-12 right-12">
-           <p className="text-white/80 text-lg font-medium italic border-l-4 border-[#facc15] pl-6">
-             "Ensuring food security and empowering local farmers across the nation."
-           </p>
+           
         </div>
       </div>
     </div>
