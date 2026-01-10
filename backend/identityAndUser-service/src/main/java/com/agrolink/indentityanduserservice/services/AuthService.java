@@ -35,6 +35,11 @@ public class AuthService {
     }
 
     public String saveUser(RegisterRequest request) {
+
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("An account with this email already exists.");
+        }
+
         User user = new User();
 
         // 1. Map Common Fields
@@ -93,5 +98,9 @@ public class AuthService {
 
         // 3. Save the updated entity to the database
         return userRepository.save(user);
+    }
+
+    public boolean checkEmailExists(String email) {
+        return userRepository.findByEmail(email).isPresent();
     }
 }

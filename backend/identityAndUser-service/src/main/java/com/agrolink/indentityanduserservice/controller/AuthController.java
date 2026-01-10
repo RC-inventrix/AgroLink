@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -143,5 +144,20 @@ public class AuthController {
         Long userId = (Long) request.getAttribute("userId");
 
         return ResponseEntity.ok(authService.updateUserDetails(userId, updateDTO));
+    }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        // This calls the checkEmailExists method we discussed for AuthService
+        boolean exists = service.checkEmailExists(email);
+
+        if (exists) {
+            // Returning 409 Conflict or 400 Bad Request so the frontend catches it
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("An account with this email already exists.");
+        }
+
+
+        return ResponseEntity.ok("Email is available");
     }
 }
