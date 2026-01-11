@@ -19,7 +19,10 @@ public class User {
     private Long id;
 
     private String fullname;
+
+    @Column(unique = true,nullable = false)
     private String email;
+
     private String phone;
     private String password;
     private String address;
@@ -30,6 +33,9 @@ public class User {
     private String zipcode;
     private String nic;
     private String AvatarUrl;
+
+    @OneToOne(mappedBy = "user")
+    private ForgotPassword forgotPassword;
 
 
 }
