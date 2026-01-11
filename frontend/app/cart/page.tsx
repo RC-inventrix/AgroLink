@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react" // Added icons
-import Header from "@/components/Header"
+import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
 

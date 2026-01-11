@@ -15,12 +15,13 @@ import {
   Truck,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import Header from "@/components/header"
 
 export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
       
-
+      <Header />
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20">
         <div className="container mx-auto px-4 text-center">
@@ -545,14 +546,7 @@ export default function FeaturesPage() {
           <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto text-balance">
             Join thousands of farmers and buyers already benefiting from AgroLink's powerful features.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-8 py-4 bg-[#EEC044] text-[#03230F] rounded-lg hover:bg-[#c99530] transition-colors font-bold text-lg">
-              Get Started Today
-            </button>
-            <button className="px-8 py-4 bg-[#03230F] text-white rounded-lg hover:bg-[#165a42] transition-colors font-bold text-lg">
-              View Live Demo
-            </button>
-          </div>
+          
         </div>
       </section>
 
