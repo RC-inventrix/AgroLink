@@ -100,7 +100,7 @@ public class PaymentService {
                 .build();
     }
 
-    public void processCashOnDelivery(Long userId) {
+    /*public void processCashOnDelivery(Long userId) {
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
         if (cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
@@ -131,7 +131,7 @@ public class PaymentService {
                 .url(session.getUrl())
                 .build();
         
-    }
+    }*/
 
     public void processCashOnDelivery(Long userId) {
         // 1. Fetch Cart Items
