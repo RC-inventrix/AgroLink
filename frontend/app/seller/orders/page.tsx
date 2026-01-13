@@ -4,6 +4,9 @@ import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
 import Header from "@/components/header";
 import { useEffect, useState } from "react"
+import SellerHeader from "@/components/headers/SellerHeader";
+import SellerSidebar from "../dashboard/SellerSideBar";
+import "../dashboard/SellerDashboard.css"
 
 export default function Home() {
     const [orders, setOrders] = useState<any[]>([])
@@ -15,7 +18,7 @@ export default function Home() {
             if (res.ok) {
                 const data = await res.json()
                 setOrders(data)
-                
+
             }
         } catch (error) {
             console.error("Failed to fetch orders", error)
@@ -34,22 +37,28 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-background">
-            <Header />
-            <main className="flex-1">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-foreground mb-2">Order Management</h1>
-                        <p className="text-muted-foreground">Manage your vegetable orders</p>
+            <SellerHeader />
+            <div className="flex">
+                
+                <SellerSidebar unreadCount={0} activePage="orders" />
+                
+                <main className="flex-1">
+                    <div className="container mx-auto px-4 py-8">
+                        <div className="mb-8">
+                            <h1 className="text-3xl font-bold text-foreground mb-2">Order Management</h1>
+                            <p className="text-muted-foreground">Manage your vegetable orders</p>
+                        </div>
+
+                        <StatsOverview totalOrders={orders.length} totalRevenue={totalRevenue} />
+
+                        <OrdersList
+                            initialOrders={orders}
+                            onOrderUpdated={fetchOrders} // Refresh list after status change
+                        />
                     </div>
+                </main>
+            </div>
 
-                    <StatsOverview totalOrders={orders.length} totalRevenue={totalRevenue} />
-
-                    <OrdersList
-                        initialOrders={orders}
-                        onOrderUpdated={fetchOrders} // Refresh list after status change
-                    />
-                </div>
-            </main>
         </div>
     )
 }

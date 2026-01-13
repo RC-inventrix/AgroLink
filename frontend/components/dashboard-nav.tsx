@@ -15,7 +15,7 @@ const navItems = [
   { href: "/buyer/order-history", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
 ]
 
 interface DashboardNavProps {
