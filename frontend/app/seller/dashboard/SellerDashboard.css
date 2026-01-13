@@ -28,7 +28,7 @@
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 20px;
 }
 
 .nav-item {
@@ -38,12 +38,16 @@
     border-radius: 8px;
     font-size: 15px;
     display: block;
+    hover {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
 }
 
 .nav-item.active {
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--primary-yellow);
     font-weight: bold;
+    
 }
 
 .badge {

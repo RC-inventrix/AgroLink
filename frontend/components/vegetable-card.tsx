@@ -82,12 +82,15 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                             <span className="text-sm text-muted-foreground">{vegetable.rating}</span>
                         </div>
                     </div>
+                    <div>
                     <Button 
                         variant="outline" size="icon" className="rounded-full border-primary/20 text-primary"
                         onClick={handleContactSeller}
                     >
                         <MessageCircle className="h-5 w-5" />
                     </Button>
+                    <span className="text-xs ml-2">Contact Seller</span>
+                    </div>
                 </div>
 
                 {/* NEW: Displaying actual Seller Name */}

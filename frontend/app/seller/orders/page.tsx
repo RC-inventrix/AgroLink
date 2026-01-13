@@ -2,7 +2,6 @@
 
 import { OrdersList } from "@/components/orders-list"
 import { StatsOverview } from "@/components/stats-overview"
-import Header from "@/components/header";
 import { useEffect, useState } from "react"
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "../dashboard/SellerSideBar";
@@ -18,7 +17,6 @@ export default function Home() {
             if (res.ok) {
                 const data = await res.json()
                 setOrders(data)
-
             }
         } catch (error) {
             console.error("Failed to fetch orders", error)
@@ -31,18 +29,20 @@ export default function Home() {
         fetchOrders()
     }, [])
 
-    // Calculate Total Revenue (Sum of 'amount' from all orders)
-    // Backend amount is in cents, so divide by 100
     const totalRevenue = orders.reduce((acc, order) => acc + (order.amount / 100), 0)
 
     return (
-        <div className="min-h-screen bg-background">
+        // Changed: Added h-screen and overflow-hidden to the root div
+        <div className="flex flex-col h-screen bg-background overflow-hidden">
             <SellerHeader />
-            <div className="flex">
+            
+            {/* Changed: flex-1 and overflow-hidden here ensure the sidebar/main content fill remaining space */}
+            <div className="flex flex-1 overflow-hidden">
                 
+                {/* Ensure SellerSidebar has min-h-full or h-full internally */}
                 <SellerSidebar unreadCount={0} activePage="orders" />
                 
-                <main className="flex-1">
+                <main className="flex-1 overflow-y-auto">
                     <div className="container mx-auto px-4 py-8">
                         <div className="mb-8">
                             <h1 className="text-3xl font-bold text-foreground mb-2">Order Management</h1>
@@ -53,12 +53,11 @@ export default function Home() {
 
                         <OrdersList
                             initialOrders={orders}
-                            onOrderUpdated={fetchOrders} // Refresh list after status change
+                            onOrderUpdated={fetchOrders} 
                         />
                     </div>
                 </main>
             </div>
-
         </div>
     )
 }

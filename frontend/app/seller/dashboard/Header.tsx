@@ -127,7 +127,7 @@ export default function DashboardHeader() {
                             <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">Notifications</div>
                             {unreadCount > 0 ? (
                                 <button
-                                    onClick={() => { setIsNotifOpen(false); router.push("/chat"); }}
+                                    onClick={() => { setIsNotifOpen(false); router.push("/seller/chat"); }}
                                     className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
                                 >
                                     <div className="p-2 rounded-full bg-orange-100 text-orange-600"><MessageSquare className="w-4 h-4" /></div>
@@ -139,7 +139,7 @@ export default function DashboardHeader() {
                             ) : (
                                 <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
                             )}
-                            <button onClick={() => router.push("/chat")} className="w-full py-2 text-center text-xs font-bold text-[#03230F] hover:bg-gray-50">Go to Chat Center</button>
+                            <button onClick={() => router.push("/seller/chat")} className="w-full py-2 text-center text-xs font-bold text-[#03230F] hover:bg-gray-50">Go to Chat Center</button>
                         </div>
                     )}
                 </div>

@@ -12,12 +12,33 @@ import './SellerDashboard.css';
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [activeTab, setActiveTab] = useState('pending');
+    
+    // --- NEW STATE FOR USER NAME ---
+    const [userName, setUserName] = useState("Farmer"); 
+    
     const baseUrl = "http://localhost:8083";
+    const authUrl = "http://localhost:8080"; // Identity service port
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
         if (!token || !myId) return;
+
+        // --- FETCH ACTUAL USER NAME ---
+        const fetchUserData = async () => {
+            try {
+                const res = await fetch(`${authUrl}/auth/me`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Assumes your backend returns { "fullName": "Kamal Bandara" }
+                    setUserName(data.fullName || "Farmer");
+                }
+            } catch (err) {
+                console.error("Failed to fetch user name:", err);
+            }
+        };
 
         const syncGlobalUnread = async () => {
             try {
@@ -41,7 +62,8 @@ export default function SellerDashboard() {
             }
         };
 
-        syncGlobalUnread();
+        fetchUserData(); // Get Name
+        syncGlobalUnread(); // Get Messages
 
         const socket = new SockJS(`${baseUrl}/ws`);
         const client = new Client({
@@ -61,20 +83,21 @@ export default function SellerDashboard() {
         <>
             <SellerHeader />
             <div className="dashboard-container">
-                {/* Reusable Sidebar */}
                 <SellerSidebar unreadCount={navUnread} activePage="dashboard" />
 
                 <main className="main-content">
                     <header className="dashboard-header">
                         <div>
-                            <h1 className="title">Welcome back, Farmer! 👨‍🌾</h1>
+                            {/* --- UPDATED HEADER WITH DYNAMIC NAME --- */}
+                            <h1 className="title">Welcome back, {userName}! 👨‍🌾</h1>
                             <p className="subtitle">Here is what’s happening with your store today.</p>
                         </div>
                         <Link href="/VegetableList/farmer/add-product">
                             <button className="create-btn">+ Add New Product</button>
                         </Link>
                     </header>
-
+                    
+                    {/* ... stats-grid and widgets-grid logic remains exactly the same ... */}
                     <div className="stats-grid">
                         <StatCard label="Total Revenue" value="Rs. 45,000" icon="💰" highlight={false} />
                         <StatCard label="Pending Orders" value={12} icon="📦" highlight={true} />
@@ -103,7 +126,6 @@ export default function SellerDashboard() {
                                         <button className={activeTab === 'completed' ? 'active-tab' : 'tab'} onClick={() => setActiveTab('completed')}>Completed</button>
                                     </div>
                                 </div>
-                                {/* Order list logic remains the same... */}
                             </div>
                         </div>
 
@@ -123,6 +145,7 @@ export default function SellerDashboard() {
     );
 }
 
+// ... StatCard function remains the same ...
 function StatCard({ label, value, icon, highlight }: { label: string, value: string | number, icon: string, highlight: boolean }) {
     return (
         <div className={`stat-card ${highlight ? 'highlight-card' : ''}`} style={{

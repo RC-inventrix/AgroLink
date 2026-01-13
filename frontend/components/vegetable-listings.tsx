@@ -5,6 +5,7 @@ import { Search, ChevronDown, Loader2 } from "lucide-react"
 import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import BuyerHeader from "./headers/BuyerHeader"
 
 // 1. Define the Interface (Matches your VegetableCard props)
 interface Vegetable {
@@ -96,6 +97,8 @@ useEffect(() => {
 
     return (
         <div className="min-h-screen bg-background">
+
+            
             {/* Header Section */}
             <div className="bg-[#f8f8f8] #EEC044 py-12">
                 <div className="container mx-auto px-4">
