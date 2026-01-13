@@ -37,13 +37,22 @@ public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-
-    private final AuthService authService;
-
-    public AuthController(AuthService authService) {
-        this.authService = authService;
+    // --- FIX: Endpoint to resolve "NoResourceFoundException" for /auth/user/{id} ---
+    @GetMapping("/user/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            // Ensure you have implemented findById in your AuthService
+            User user = service.findById(id);
+            if (user != null) {
+                return ResponseEntity.ok(user);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving user: " + e.getMessage());
+        }
     }
-
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
@@ -58,7 +67,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> getToken(@RequestBody LoginRequest authRequest, HttpServletResponse response) {
         try {
-            // 1. Attempt Authentication
             Authentication authenticate = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(authRequest.getIdentifier(), authRequest.getPassword())
             );
@@ -73,91 +81,66 @@ public class AuthController {
 
                 return ResponseEntity.ok(new AuthResponse(token, role, authRequest.getIdentifier(), userId));
             } else {
-                // This part is rarely reached as authenticationManager throws an exception on failure
                 return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password."));
             }
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            // SPECIFIC ERROR: Wrong password or email
             return ResponseEntity.status(401).body(Map.of("message", "The email or password you entered is incorrect."));
         } catch (org.springframework.security.core.AuthenticationException e) {
-            // GENERAL ERROR: Account locked, disabled, etc.
             return ResponseEntity.status(403).body(Map.of("message", "Your account is temporarily disabled. Please contact support."));
         } catch (Exception e) {
-            // SERVER ERROR
             return ResponseEntity.status(500).body(Map.of("message", "An unexpected server error occurred. Please try again later."));
         }
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        // To log out, we overwrite the existing "token" cookie with an expired one
         Cookie cookie = new Cookie("token", null);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
-        cookie.setMaxAge(0); // Immediately expires the cookie
-
+        cookie.setMaxAge(0);
         response.addCookie(cookie);
         return ResponseEntity.ok("Logged out successfully");
     }
 
     @GetMapping("/validate")
     public ResponseEntity<?> validateToken() {
-        // If the request reaches this point, the JwtAuthenticationFilter
-        // already verified the cookie and set the SecurityContext
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-
         if (authentication == null) {
             return ResponseEntity.status(401).body("Not authenticated");
         }
-        // 1. Get the email from the authenticated user context
         String email = authentication.getName();
-
-        // 2. Fetch the user's full name from your database service
-        // For example, if you have a service that finds user by email:
         String fullName = service.getFullNameByEmail(email);
-
-        // 3. Return a small JSON object with the name
         return ResponseEntity.ok(java.util.Map.of("fullName", fullName));
     }
 
     @GetMapping("/fullnames")
     public ResponseEntity<Map<Long, String>> getFullNamesByIds(@RequestParam List<Long> ids) {
-        // Use the method we just added to authService
-        List<User> users = authService.findAllById(ids);
-
+        List<User> users = service.findAllById(ids);
         Map<Long, String> fullNameMap = users.stream()
                 .collect(Collectors.toMap(
-                        User::getId,       // Key: Long
-                        User::getFullname  // Value: String
+                        User::getId,
+                        User::getFullname
                 ));
-
         return ResponseEntity.ok(fullNameMap);
     }
 
     @PutMapping("/profile/update")
     public ResponseEntity<?> updateProfile(@RequestBody UserUpdateDTO updateDTO, HttpServletRequest request) {
-        // Resolve 'getAttribute' error by importing HttpServletRequest
         Long userId = (Long) request.getAttribute("userId");
-
-        return ResponseEntity.ok(authService.updateUserDetails(userId, updateDTO));
+        return ResponseEntity.ok(service.updateUserDetails(userId, updateDTO));
     }
 
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmail(@RequestParam String email) {
-        // This calls the checkEmailExists method we discussed for AuthService
         boolean exists = service.checkEmailExists(email);
-
         if (exists) {
-            // Returning 409 Conflict or 400 Bad Request so the frontend catches it
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("An account with this email already exists.");
         }
-
-
         return ResponseEntity.ok("Email is available");
     }
 }

@@ -5,9 +5,9 @@ import SellerSidebar from "../dashboard/SellerSideBar"
 
 export default function Page() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className=" bg-background">
       <SellerHeader />
-      <div className="flex">
+      <div className="flex h-screen">
         <SellerSidebar unreadCount={0} activePage="products" />
         <ProductList />
       </div>
