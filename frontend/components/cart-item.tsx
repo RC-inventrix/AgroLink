@@ -1,5 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image"
+import { Trash2 } from "lucide-react" // Added icon
 
 interface Vegetable {
   id: string
@@ -14,14 +15,15 @@ interface Vegetable {
 interface CartItemProps {
   item: Vegetable
   onToggle: (id: string) => void
+  onRemove: (id: string) => void // Added this prop
 }
 
-export default function CartItem({ item, onToggle }: CartItemProps) {
+export default function CartItem({ item, onToggle, onRemove }: CartItemProps) {
   const totalPrice = item.pricePerKg * item.quantity
 
   return (
     <div
-      className={`flex gap-4 rounded-lg border p-4 transition-colors ${
+      className={`group flex gap-4 rounded-lg border p-4 transition-all ${
         item.selected ? "border-green-300 bg-green-50" : "border-gray-200 bg-white"
       }`}
     >
@@ -35,7 +37,12 @@ export default function CartItem({ item, onToggle }: CartItemProps) {
       </div>
 
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-        <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+        <Image 
+            src={item.image || "/placeholder.svg"} 
+            alt={item.name} 
+            fill 
+            className="object-cover" 
+        />
       </div>
 
       <div className="flex flex-1 justify-between">
@@ -47,8 +54,18 @@ export default function CartItem({ item, onToggle }: CartItemProps) {
           </p>
         </div>
 
-        <div className="text-right">
+        <div className="flex flex-col justify-between items-end">
           <p className="font-semibold text-gray-900">Rs. {totalPrice.toFixed(2)}</p>
+          
+          {/* --- REMOVE BUTTON --- */}
+          <button
+            onClick={() => onRemove(item.id)}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 transition-colors"
+            title="Remove from cart"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Remove</span>
+          </button>
         </div>
       </div>
     </div>

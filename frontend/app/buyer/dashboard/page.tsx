@@ -20,15 +20,7 @@ import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// ... (Keep your Static Mock Data: cartItems, wishlistItems, orders, bargains, itemRequests, notifications as they were) ...
-// (I am omitting the mock data here to save space, keep it exactly as you had it)
-
-const cartItems = [
-    { id: 1, name: "Fresh Tomatoes", image: "/buyer-dashboard/red-tomatoes.jpg", quantity: 5 },
-    { id: 2, name: "Carrots", image: "/buyer-dashboard/orange-carrots.jpg", quantity: 3 },
-    { id: 3, name: "Leafy Greens", image: "/buyer-dashboard/fresh-lettuce.png", quantity: 2 },
-]
-
+// Static Mock Data for sections not yet integrated with API
 const wishlistItems = [
     { id: 1, name: "Organic Beans", image: "/buyer-dashboard/green-beans.jpg" },
     { id: 2, name: "Bell Peppers", image: "/buyer-dashboard/colorful-bell-peppers.png" },
@@ -59,21 +51,21 @@ export default function BuyerDashboard() {
     const [liveChats, setLiveChats] = useState<any[]>([])
     const [isLoadingChats, setIsLoadingChats] = useState(true)
 
-    // --- FIX: Point EVERYTHING to the API Gateway (Port 8080) ---
-    const authBaseUrl = "http://localhost:8080"
-    const chatBaseUrl = "http://localhost:8080"
-    // ------------------------------------------------------------
+    // --- State for Real Cart Data ---
+    const [realCartItems, setRealCartItems] = useState<any[]>([])
+    const [isLoadingCart, setIsLoadingCart] = useState(true)
+
+    const gatewayUrl = "http://localhost:8080"
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
-        const myId = sessionStorage.getItem("id");
+        const myId = sessionStorage.getItem("id") || "1"; 
         if (!token) return;
 
         // 1. Fetch User Name
         const fetchUserName = async () => {
             try {
-                // Gateway forwards "/auth/me" -> Identity Service
-                const response = await fetch(`${authBaseUrl}/auth/me`, {
+                const response = await fetch(`${gatewayUrl}/auth/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -83,11 +75,25 @@ export default function BuyerDashboard() {
             } catch (err) { console.error("Name fetch failed:", err); }
         };
 
-        // 2. Fetch Unread Count & Recent Chats
+        // 2. Fetch Real Cart Items from Backend
+        const fetchCartItems = async () => {
+            try {
+                const res = await fetch(`${gatewayUrl}/cart/${myId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setRealCartItems(data);
+                }
+            } catch (err) {
+                console.error("Cart fetch failed:", err);
+            } finally {
+                setIsLoadingCart(false);
+            }
+        };
+
+        // 3. Sync Chat Data
         const syncDashboardData = async () => {
             try {
-                // Gateway forwards "/api/chat/..." -> Chat Service
-                const res = await fetch(`${chatBaseUrl}/api/chat/contacts`, {
+                const res = await fetch(`${gatewayUrl}/api/chat/contacts`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -98,15 +104,13 @@ export default function BuyerDashboard() {
                         return;
                     }
 
-                    // Get names from Identity Service
-                    const nameRes = await fetch(`${authBaseUrl}/auth/fullnames?ids=${ids.join(',')}`, {
+                    const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${ids.join(',')}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-                    // Get counts per sender
                     const data = await Promise.all(ids.map(async (senderId) => {
-                        const countRes = await fetch(`${chatBaseUrl}/api/chat/unread-count/${senderId}`, {
+                        const countRes = await fetch(`${gatewayUrl}/api/chat/unread-count/${senderId}`, {
                             headers: { "Authorization": `Bearer ${token}` }
                         });
                         const count = countRes.ok ? await countRes.json() : 0;
@@ -114,7 +118,6 @@ export default function BuyerDashboard() {
                     }));
 
                     setNavUnread(data.reduce((acc, curr) => acc + curr.count, 0));
-
                     setLiveChats(data.slice(0, 3).map(chat => ({
                         id: chat.id.toString(),
                         farmer: chat.name,
@@ -128,8 +131,12 @@ export default function BuyerDashboard() {
         };
 
         fetchUserName();
+        fetchCartItems();
         syncDashboardData();
-        const interval = setInterval(syncDashboardData, 60000);
+        const interval = setInterval(() => {
+            syncDashboardData();
+            fetchCartItems();
+        }, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -140,33 +147,64 @@ export default function BuyerDashboard() {
                 <div className="flex">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
-                        {/* Welcome Banner */}
                         <div className="relative mb-8 overflow-hidden rounded-xl bg-[#03230F] p-8 text-white">
                             <h1 className="mb-2 text-3xl font-bold">Welcome back, {firstName} 👋</h1>
                             <p className="text-lg opacity-90">Manage your orders, bargains, and requests in one place</p>
                         </div>
 
-                        {/* Top Stats: Cart & Wishlist */}
                         <div className="mb-8 grid gap-6 md:grid-cols-2">
+                            {/* Real My Cart Section */}
                             <Card className="hover:shadow-md transition-shadow">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-lg font-semibold">My Cart</CardTitle>
                                     <ShoppingCart className="h-5 w-5 text-yellow-500" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-bold text-[#2d5016] mb-4">{cartItems.length} items</div>
-                                    <div className="flex gap-2">
-                                        {cartItems.map((item) => (
-                                            <div key={item.id} className="h-12 w-12 rounded-lg overflow-hidden border">
-                                                <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                                    {isLoadingCart ? (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="h-8 w-24 bg-gray-100 animate-pulse rounded" />
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="h-12 w-12 bg-gray-100 animate-pulse rounded-lg" />
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                    <Link href="/cart"><Button className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600">View Cart</Button></Link>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="text-3xl font-bold text-[#2d5016] mb-4">
+                                                {realCartItems.length} {realCartItems.length === 1 ? 'item' : 'items'}
+                                            </div>
+                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                                {realCartItems.length > 0 ? (
+                                                    realCartItems.slice(0, 4).map((item) => (
+                                                        <div key={item.id} className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border bg-white shadow-sm">
+                                                            <img 
+                                                                src={item.imageUrl || "/placeholder.svg"} 
+                                                                alt={item.productName} 
+                                                                className="h-full w-full object-cover" 
+                                                            />
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-400 py-2">Your cart is currently empty.</p>
+                                                )}
+                                                {realCartItems.length > 4 && (
+                                                    <div className="h-12 w-12 flex items-center justify-center rounded-lg border bg-gray-50 text-xs font-bold text-gray-500">
+                                                        +{realCartItems.length - 4}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                    <Link href="/cart">
+                                        <Button className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">
+                                            Go to Cart
+                                        </Button>
+                                    </Link>
                                 </CardContent>
                             </Card>
 
-                            <Card className="hover:shadow-md transition-shadow">
+                            {/* <Card className="hover:shadow-md transition-shadow">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-lg font-semibold">Wishlist</CardTitle>
                                     <Heart className="h-5 w-5 text-yellow-500" />
@@ -180,20 +218,19 @@ export default function BuyerDashboard() {
                                             </div>
                                         ))}
                                     </div>
-                                    <Button variant="outline" className="mt-4 w-full border-yellow-500 text-yellow-500 hover:bg-yellow-50">View Wishlist</Button>
+                                    <Button variant="outline" className="mt-4 w-full border-yellow-500 text-yellow-500 hover:bg-yellow-50 font-semibold">View Wishlist</Button>
                                 </CardContent>
-                            </Card>
+                            </Card> */}
                         </div>
 
-                        {/* Orders Section */}
+                        {/* Orders and Other Sections */}
                         <Card className="mb-8">
                             <CardHeader><CardTitle className="flex items-center gap-2 font-bold"><Package className="h-5 w-5 text-yellow-500" /> My Orders</CardTitle></CardHeader>
                             <CardContent>
                                 <Tabs defaultValue="pending">
                                     <TabsList className="grid w-full grid-cols-3 mb-6">
-                                        <TabsTrigger value="pending">Pending</TabsTrigger>
-                                        <TabsTrigger value="completed">Completed</TabsTrigger>
-                                        <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+                                        <TabsTrigger value="pending">Pending Orders</TabsTrigger>
+                                        
                                     </TabsList>
                                     <TabsContent value="pending" className="space-y-4">
                                         {orders.pending.map((order) => (
@@ -213,7 +250,6 @@ export default function BuyerDashboard() {
                         </Card>
 
                         <div className="grid gap-6 lg:grid-cols-2">
-                            {/* Bargain Status */}
                             <Card>
                                 <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-orange-500" /> Bargain Status</CardTitle></CardHeader>
                                 <CardContent className="space-y-4">
@@ -229,7 +265,6 @@ export default function BuyerDashboard() {
                                 </CardContent>
                             </Card>
 
-                            {/* Recent Chats Live Widget */}
                             <Card>
                                 <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-yellow-500" /> Recent Chats</CardTitle></CardHeader>
                                 <CardContent className="space-y-3">
