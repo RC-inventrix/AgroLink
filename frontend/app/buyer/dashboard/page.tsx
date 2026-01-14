@@ -20,24 +20,11 @@ import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Static Mock Data for sections not yet integrated with API
+// Remaining Static Mock Data (Wishlist & Bargains)
 const wishlistItems = [
     { id: 1, name: "Organic Beans", image: "/buyer-dashboard/green-beans.jpg" },
     { id: 2, name: "Bell Peppers", image: "/buyer-dashboard/colorful-bell-peppers.png" },
 ]
-
-const orders = {
-    pending: [
-        { id: 1, product: "Fresh Tomatoes", image: "/buyer-dashboard/red-tomatoes.jpg", farmer: "John Farmer", quantity: "10 kg", price: "LKR 1,500", status: "pending" },
-        { id: 2, product: "Carrots", image: "/buyer-dashboard/orange-carrots.jpg", farmer: "Sarah Agriculture", quantity: "5 kg", price: "LKR 750", status: "pending" },
-    ],
-    completed: [
-        { id: 3, product: "Leafy Greens", image: "/buyer-dashboard/fresh-lettuce.png", farmer: "Mike Produce", quantity: "3 kg", price: "LKR 450", status: "completed" },
-    ],
-    cancelled: [
-        { id: 4, product: "Bell Peppers", image: "/buyer-dashboard/colorful-bell-peppers.png", farmer: "Lisa Farms", quantity: "2 kg", price: "LKR 600", status: "cancelled" },
-    ],
-}
 
 const bargains = {
     pending: [{ id: 1, product: "Organic Beans", image: "/buyer-dashboard/green-beans.jpg", offeredPrice: "LKR 800", quantity: "8 kg", status: "pending" }],
@@ -51,9 +38,12 @@ export default function BuyerDashboard() {
     const [liveChats, setLiveChats] = useState<any[]>([])
     const [isLoadingChats, setIsLoadingChats] = useState(true)
 
-    // --- State for Real Cart Data ---
+    // --- Real State for Cart & Orders ---
     const [realCartItems, setRealCartItems] = useState<any[]>([])
     const [isLoadingCart, setIsLoadingCart] = useState(true)
+    
+    const [pendingOrders, setPendingOrders] = useState<any[]>([])
+    const [isLoadingOrders, setIsLoadingOrders] = useState(true)
 
     const gatewayUrl = "http://localhost:8080"
 
@@ -75,7 +65,7 @@ export default function BuyerDashboard() {
             } catch (err) { console.error("Name fetch failed:", err); }
         };
 
-        // 2. Fetch Real Cart Items from Backend
+        // 2. Fetch Real Cart Items
         const fetchCartItems = async () => {
             try {
                 const res = await fetch(`${gatewayUrl}/cart/${myId}`);
@@ -83,14 +73,29 @@ export default function BuyerDashboard() {
                     const data = await res.json();
                     setRealCartItems(data);
                 }
+            } catch (err) { console.error("Cart fetch failed:", err); }
+            finally { setIsLoadingCart(false); }
+        };
+
+        // 3. NEW: Fetch Pending Orders from Database
+        const fetchPendingOrders = async () => {
+            try {
+                // Adjust this endpoint to match your Order Service controller mapping
+                const res = await fetch(`${gatewayUrl}/orders/buyer/${myId}?status=PENDING`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setPendingOrders(data);
+                }
             } catch (err) {
-                console.error("Cart fetch failed:", err);
+                console.error("Orders fetch failed:", err);
             } finally {
-                setIsLoadingCart(false);
+                setIsLoadingOrders(false);
             }
         };
 
-        // 3. Sync Chat Data
+        // 4. Sync Chat Data
         const syncDashboardData = async () => {
             try {
                 const res = await fetch(`${gatewayUrl}/api/chat/contacts`, {
@@ -132,10 +137,13 @@ export default function BuyerDashboard() {
 
         fetchUserName();
         fetchCartItems();
+        fetchPendingOrders();
         syncDashboardData();
+
         const interval = setInterval(() => {
             syncDashboardData();
             fetchCartItems();
+            fetchPendingOrders();
         }, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -147,13 +155,14 @@ export default function BuyerDashboard() {
                 <div className="flex">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
+                        {/* Welcome Banner */}
                         <div className="relative mb-8 overflow-hidden rounded-xl bg-[#03230F] p-8 text-white">
                             <h1 className="mb-2 text-3xl font-bold">Welcome back, {firstName} 👋</h1>
                             <p className="text-lg opacity-90">Manage your orders, bargains, and requests in one place</p>
                         </div>
 
+                        {/* Top Stats: Cart & Wishlist */}
                         <div className="mb-8 grid gap-6 md:grid-cols-2">
-                            {/* Real My Cart Section */}
                             <Card className="hover:shadow-md transition-shadow">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-lg font-semibold">My Cart</CardTitle>
@@ -161,46 +170,22 @@ export default function BuyerDashboard() {
                                 </CardHeader>
                                 <CardContent>
                                     {isLoadingCart ? (
-                                        <div className="flex flex-col gap-2">
-                                            <div className="h-8 w-24 bg-gray-100 animate-pulse rounded" />
-                                            <div className="flex gap-2">
-                                                {[1, 2, 3].map(i => (
-                                                    <div key={i} className="h-12 w-12 bg-gray-100 animate-pulse rounded-lg" />
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <div className="h-24 flex items-center justify-center animate-pulse bg-gray-50 rounded-lg">Loading cart...</div>
                                     ) : (
                                         <>
                                             <div className="text-3xl font-bold text-[#2d5016] mb-4">
                                                 {realCartItems.length} {realCartItems.length === 1 ? 'item' : 'items'}
                                             </div>
                                             <div className="flex gap-2 overflow-x-auto pb-2">
-                                                {realCartItems.length > 0 ? (
-                                                    realCartItems.slice(0, 4).map((item) => (
-                                                        <div key={item.id} className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border bg-white shadow-sm">
-                                                            <img 
-                                                                src={item.imageUrl || "/placeholder.svg"} 
-                                                                alt={item.productName} 
-                                                                className="h-full w-full object-cover" 
-                                                            />
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <p className="text-sm text-gray-400 py-2">Your cart is currently empty.</p>
-                                                )}
-                                                {realCartItems.length > 4 && (
-                                                    <div className="h-12 w-12 flex items-center justify-center rounded-lg border bg-gray-50 text-xs font-bold text-gray-500">
-                                                        +{realCartItems.length - 4}
+                                                {realCartItems.slice(0, 4).map((item) => (
+                                                    <div key={item.id} className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border">
+                                                        <img src={item.imageUrl || "/placeholder.svg"} alt={item.productName} className="h-full w-full object-cover" />
                                                     </div>
-                                                )}
+                                                ))}
                                             </div>
                                         </>
                                     )}
-                                    <Link href="/cart">
-                                        <Button className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">
-                                            Go to Cart
-                                        </Button>
-                                    </Link>
+                                    <Link href="/cart"><Button className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600">View Cart</Button></Link>
                                 </CardContent>
                             </Card>
 
@@ -218,37 +203,71 @@ export default function BuyerDashboard() {
                                             </div>
                                         ))}
                                     </div>
-                                    <Button variant="outline" className="mt-4 w-full border-yellow-500 text-yellow-500 hover:bg-yellow-50 font-semibold">View Wishlist</Button>
+                                    <Button variant="outline" className="mt-4 w-full border-yellow-500 text-yellow-500">View Wishlist</Button>
                                 </CardContent>
                             </Card> */}
                         </div>
 
-                        {/* Orders and Other Sections */}
+                        {/* Orders Section - Real Database Integration */}
                         <Card className="mb-8">
-                            <CardHeader><CardTitle className="flex items-center gap-2 font-bold"><Package className="h-5 w-5 text-yellow-500" /> My Orders</CardTitle></CardHeader>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 font-bold">
+                                    <Package className="h-5 w-5 text-yellow-500" /> My Orders
+                                </CardTitle>
+                            </CardHeader>
                             <CardContent>
                                 <Tabs defaultValue="pending">
-                                    <TabsList className="grid w-full grid-cols-3 mb-6">
-                                        <TabsTrigger value="pending">Pending Orders</TabsTrigger>
-                                        
+                                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                                        <TabsTrigger value="pending">Pending Orders ({pendingOrders.length})</TabsTrigger>
+                                        <TabsTrigger value="history">History</TabsTrigger>
                                     </TabsList>
+                                    
                                     <TabsContent value="pending" className="space-y-4">
-                                        {orders.pending.map((order) => (
-                                            <div key={order.id} className="flex items-center gap-4 p-4 rounded-lg border bg-white">
-                                                <img src={order.image} alt={order.product} className="h-16 w-16 rounded-lg object-cover" />
-                                                <div className="flex-1 text-left">
-                                                    <h3 className="font-semibold">{order.product}</h3>
-                                                    <p className="text-xs text-gray-500">{order.farmer}</p>
-                                                    <p className="text-sm font-bold text-[#2d5016]">{order.price}</p>
+                                        {isLoadingOrders ? (
+                                            <div className="py-10 text-center animate-pulse text-gray-400">Fetching your orders...</div>
+                                        ) : pendingOrders.length > 0 ? (
+                                            pendingOrders.map((order) => (
+                                                <div key={order.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border bg-white hover:border-yellow-200 transition-colors">
+                                                    <div className="h-16 w-16 rounded-lg overflow-hidden border flex-shrink-0">
+                                                        <img 
+                                                            src={order.productImage || "/buyer-dashboard/red-tomatoes.jpg"} 
+                                                            alt={order.productName} 
+                                                            className="h-full w-full object-cover" 
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 text-left">
+                                                        <div className="flex justify-between items-start">
+                                                            <h3 className="font-semibold text-gray-900">{order.productName}</h3>
+                                                            <span className="text-xs font-mono text-gray-400">#{order.id.toString().padStart(5, '0')}</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500">Seller: {order.sellerName || "Farmer"}</p>
+                                                        <div className="mt-1 flex items-center gap-3">
+                                                            <p className="text-sm font-bold text-[#2d5016]">LKR {order.totalAmount || order.price}</p>
+                                                            <span className="text-xs text-gray-400">{order.quantity} kg</span>
+                                                        </div>
+                                                    </div>
+                                                    <Badge className="w-fit bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-50">
+                                                        <Clock className="mr-1 h-3 w-3" /> Pending
+                                                    </Badge>
                                                 </div>
-                                                <Badge className="bg-yellow-100 text-yellow-600 border-none"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>
+                                            ))
+                                        ) : (
+                                            <div className="py-12 text-center">
+                                                <Package className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+                                                <p className="text-gray-500">No pending orders found.</p>
+                                                <Link href="/VegetableList"><Button variant="link" className="text-yellow-600">Start Shopping</Button></Link>
                                             </div>
-                                        ))}
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="history">
+                                        <p className="py-10 text-center text-sm text-gray-400">Order history will appear here.</p>
                                     </TabsContent>
                                 </Tabs>
                             </CardContent>
                         </Card>
 
+                        {/* Bargains & Chats Widget */}
                         <div className="grid gap-6 lg:grid-cols-2">
                             <Card>
                                 <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-orange-500" /> Bargain Status</CardTitle></CardHeader>
