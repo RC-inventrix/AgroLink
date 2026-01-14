@@ -37,7 +37,17 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
     return isToday ? `Last seen today at ${timeString}` : `Last seen ${date.toLocaleDateString()} at ${timeString}`
   }
 
-  const initials = conversation.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+  // Inside MessageView component...
+
+const initials = (conversation.name || "??")
+    .split(" ")
+    .filter(n => n.length > 0)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+// Use 'initials' in your AvatarFallback...
 
   const handleSend = () => {
     if (inputValue.trim()) {

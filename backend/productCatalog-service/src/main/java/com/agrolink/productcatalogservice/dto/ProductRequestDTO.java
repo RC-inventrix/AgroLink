@@ -6,6 +6,8 @@ import java.util.List;
 
 @Data
 public class ProductRequestDTO {
+
+    private Long farmerId;
     private String vegetableName;
     private String category;
     private double quantity;
