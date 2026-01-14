@@ -113,7 +113,7 @@ export function DashboardHeader() {
               <DropdownMenuSeparator />
               {unreadCount > 0 ? (
                 <DropdownMenuItem 
-                  onClick={() => router.push("/chat")}
+                  onClick={() => router.push("/buyer/chat")}
                   className="flex gap-3 p-3 cursor-pointer focus:bg-gray-50"
                 >
                   <div className="p-2 rounded-full bg-orange-100 text-orange-600">
@@ -129,7 +129,7 @@ export function DashboardHeader() {
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => router.push("/chat")}
+                onClick={() => router.push("/buyer/chat")}
                 className="justify-center text-xs text-[#2d5016] font-semibold cursor-pointer"
               >
                 Go to Chat Center
