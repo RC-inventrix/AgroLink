@@ -61,7 +61,7 @@ export default function BuyerDashboard() {
 
     // --- FIX: Point EVERYTHING to the API Gateway (Port 8080) ---
     const authBaseUrl = "http://localhost:8080"
-    const chatBaseUrl = "http://localhost:8080"
+    const chatBaseUrl = "http://localhost:8083"
     // ------------------------------------------------------------
 
     useEffect(() => {

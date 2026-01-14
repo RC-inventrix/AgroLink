@@ -5,6 +5,7 @@ import { Search, ChevronDown, Loader2 } from "lucide-react"
 import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import BuyerHeader from "./headers/BuyerHeader"
 
 // 1. Define the Interface (Matches your VegetableCard props)
 interface Vegetable {
@@ -14,6 +15,7 @@ interface Vegetable {
     price100g: number // We will calculate this
     price1kg: number  // Maps to backend 'fixedPrice'
     seller: string    // Placeholder for now
+    sellerId: string  // Added to match VegetableCard requirements
     description: string
     category: string
     rating: number    // Placeholder for now
@@ -31,49 +33,56 @@ export default function VegetableListings() {
     const [error, setError] = useState("")
 
     // 3. Fetch Data from Backend
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                // Calls API Gateway -> Product Service
-                const res = await fetch("http://localhost:8080/products")
+    // Inside vegetable-listings.tsx
+// Inside your VegetableListings component
+useEffect(() => {
+    const fetchProductsAndNames = async () => {
+        try {
+            const token = sessionStorage.getItem("token");
+            // 1. Fetch products from Product Catalog Service
+            const res = await fetch("http://localhost:8080/products");
+            if (!res.ok) throw new Error("Failed to fetch products");
+            const data = await res.json();
 
-                if (!res.ok) {
-                    throw new Error("Failed to fetch products")
-                }
+            // 2. Extract all unique farmerIds from the product list
+            const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
 
-                const data = await res.json()
+            // 3. Fetch Full Names from Identity Service (Port 8080)
+            const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-                // 4. Map Backend Data -> Frontend Structure
-                const mappedData = data.map((item: any) => ({
-                    id: item.id.toString(),
-                    name: item.vegetableName,
-                    // Use first image from S3, or a fallback placeholder
-                    image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
+            // 4. Map Backend Data to Frontend Interface with actual names
+            const mappedData = data.map((item: any) => ({
+                id: item.id.toString(),
+                name: item.vegetableName,
+                image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
+                price1kg: item.fixedPrice || item.biddingPrice || 0,
+                price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
+                pricingType: item.pricingType,
+                description: item.description,
+                category: item.category,
+                sellerId: item.farmerId.toString(),
+                
+                // Assign the actual name from the Identity Service map
+                seller: fullNameMap[item.farmerId] || "Unknown Farmer", 
+                
+                rating: 4.5
+            }));
 
-                    // Pricing Logic
-                    price1kg: item.fixedPrice || item.biddingPrice || 0,
-                    price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
-
-                    pricingType: item.pricingType,
-                    description: item.description,
-                    category: item.category,
-
-                    // These fields don't exist in backend yet, so we hardcode them for UI
-                    seller: "AgroLink Farmer",
-                    rating: 4.5
-                }))
-
-                setVegetables(mappedData)
-            } catch (err) {
-                console.error("Error loading products:", err)
-                setError("Could not load products. Please ensure the backend is running.")
-            } finally {
-                setLoading(false)
-            }
+            setVegetables(mappedData);
+        } catch (err) {
+            console.error("Error loading products:", err);
+            setError("Could not load products. Please ensure the backend is running.");
+        } finally {
+            setLoading(false);
         }
+    };
 
-        fetchProducts()
-    }, [])
+    fetchProductsAndNames();
+}, []);
 
     // 5. Filter Logic (Updated to use 'vegetables' state)
     const filteredVegetables = useMemo(() => {
@@ -88,6 +97,8 @@ export default function VegetableListings() {
 
     return (
         <div className="min-h-screen bg-background">
+
+            
             {/* Header Section */}
             <div className="bg-[#f8f8f8] #EEC044 py-12">
                 <div className="container mx-auto px-4">

@@ -81,67 +81,84 @@ export default function VegetableForm() {
         setImagePreviews((prev) => prev.filter((_, i) => i !== index))
     }
 
-    // --- Submit Logic ---
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsLoading(true)
-        setNotification(null)
+   // --- Submit Logic ---
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setNotification(null)
 
-        // Basic Client-side Validation
-        if (images.length === 0) {
-            setNotification({ message: "Please upload at least one image.", type: 'error' });
-            setIsLoading(false);
-            return;
-        }
+    // 1. Retrieve the Farmer ID and Token from session storage
+    const myId = sessionStorage.getItem("id");
+    const token = sessionStorage.getItem("token");
 
-        const data = new FormData()
-        data.append("vegetableName", formData.vegetableName)
-        data.append("category", formData.category)
-        data.append("quantity", formData.quantity)
-        data.append("pricingType", formData.pricingType.toUpperCase())
-        data.append("description", formData.description)
+    // Basic Validation: Ensure the user is logged in
+    if (!myId) {
+        setNotification({ message: "User session not found. Please log in again.", type: 'error' });
+        setIsLoading(false);
+        return;
+    }
 
-        if (formData.pricingType === "fixed") {
-            data.append("fixedPrice", formData.fixedPrice)
-        } else {
-            data.append("biddingPrice", formData.biddingPrice)
-            if (formData.biddingStartDate) data.append("biddingStartDate", formData.biddingStartDate)
-            if (formData.biddingEndDate) data.append("biddingEndDate", formData.biddingEndDate)
-        }
+    if (images.length === 0) {
+        setNotification({ message: "Please upload at least one image.", type: 'error' });
+        setIsLoading(false);
+        return;
+    }
 
-        if (formData.willDeliver === "yes") {
-            data.append("deliveryAvailable", "true")
-            data.append("deliveryFeeFirst3Km", formData.deliveryCharge3km)
-            data.append("deliveryFeePerKm", formData.deliveryChargePerKm)
-        } else {
-            data.append("deliveryAvailable", "false")
-        }
+    const data = new FormData()
+    
+    // 2. Append the farmerId to the FormData
+    data.append("farmerId", myId) 
+    
+    data.append("vegetableName", formData.vegetableName)
+    data.append("category", formData.category)
+    data.append("quantity", formData.quantity)
+    data.append("pricingType", formData.pricingType.toUpperCase())
+    data.append("description", formData.description)
 
-        images.forEach((image) => {
-            data.append("images", image)
+    if (formData.pricingType === "fixed") {
+        data.append("fixedPrice", formData.fixedPrice)
+    } else {
+        data.append("biddingPrice", formData.biddingPrice)
+        if (formData.biddingStartDate) data.append("biddingStartDate", formData.biddingStartDate)
+        if (formData.biddingEndDate) data.append("biddingEndDate", formData.biddingEndDate)
+    }
+
+    if (formData.willDeliver === "yes") {
+        data.append("deliveryAvailable", "true")
+        data.append("deliveryFeeFirst3Km", formData.deliveryCharge3km)
+        data.append("deliveryFeePerKm", formData.deliveryChargePerKm)
+    } else {
+        data.append("deliveryAvailable", "false")
+    }
+
+    images.forEach((image) => {
+        data.append("images", image)
+    })
+
+    try {
+        const res = await fetch("http://localhost:8080/products", {
+            method: "POST",
+            headers: {
+                // Include the token for authentication if your backend requires it
+                "Authorization": `Bearer ${token}` 
+            },
+            body: data,
         })
 
-        try {
-            const res = await fetch("http://localhost:8080/products", {
-                method: "POST",
-                body: data,
-                // Note: Don't set Content-Type header when sending FormData
-            })
-
-            if (res.ok) {
-                setNotification({ message: "Product listed successfully!", type: 'success' });
-                setTimeout(() => router.push("/seller/dashboard"), 2000);
-            } else {
-                const errorData = await res.json().catch(() => null);
-                const message = errorData?.message || "Failed to add product. Please check your inputs.";
-                setNotification({ message, type: 'error' });
-            }
-        } catch (error) {
-            setNotification({ message: "Connection error. Is the server running?", type: 'error' });
-        } finally {
-            setIsLoading(false)
+        if (res.ok) {
+            setNotification({ message: "Product listed successfully!", type: 'success' });
+            setTimeout(() => router.push("/seller/dashboard"), 2000);
+        } else {
+            const errorData = await res.json().catch(() => null);
+            const message = errorData?.message || "Failed to add product.";
+            setNotification({ message, type: 'error' });
         }
+    } catch (error) {
+        setNotification({ message: "Connection error. Is the server running?", type: 'error' });
+    } finally {
+        setIsLoading(false)
     }
+}
 
     return (
         <main className="min-h-screen bg-background relative overflow-x-hidden">

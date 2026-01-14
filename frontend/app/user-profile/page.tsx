@@ -49,7 +49,7 @@ export default function ProfilePage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:8081/auth/user/${userId}`, {
+        const res = await fetch(`http://localhost:8080/auth/user/${userId}`, {
           method: "GET",
           headers: { 
             "Authorization": `Bearer ${token}`,
@@ -154,7 +154,7 @@ export default function ProfilePage() {
       )}
 
       <div className="flex">
-        <DashboardNav />
+        
         <main className="flex-1 p-8">
           <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border p-8 transition-all hover:shadow-md">
             <div className="flex items-center justify-between mb-8 border-b pb-4">
