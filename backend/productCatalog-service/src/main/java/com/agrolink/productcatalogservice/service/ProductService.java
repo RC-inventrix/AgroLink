@@ -36,6 +36,7 @@ public class ProductService {
 
         // 2. Create Product
         Product product = Product.builder()
+                .farmerId(request.getFarmerId())
                 .vegetableName(request.getVegetableName())
                 .category(request.getCategory())
                 .quantity(request.getQuantity())

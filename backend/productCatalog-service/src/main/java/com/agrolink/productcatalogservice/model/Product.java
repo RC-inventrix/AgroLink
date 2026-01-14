@@ -19,6 +19,8 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long farmerId;
+
     private String vegetableName;
     private String category;
     private double quantity;
