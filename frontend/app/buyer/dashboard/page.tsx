@@ -38,7 +38,6 @@ export default function BuyerDashboard() {
     const [liveChats, setLiveChats] = useState<any[]>([])
     const [isLoadingChats, setIsLoadingChats] = useState(true)
 
-    // --- Real State for Cart & Orders ---
     const [realCartItems, setRealCartItems] = useState<any[]>([])
     const [isLoadingCart, setIsLoadingCart] = useState(true)
     
@@ -52,7 +51,6 @@ export default function BuyerDashboard() {
         const myId = sessionStorage.getItem("id") || "1"; 
         if (!token) return;
 
-        // 1. Fetch User Name
         const fetchUserName = async () => {
             try {
                 const response = await fetch(`${gatewayUrl}/auth/me`, {
@@ -65,7 +63,6 @@ export default function BuyerDashboard() {
             } catch (err) { console.error("Name fetch failed:", err); }
         };
 
-        // 2. Fetch Real Cart Items
         const fetchCartItems = async () => {
             try {
                 const res = await fetch(`${gatewayUrl}/cart/${myId}`);
@@ -77,16 +74,50 @@ export default function BuyerDashboard() {
             finally { setIsLoadingCart(false); }
         };
 
-        // 3. NEW: Fetch Pending Orders from Database
+        // --- UPDATED: Fetch and Transform Pending Orders ---
         const fetchPendingOrders = async () => {
             try {
-                // Adjust this endpoint to match your Order Service controller mapping
-                const res = await fetch(`${gatewayUrl}/orders/buyer/${myId}?status=PENDING`, {
+                const res = await fetch(`${gatewayUrl}/api/buyer/orders/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
+
                 if (res.ok) {
-                    const data = await res.json();
-                    setPendingOrders(data);
+                    const backendOrders = await res.json();
+                    const pendingList: any[] = [];
+                    const sellerIds = new Set<string>();
+
+                    // 1. Filter for PENDING and Parse Items
+                    backendOrders.filter((o: any) => o.status !== "COMPLETED").forEach((order: any) => {
+                        let items = [];
+                        try {
+                            if (order.itemsJson && order.itemsJson.startsWith("[")) {
+                                items = JSON.parse(order.itemsJson);
+                            } else {
+                                items = [{ productName: "Agro Product", quantity: 1, pricePerKg: order.amount / 100 }];
+                            }
+                        } catch (e) { items = []; }
+
+                        items.forEach((item: any) => {
+                            const sId = item.sellerId || order.sellerId;
+                            if (sId) sellerIds.add(sId);
+                            pendingList.push({ ...item, orderId: order.id, sellerId: sId, status: "pending" });
+                        });
+                    });
+
+                    // 2. Fetch Seller Names
+                    let nameMap: Record<string, string> = {};
+                    if (sellerIds.size > 0) {
+                        const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${Array.from(sellerIds).join(',')}`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+                        if (nameRes.ok) nameMap = await nameRes.json();
+                    }
+
+                    // 3. Map final display data
+                    setPendingOrders(pendingList.map(item => ({
+                        ...item,
+                        sellerName: nameMap[item.sellerId] || "AgroLink Seller"
+                    })));
                 }
             } catch (err) {
                 console.error("Orders fetch failed:", err);
@@ -95,7 +126,6 @@ export default function BuyerDashboard() {
             }
         };
 
-        // 4. Sync Chat Data
         const syncDashboardData = async () => {
             try {
                 const res = await fetch(`${gatewayUrl}/api/chat/contacts`, {
@@ -155,13 +185,11 @@ export default function BuyerDashboard() {
                 <div className="flex">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
-                        {/* Welcome Banner */}
                         <div className="relative mb-8 overflow-hidden rounded-xl bg-[#03230F] p-8 text-white">
                             <h1 className="mb-2 text-3xl font-bold">Welcome back, {firstName} 👋</h1>
                             <p className="text-lg opacity-90">Manage your orders, bargains, and requests in one place</p>
                         </div>
 
-                        {/* Top Stats: Cart & Wishlist */}
                         <div className="mb-8 grid gap-6 md:grid-cols-2">
                             <Card className="hover:shadow-md transition-shadow">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -208,7 +236,7 @@ export default function BuyerDashboard() {
                             </Card> */}
                         </div>
 
-                        {/* Orders Section - Real Database Integration */}
+                        {/* Orders Section */}
                         <Card className="mb-8">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 font-bold">
@@ -226,11 +254,11 @@ export default function BuyerDashboard() {
                                         {isLoadingOrders ? (
                                             <div className="py-10 text-center animate-pulse text-gray-400">Fetching your orders...</div>
                                         ) : pendingOrders.length > 0 ? (
-                                            pendingOrders.map((order) => (
-                                                <div key={order.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border bg-white hover:border-yellow-200 transition-colors">
+                                            pendingOrders.map((order, idx) => (
+                                                <div key={`${order.orderId}-${idx}`} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border bg-white hover:border-yellow-200 transition-colors">
                                                     <div className="h-16 w-16 rounded-lg overflow-hidden border flex-shrink-0">
                                                         <img 
-                                                            src={order.productImage || "/buyer-dashboard/red-tomatoes.jpg"} 
+                                                            src={order.imageUrl || "/buyer-dashboard/red-tomatoes.jpg"} 
                                                             alt={order.productName} 
                                                             className="h-full w-full object-cover" 
                                                         />
@@ -238,15 +266,15 @@ export default function BuyerDashboard() {
                                                     <div className="flex-1 text-left">
                                                         <div className="flex justify-between items-start">
                                                             <h3 className="font-semibold text-gray-900">{order.productName}</h3>
-                                                            <span className="text-xs font-mono text-gray-400">#{order.id.toString().padStart(5, '0')}</span>
+                                                            <span className="text-xs font-mono text-gray-400">#{order.orderId.toString().padStart(5, '0')}</span>
                                                         </div>
-                                                        <p className="text-xs text-gray-500">Seller: {order.sellerName || "Farmer"}</p>
+                                                        <p className="text-xs text-primary font-medium">Seller: {order.sellerName}</p>
                                                         <div className="mt-1 flex items-center gap-3">
-                                                            <p className="text-sm font-bold text-[#2d5016]">LKR {order.totalAmount || order.price}</p>
+                                                            <p className="text-sm font-bold text-[#2d5016]">LKR {(order.pricePerKg * order.quantity).toFixed(2)}</p>
                                                             <span className="text-xs text-gray-400">{order.quantity} kg</span>
                                                         </div>
                                                     </div>
-                                                    <Badge className="w-fit bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-50">
+                                                    <Badge className="w-fit bg-yellow-50 text-yellow-700 border-yellow-200">
                                                         <Clock className="mr-1 h-3 w-3" /> Pending
                                                     </Badge>
                                                 </div>
@@ -261,7 +289,12 @@ export default function BuyerDashboard() {
                                     </TabsContent>
 
                                     <TabsContent value="history">
-                                        <p className="py-10 text-center text-sm text-gray-400">Order history will appear here.</p>
+                                        <div className="py-10 text-center">
+                                            <p className="text-sm text-gray-400">Visit the full history page to see completed orders.</p>
+                                            <Link href="/buyer/order-history">
+                                                <Button variant="outline" className="mt-4">View All History</Button>
+                                            </Link>
+                                        </div>
                                     </TabsContent>
                                 </Tabs>
                             </CardContent>
@@ -291,7 +324,7 @@ export default function BuyerDashboard() {
                                         <div className="py-4 text-center text-sm text-gray-400 animate-pulse">Syncing conversations...</div>
                                     ) : liveChats.length > 0 ? (
                                         liveChats.map((chat) => (
-                                            <Link key={chat.id} href="/chat">
+                                            <Link key={chat.id} href="/buyer/chat">
                                                 <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer">
                                                     <Avatar className="h-10 w-10">
                                                         <AvatarImage src={chat.avatar} />
@@ -308,7 +341,7 @@ export default function BuyerDashboard() {
                                     ) : (
                                         <p className="py-4 text-center text-sm text-gray-400">No active chats found</p>
                                     )}
-                                    <Link href="/chat"><Button variant="ghost" className="w-full text-xs text-[#2d5016] font-bold">Open Message Center</Button></Link>
+                                    <Link href="/buyer/chat"><Button variant="ghost" className="w-full text-xs text-[#2d5016] font-bold">Open Message Center</Button></Link>
                                 </CardContent>
                             </Card>
                         </div>
