@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+
 import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
-    sellerId: string 
+    sellerId: string
     description: string
     rating: number
 }
@@ -26,7 +26,9 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
         router.push("/VegetableList/quantity")
     }
-
+    const handleContactSeller = () => {
+        router.push(`/buyer/chat?userId=${vegetable.sellerId}`);
+    }
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -103,7 +105,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                         </div>
                     </div>
                     <div>
-                    <Button 
+                    <Button
                         variant="outline" size="icon" className="rounded-full border-primary/20 text-primary"
                         onClick={handleContactSeller}
                     >
