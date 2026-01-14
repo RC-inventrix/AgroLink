@@ -16,54 +16,47 @@ import java.util.List;
 public class AuthService {
 
     @Autowired
-    private  UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    /**
+     * Finds a single user by their ID.
+     * This is required by the AuthController /auth/user/{id} endpoint.
+     */
+    public User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id)); //
+    }
 
-
-    public  Long getUserIdByEmail(@NotBlank(message = "Username/Email is required") String identifier) {
-        // 1. Query the repository for the user by their email/identifier
+    public Long getUserIdByEmail(@NotBlank(message = "Username/Email is required") String identifier) {
         return userRepository.findByEmail(identifier)
-                // 2. Map the found User object to their numeric ID
                 .map(User::getId)
-                // 3. Throw an exception if the user does not exist to prevent NullPointerException
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + identifier));
-                // 4. Convert Long to int if your generateToken method specifically requires 'int'
-
     }
 
     public String saveUser(RegisterRequest request) {
-
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("An account with this email already exists.");
         }
 
         User user = new User();
-
-        // 1. Map Common Fields
         user.setFullname(request.getFullname());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        // 2. Map Role
         try {
             user.setRole(Role.valueOf(request.getRole()));
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid Role");
         }
 
-        // 3. Map Address & Business Details (For BOTH Farmers and Buyers)
-        // Remove the "if (Farmer)" check here so Buyers get their data saved too.
         user.setBusinessName(request.getBusinessName());
-        user.setAddress(request.getStreetAddress()); // Maps 'Delivery Address' to 'Address'
+        user.setAddress(request.getStreetAddress());
         user.setDistrict(request.getDistrict());
         user.setZipcode(request.getZipcode());
-
-        // 4. Map NIC (Only relevant for Farmers, but safe to map always)
-        // Buyers send "" (empty string) for this, which is fine.
         user.setNic(request.getBusinessRegOrNic());
 
         userRepository.save(user);
@@ -72,7 +65,7 @@ public class AuthService {
 
     public String getFullNameByEmail(String email) {
         return userRepository.findByEmail(email)
-                .map(User::getFullname) // Assuming your Entity has a getFullName() method
+                .map(User::getFullname)
                 .orElse("User");
     }
 
@@ -80,14 +73,10 @@ public class AuthService {
         return userRepository.findAllById(ids);
     }
 
-    // Inside AuthService.java
-    // Inside AuthService.java
     public User updateUserDetails(Long userId, UserUpdateDTO updateDTO) {
-        // 1. Find user by ID
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Update existing attributes
         if (updateDTO.getFullname() != null) user.setFullname(updateDTO.getFullname());
         if (updateDTO.getPhone() != null) user.setPhone(updateDTO.getPhone());
         if (updateDTO.getAddress() != null) user.setAddress(updateDTO.getAddress());
@@ -96,7 +85,6 @@ public class AuthService {
         if (updateDTO.getZipcode() != null) user.setZipcode(updateDTO.getZipcode());
         if (updateDTO.getAvatarUrl() != null) user.setAvatarUrl(updateDTO.getAvatarUrl());
 
-        // 3. Save the updated entity to the database
         return userRepository.save(user);
     }
 

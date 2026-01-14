@@ -120,7 +120,7 @@ export default function ProductList() {
     if (loading) return <div className="text-center py-20">Loading your products...</div>
 
     return (
-        <section className="max-w-7xl mx-auto px-4 py-8">
+        <section className="max-w-7xl ml-10  py-8">
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-foreground mb-2">My Products</h2>
                 <p className="text-muted-foreground">Manage your vegetable listings</p>
@@ -131,7 +131,7 @@ export default function ProductList() {
                     <p>No products found.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {products.map((product) => (
                         <ProductCard
                             key={product.id}

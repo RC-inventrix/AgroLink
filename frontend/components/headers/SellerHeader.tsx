@@ -7,8 +7,9 @@ import { useRouter } from "next/navigation"
 import { Bell, ShoppingCart, User, Menu, LogOut, Settings, X, Check, MessageSquare, Search } from "lucide-react"
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
-import logo from "../../../public/images/Group-6.png"
-export default function DashboardHeader() {
+import logo from "../../public/images/Group-6.png"
+
+export default function SellerHeader() {
     const router = useRouter()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
@@ -16,7 +17,7 @@ export default function DashboardHeader() {
     const dropdownRef = useRef<HTMLDivElement>(null)
     const notifRef = useRef<HTMLDivElement>(null)
 
-    const chatBaseUrl = "http://localhost:8080"
+    const chatBaseUrl = "http://localhost:8083"
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // 1. WebSocket & Initial Fetch Logic (Merged from your previous code)
@@ -97,12 +98,7 @@ export default function DashboardHeader() {
                 </Link>
             </div>
 
-            {/* 2. CENTER: NAVIGATION LINKS */}
-            <nav className="hidden lg:flex items-center gap-12">
-                <Link href="/seller/dashboard" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Home</Link>
-                <Link href="/sellers" className="text-sm font-medium hover:text-[#EEC044] transition-colors">Features</Link>
-                <Link href="/about" className="text-sm font-medium hover:text-[#EEC044] transition-colors">About Us</Link>
-            </nav>
+            
 
             {/* 3. RIGHT: ACTION ICONS (The "Evenly Spaced" Group) */}
             <div className="flex items-center gap-4 sm:gap-8">
