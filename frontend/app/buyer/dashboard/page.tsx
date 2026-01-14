@@ -247,7 +247,7 @@ export default function BuyerDashboard() {
                                 <Tabs defaultValue="pending">
                                     <TabsList className="grid w-full grid-cols-2 mb-6">
                                         <TabsTrigger value="pending">Pending Orders ({pendingOrders.length})</TabsTrigger>
-                                        <TabsTrigger value="history">History</TabsTrigger>
+                                        {/* <TabsTrigger value="history">History</TabsTrigger> */}
                                     </TabsList>
                                     
                                     <TabsContent value="pending" className="space-y-4">
