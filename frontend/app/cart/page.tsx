@@ -16,6 +16,7 @@ interface CartItemData {
     pricePerKg: number
     quantity: number
     sellerName: string
+    sellerId: number
     selected: boolean
 }
 
