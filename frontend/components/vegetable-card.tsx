@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 
-import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle } from "lucide-react"
+import {Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoins} from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {useRouter} from "next/navigation";
@@ -145,6 +145,13 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                 >
                     {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
                     {adding ? "Adding..." : "Add to Cart"}
+                </Button>
+                <Button
+                    //onClick={() => router.push(`/bargain?productId=${vegetable.id}&sellerId=${vegetable.sellerId}`)}
+                    className="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 transition-all active:scale-95"
+                >
+                    <HandCoins className="h-4 w-4" />
+                    Bargain the Item
                 </Button>
             </CardContent>
         </Card>
