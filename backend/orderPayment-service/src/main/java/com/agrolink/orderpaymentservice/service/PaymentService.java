@@ -130,33 +130,37 @@ public class PaymentService {
     public void processCashOnDelivery(Long userId) {
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new RuntimeException("Cart is empty for user: " + userId);
         }
 
         for (CartItem item : cartItems) {
-            String itemsJson;
             try {
-                itemsJson = objectMapper.writeValueAsString(List.of(item));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException("Error converting cart items to JSON", e);
+                // Null-safe check
+                double price = item.getPricePerKg() != null ? item.getPricePerKg() : 0.0;
+                double qty = item.getQuantity() != null ? item.getQuantity() : 0.0;
+
+                double itemTotal = (price * qty) + 30.0;
+                String itemsJson = objectMapper.writeValueAsString(List.of(item));
+                String fakeStripeId = "COD-" + UUID.randomUUID().toString();
+
+                Order order = Order.builder()
+                        .userId(userId)
+                        .stripeId(fakeStripeId)
+                        .amount((long) (itemTotal * 100))
+                        .currency("lkr")
+                        .status(OrderStatus.COD_CONFIRMED)
+                        .itemsJson(itemsJson)
+                        .sellerId(Long.valueOf(item.getSellerId()))
+                        .build();
+
+                orderRepository.save(order);
+            } catch (Exception e) {
+                // This will help you see the EXACT error in your terminal
+                System.err.println("Error creating COD order for item: " + item.getProductName());
+                e.printStackTrace();
+                throw new RuntimeException("COD processing failed: " + e.getMessage());
             }
-
-            double itemTotal = (item.getPricePerKg() * item.getQuantity()) + 30.0;
-            String fakeStripeId = "COD-" + UUID.randomUUID().toString();
-
-            Order order = Order.builder()
-                    .userId(userId)
-                    .stripeId(fakeStripeId)
-                    .amount((long) (itemTotal * 100))
-                    .currency("lkr")
-                    .status(OrderStatus.COD_CONFIRMED)
-                    .itemsJson(itemsJson)
-                    .sellerId(Long.valueOf(item.getSellerId())) // Map Seller ID
-                    .build();
-
-            orderRepository.save(order);
         }
-
         cartRepository.deleteAll(cartItems);
     }
 }
