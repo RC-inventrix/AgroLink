@@ -69,21 +69,28 @@ export function CheckoutPage() {
 
         try {
             // --- OPTION A: CASH ON DELIVERY ---
-            if (paymentMethod === "cash") {
-                // Call Backend to create order & clear cart FIRST
-                const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
-                    method: "POST",
-                })
+            // inside handleProceedToPayment...
+if (paymentMethod === "cash") {
+    // 1. Get the token from storage
+    const token = localStorage.getItem("token"); // or sessionStorage.getItem("token")
 
-                if (response.ok) {
-                    // Only redirect if backend saved it successfully
-                    router.push("/buyer/order-success")
-                } else {
-                    console.error("Failed to place COD order")
-                    alert("Failed to place order. Please try again.")
-                }
-                return
-            }
+    const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            // 2. Add the Authorization header
+            "Authorization": `Bearer ${token}` 
+        },
+    });
+
+    if (response.ok) {
+        router.push("/buyer/order-success");
+    } else {
+        console.error("Failed to place COD order");
+        setNotification({ message: "Failed to place order. Check permissions.", type: 'error' });
+    }
+    return;
+}
 
             // --- OPTION B: CARD PAYMENT (STRIPE) ---
             const response = await fetch(`http://localhost:8080/api/payment/create-checkout-session?userId=${userId}`, {

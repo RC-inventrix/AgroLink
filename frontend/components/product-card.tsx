@@ -134,9 +134,9 @@ export default function ProductCard({
         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.description}</p>
 
         {/* Seller */}
-        <p className="text-xs text-muted-foreground mb-3">
+        {/* <p className="text-xs text-muted-foreground mb-3">
           <span className="font-semibold">Seller:</span> {product.seller}
-        </p>
+        </p> */}
 
         {/* Pricing */}
         <div className="grid grid-cols-2 gap-3">
