@@ -5,10 +5,9 @@ import { useState, useEffect } from "react"
 import { ShoppingCart, Loader2, X, Check, AlertCircle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {router} from "next/client";
-import {useRouter} from "next/navigation";
-import {Router} from "next/router";
+import { useRouter } from "next/navigation"
 
+// Updated interface to include the critical sellerId field
 interface Vegetable {
     id: string
     name: string
@@ -16,16 +15,14 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
+    sellerId: number; // Added to fix backend NullPointerException
     description: string
     rating: number
 }
 
 export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegetable }) {
-    // CHANGE 1: Initialize state as a string ("1") instead of a number (1)
-    // This allows the input to be completely empty ("") while typing
     const router = useRouter()
     const [quantity, setQuantity] = useState<string>("1")
-
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{
         message: string
@@ -39,7 +36,6 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         }
     }, [notification])
 
-    // CHANGE 2: Helper to safely get the number for calculations
     const getQuantityNumber = () => {
         const num = parseFloat(quantity)
         return isNaN(num) ? 0 : num
@@ -54,30 +50,22 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         })
     }
 
-    // CHANGE 3: Updated Handler allows empty strings
     const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
-
-        // Allow user to clear the input completely
         if (value === "") {
             setQuantity("")
             return
         }
-
-        // Only allow positive numbers (regex ensures standard number format)
         if (/^\d*\.?\d*$/.test(value)) {
             setQuantity(value)
         }
     }
 
-
-
-    const handleReirectToProductList=()=>{
+    const handleReirectToProductList = () => {
         router.push("/VegetableList")
     }
 
     const handleAddToCart = async () => {
-        // CHANGE 4: Validate before sending
         const finalQuantity = getQuantityNumber()
 
         if (finalQuantity <= 0) {
@@ -93,6 +81,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         const userId = sessionStorage.getItem("id") || "1"
 
         try {
+            // This request body now includes the sellerId to prevent backend crashes
             const res = await fetch("http://localhost:8080/cart/add", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -101,9 +90,10 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     productId: vegetable.id,
                     productName: vegetable.name,
                     pricePerKg: vegetable.price1kg,
-                    quantity: finalQuantity, // Send the number, not the string
+                    quantity: finalQuantity,
                     imageUrl: vegetable.image,
                     sellerName: vegetable.seller,
+                    sellerId: vegetable.sellerId, // CRITICAL FIX: Sends the seller ID to the database
                 }),
             })
 
@@ -112,11 +102,10 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     message: `${finalQuantity}kg of ${vegetable.name} added to cart!`,
                     type: "success",
                 })
-                // Optional: Reset to "1" after success, or keep as is
                 setQuantity("1")
-               setTimeout(()=>{
-                   handleReirectToProductList()
-               },3000)
+                setTimeout(() => {
+                    handleReirectToProductList()
+                }, 2000)
 
             } else {
                 setNotification({
@@ -195,10 +184,10 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                             </label>
                             <input
                                 id="quantity"
-                                type="number" // Still use type="number" for mobile keyboard
+                                type="number"
                                 min="0"
-                                step="any" // Allows decimals smoothly
-                                value={quantity} // Binds to our string state
+                                step="any"
+                                value={quantity}
                                 onChange={handleQuantityChange}
                                 placeholder="Enter quantity"
                                 className="w-full px-4 py-2 border-2 border-black rounded-md text-black font-semibold focus:outline-none focus:ring-2 focus:ring-black"

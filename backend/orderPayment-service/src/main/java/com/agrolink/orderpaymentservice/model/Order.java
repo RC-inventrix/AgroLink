@@ -54,4 +54,7 @@ public class Order {
 
     @Column(name = "sellerId")
     private Long sellerId;
+
+    @Column(name = "is_seen_by_buyer", nullable = false)
+    private boolean isSeenByBuyer = false; //
 }

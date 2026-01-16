@@ -24,23 +24,41 @@ export function OrderHistoryClient() {
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
 
+    // --- 1. Combined Effect: Update Status & Fetch Data ---
     useEffect(() => {
-        fetchOrders()
-    }, [])
+        const initializeOrderHistory = async () => {
+            const userId = sessionStorage.getItem("id");
+            const token = sessionStorage.getItem("token");
 
-    const fetchOrders = async () => {
-        // 1. Get both ID and Token for the current session to ensure identity
-        const userId = sessionStorage.getItem("id")
-        const token = sessionStorage.getItem("token")
+            if (!userId || !token) {
+                console.error("User not authenticated.");
+                setLoading(false);
+                return;
+            }
 
-        if (!userId || !token) {
-            console.error("User not authenticated.")
-            setLoading(false)
-            return
-        }
+            // Step A: Mark accepted orders as seen in the database permanently
+            // This calls the PUT endpoint in your BuyerOrderController
+            try {
+                await fetch(`http://localhost:8080/api/buyer/orders/mark-seen/${userId}`, {
+                    method: "PUT",
+                    headers: { 
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json" 
+                    }
+                });
+            } catch (err) {
+                console.error("Failed to sync 'seen' status with backend:", err);
+            }
 
+            // Step B: Fetch the actual order records
+            await fetchOrders(userId, token);
+        };
+
+        initializeOrderHistory();
+    }, []);
+
+    const fetchOrders = async (userId: string, token: string) => {
         try {
-            // 2. Add Authorization header to the request to prevent 403 Forbidden
             const res = await fetch(`http://localhost:8080/api/buyer/orders/${userId}`, {
                 method: "GET",
                 headers: {
@@ -54,13 +72,11 @@ export function OrderHistoryClient() {
                 const allItems: OrderItem[] = []
 
                 backendOrders.forEach((order: any) => {
-                    // 3. Security Check: Only process items if they belong to this user
+                    // Security Check: Only process items if they belong to this user
                     if (order.userId?.toString() !== userId.toString()) return;
 
-                    // 4. Determine UI Status
                     const uiStatus = order.status === "COMPLETED" ? "completed" : "pending"
 
-                    // 5. Parse the Items JSON safely
                     let parsedItems = []
                     try {
                         if (order.itemsJson && order.itemsJson.startsWith("[")) {
@@ -72,7 +88,6 @@ export function OrderHistoryClient() {
                         console.error("Failed to parse items for order", order.id)
                     }
 
-                    // 6. Flatten to individual items for the history view
                     parsedItems.forEach((item: any, index: number) => {
                         allItems.push({
                             id: `${order.id}-${index}`,
@@ -88,9 +103,12 @@ export function OrderHistoryClient() {
                     })
                 })
 
-                setOrders(allItems)
-            } else if (res.status === 403) {
-                console.error("Access forbidden: Invalid token.")
+                // --- 2. SORTING: Descending Order (Newest First) ---
+                const sortedItems = allItems.sort((a, b) => 
+                    b.orderDate.getTime() - a.orderDate.getTime()
+                );
+
+                setOrders(sortedItems)
             }
         } catch (error) {
             console.error("Failed to fetch order history", error)
@@ -153,11 +171,7 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                 <Card key={order.id} className="p-6 overflow-hidden border-l-4 border-l-[#EEC044] transition-shadow hover:shadow-md">
                     <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                         <div className="relative h-24 w-24 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                            <img
-                                src={order.image}
-                                alt={order.name}
-                                className="object-cover w-full h-full"
-                            />
+                            <img src={order.image} alt={order.name} className="object-cover w-full h-full" />
                         </div>
 
                         <div className="flex-1 space-y-1">
@@ -175,38 +189,18 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                                     }
                                 >
                                     {order.status === "completed" ? (
-                                        <span className="flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" /> Completed
-                                        </span>
+                                        <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Completed</span>
                                     ) : (
-                                        <span className="flex items-center gap-1">
-                                            <Clock className="w-3 h-3" /> Pending
-                                        </span>
+                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
                                     )}
                                 </Badge>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border/50">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Quantity</p>
-                                    <p className="font-medium">{order.quantity} kg</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Unit Price</p>
-                                    <p className="font-medium">Rs. {order.pricePerKg}/kg</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Date Placed</p>
-                                    <p className="font-medium">
-                                        {format(order.orderDate, "MMM d, yyyy")}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Order Total</p>
-                                    <p className="font-bold text-[#03230F]">
-                                        Rs. {(order.quantity * order.pricePerKg).toFixed(2)}
-                                    </p>
-                                </div>
+                                <div><p className="text-xs text-muted-foreground mb-1">Quantity</p><p className="font-medium">{order.quantity} kg</p></div>
+                                <div><p className="text-xs text-muted-foreground mb-1">Unit Price</p><p className="font-medium">Rs. {order.pricePerKg}/kg</p></div>
+                                <div><p className="text-xs text-muted-foreground mb-1">Date Placed</p><p className="font-medium">{format(order.orderDate, "MMM d, yyyy")}</p></div>
+                                <div><p className="text-xs text-muted-foreground mb-1">Order Total</p><p className="font-bold text-[#03230F]">Rs. {(order.quantity * order.pricePerKg).toFixed(2)}</p></div>
                             </div>
                         </div>
                     </div>
