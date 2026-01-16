@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/c
 import { Button } from "@/components/ui/button"
 import {useRouter} from "next/navigation";
 
+
 interface Vegetable {
     id: string
     name: string
@@ -14,7 +15,7 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
-    sellerId: string 
+    sellerId: number 
     description: string
     rating: number
 }
@@ -36,6 +37,37 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
+    const handleContactSeller = () => {
+        router.push(`/buyer/chat?userId=${vegetable.sellerId}`);
+    }
+
+
+    const handleAddToCart = async () => {
+        setAdding(true)
+        const userId = sessionStorage.getItem("id") || "1"
+        try {
+            const res = await fetch("http://localhost:8080/cart/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: userId,
+                    productId: vegetable.id,
+                    productName: vegetable.name,
+                    pricePerKg: vegetable.price1kg,
+                    quantity: 1,
+                    imageUrl: vegetable.image,
+                    sellerName: vegetable.seller,
+                    sellerId: vegetable.sellerId // --- NEW FIELD ADDED HERE ---
+                })
+            })
+            if (res.ok) setNotification({ message: `${vegetable.name} added to cart!`, type: 'success' });
+            else setNotification({ message: "Failed to add item.", type: 'error' });
+        } catch (error) {
+            setNotification({ message: "Connection error.", type: 'error' });
+        } finally { setAdding(false) }
+    }
+
 
     // const handleAddToCart = async () => {
     //     setAdding(true)

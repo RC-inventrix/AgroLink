@@ -18,9 +18,16 @@ public class SellerOrderController {
     private final OrderRepository orderRepository;
 
     // 1. Get All Orders
-    @GetMapping
+    @GetMapping("")
     public ResponseEntity<List<Order>> getAllOrders() {
         return ResponseEntity.ok(orderRepository.findAll());
+    }
+
+
+    @GetMapping("/{sellerId}")
+    public ResponseEntity<List<Order>> getOrdersBySeller(@PathVariable Long sellerId) {
+        List<Order> sellerOrders = orderRepository.findBySellerId(sellerId);
+        return ResponseEntity.ok(sellerOrders);
     }
 
     // 2. Update Order Status
