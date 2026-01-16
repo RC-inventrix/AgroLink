@@ -17,7 +17,7 @@ interface OrderItem {
     sellerName: string
     orderDate: Date
     status: "completed" | "pending"
-    totalPrice: number // Added total price for context
+    totalPrice: number 
 }
 
 export function OrderHistoryClient() {
@@ -29,41 +29,53 @@ export function OrderHistoryClient() {
     }, [])
 
     const fetchOrders = async () => {
-        const userId = sessionStorage.getItem("id") || "1"
+        // 1. Get both ID and Token for the current session to ensure identity
+        const userId = sessionStorage.getItem("id")
+        const token = sessionStorage.getItem("token")
+
+        if (!userId || !token) {
+            console.error("User not authenticated.")
+            setLoading(false)
+            return
+        }
+
         try {
-            // Call the new Backend Endpoint
-            const res = await fetch(`http://localhost:8080/api/buyer/orders/${userId}`)
+            // 2. Add Authorization header to the request to prevent 403 Forbidden
+            const res = await fetch(`http://localhost:8080/api/buyer/orders/${userId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            })
+
             if (res.ok) {
                 const backendOrders = await res.json()
-
-                // Transform Backend Data -> Frontend UI Structure
                 const allItems: OrderItem[] = []
 
                 backendOrders.forEach((order: any) => {
-                    // 1. Determine Status
-                    // Backend: CREATED, PAID, COD_CONFIRMED, PROCESSING, COMPLETED
-                    // Frontend: "pending" or "completed"
+                    // 3. Security Check: Only process items if they belong to this user
+                    if (order.userId?.toString() !== userId.toString()) return;
+
+                    // 4. Determine UI Status
                     const uiStatus = order.status === "COMPLETED" ? "completed" : "pending"
 
-                    // 2. Parse the Items JSON string back into objects
-                    // The backend stores: "[{'productName':'Tomatoes', ...}]"
+                    // 5. Parse the Items JSON safely
                     let parsedItems = []
                     try {
-                        // If itemsJson is "Items from Cart" (dummy text from COD), we handle it safely
                         if (order.itemsJson && order.itemsJson.startsWith("[")) {
                             parsedItems = JSON.parse(order.itemsJson)
                         } else {
-                            // Fallback for text-only descriptions or legacy data
                             parsedItems = [{ productName: "Order Items", quantity: 1, pricePerKg: order.amount / 100 }]
                         }
                     } catch (e) {
                         console.error("Failed to parse items for order", order.id)
                     }
 
-                    // 3. Flatten: Create a row for each item in the order
+                    // 6. Flatten to individual items for the history view
                     parsedItems.forEach((item: any, index: number) => {
                         allItems.push({
-                            id: `${order.id}-${index}`, // Unique key
+                            id: `${order.id}-${index}`,
                             name: item.productName || item.name || "Unknown Item",
                             quantity: item.quantity || 1,
                             pricePerKg: item.pricePerKg || 0,
@@ -77,6 +89,8 @@ export function OrderHistoryClient() {
                 })
 
                 setOrders(allItems)
+            } else if (res.status === 403) {
+                console.error("Access forbidden: Invalid token.")
             }
         } catch (error) {
             console.error("Failed to fetch order history", error)
@@ -91,13 +105,13 @@ export function OrderHistoryClient() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-[#03230F]">Order History</h1>
                 <p className="text-muted-foreground">View your vegetable orders and track their delivery status</p>
             </div>
 
             <Tabs defaultValue="all" className="w-full">
                 <TabsList className="grid w-full max-w-md grid-cols-3 bg-secondary">
-                    <TabsTrigger value="all">All Orders ({orders.length})</TabsTrigger>
+                    <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
                     <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
                     <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
                 </TabsList>
@@ -119,11 +133,12 @@ export function OrderHistoryClient() {
 }
 
 function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean }) {
-    if (loading) return <div className="text-center py-10">Loading orders...</div>
+    if (loading) return <div className="text-center py-10 text-muted-foreground">Loading your orders...</div>
+    
     if (orders.length === 0) {
         return (
-            <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
-                <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+                <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-semibold">No orders found</h3>
                 <p className="text-muted-foreground text-sm mt-2">
                     You haven&apos;t placed any orders in this category yet.
@@ -135,9 +150,8 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
     return (
         <div className="space-y-4">
             {orders.map((order) => (
-                <Card key={order.id} className="p-6 overflow-hidden border-l-4 border-l-primary/20">
+                <Card key={order.id} className="p-6 overflow-hidden border-l-4 border-l-[#EEC044] transition-shadow hover:shadow-md">
                     <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                        {/* Image */}
                         <div className="relative h-24 w-24 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                             <img
                                 src={order.image}
@@ -146,7 +160,6 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                             />
                         </div>
 
-                        {/* Details */}
                         <div className="flex-1 space-y-1">
                             <div className="flex items-start justify-between">
                                 <div>
@@ -163,12 +176,12 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                                 >
                                     {order.status === "completed" ? (
                                         <span className="flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" /> Completed
-                    </span>
+                                            <CheckCircle className="w-3 h-3" /> Completed
+                                        </span>
                                     ) : (
                                         <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Pending
-                    </span>
+                                            <Clock className="w-3 h-3" /> Pending
+                                        </span>
                                     )}
                                 </Badge>
                             </div>
@@ -179,18 +192,18 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                                     <p className="font-medium">{order.quantity} kg</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Price</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Unit Price</p>
                                     <p className="font-medium">Rs. {order.pricePerKg}/kg</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Order Date</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Date Placed</p>
                                     <p className="font-medium">
                                         {format(order.orderDate, "MMM d, yyyy")}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Total</p>
-                                    <p className="font-medium text-primary">
+                                    <p className="text-xs text-muted-foreground mb-1">Order Total</p>
+                                    <p className="font-bold text-[#03230F]">
                                         Rs. {(order.quantity * order.pricePerKg).toFixed(2)}
                                     </p>
                                 </div>
