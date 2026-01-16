@@ -121,11 +121,40 @@ export default function Cart() {
             setNotification({ message: "An error occurred. Please try again.", type: 'error' });
         }
     }
+    try {
+      sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems));
+      setNotification({ message: "Redirecting to checkout...", type: 'success' });
+      setTimeout(() => { router.push("/buyer/checkout"); }, 800);
+    } catch (err) {
+      setNotification({ message: "An error occurred. Please try again.", type: 'error' });
+    }
+  }
 
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-            <div className="w-10 h-10 border-4 border-[#03230F] border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading your fresh picks...</p>
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="w-10 h-10 border-4 border-[#03230F] border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-gray-600 font-medium">Loading your fresh picks...</p>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-gray-50 relative">
+      <Header />
+
+      {notification && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
+          <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
+              notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
+                "bg-[#03230F] border-gray-700 text-white"
+            }`}>
+            {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+            {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
+            {notification.type === 'info' && <ShoppingBag className="w-5 h-5 text-[#EEC044]" />}
+            <p className="text-sm font-semibold flex-1">{notification.message}</p>
+            <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
     )
 
@@ -210,8 +239,27 @@ export default function Cart() {
                         totalPrice={totalPrice}
                         onCheckout={handleCheckout}
                     />
-                </div>
-            </main>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <CartSummary
+            selectedItems={selectedItems.map(item => ({
+              id: item.id.toString(),
+              name: item.productName,
+              image: item.imageUrl,
+              pricePerKg: item.pricePerKg,
+              quantity: item.quantity,
+              seller: item.sellerName,
+              selected: item.selected
+            }))}
+            totalPrice={totalPrice}
+            onCheckout={handleCheckout}
+          />
         </div>
-    )
+      </main>
+    </div>
+  )
 }

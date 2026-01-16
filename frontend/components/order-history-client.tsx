@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Package, CheckCircle, Clock } from "lucide-react"
 import { format } from "date-fns"
 
-// Interface for what we want to display (Flattened Item)
 interface OrderItem {
     id: string
     name: string
@@ -17,7 +16,7 @@ interface OrderItem {
     sellerName: string
     orderDate: Date
     status: "completed" | "pending"
-    totalPrice: number 
+    totalPrice: number
 }
 
 export function OrderHistoryClient() {
@@ -25,6 +24,8 @@ export function OrderHistoryClient() {
     const [loading, setLoading] = useState(true)
 
     // --- 1. Combined Effect: Update Status & Fetch Data ---
+    const gatewayUrl = "http://localhost:8080"
+
     useEffect(() => {
         const initializeOrderHistory = async () => {
             const userId = sessionStorage.getItem("id");
@@ -66,10 +67,11 @@ export function OrderHistoryClient() {
                     "Content-Type": "application/json"
                 }
             })
-
+            
             if (res.ok) {
                 const backendOrders = await res.json()
-                const allItems: OrderItem[] = []
+                const rawItemsList: any[] = []
+                const sellerIds = new Set<string>()
 
                 backendOrders.forEach((order: any) => {
                     // Security Check: Only process items if they belong to this user
@@ -82,7 +84,11 @@ export function OrderHistoryClient() {
                         if (order.itemsJson && order.itemsJson.startsWith("[")) {
                             parsedItems = JSON.parse(order.itemsJson)
                         } else {
-                            parsedItems = [{ productName: "Order Items", quantity: 1, pricePerKg: order.amount / 100 }]
+                            parsedItems = [{ 
+                                productName: "Order Items", 
+                                quantity: 1, 
+                                pricePerKg: order.amount / 100 
+                            }]
                         }
                     } catch (e) {
                         console.error("Failed to parse items for order", order.id)
@@ -111,39 +117,30 @@ export function OrderHistoryClient() {
                 setOrders(sortedItems)
             }
         } catch (error) {
-            console.error("Failed to fetch order history", error)
+            console.error("Order fetch failed", error)
         } finally {
             setLoading(false)
         }
     }
 
-    const completedOrders = orders.filter((order) => order.status === "completed")
-    const pendingOrders = orders.filter((order) => order.status === "pending")
+    const completedOrders = orders.filter((o) => o.status === "completed")
+    const pendingOrders = orders.filter((o) => o.status === "pending")
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight text-[#03230F]">Order History</h1>
-                <p className="text-muted-foreground">View your vegetable orders and track their delivery status</p>
-            </div>
-
+            <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
+            
             <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full max-w-md grid-cols-3 bg-secondary">
+                <TabsList className="bg-secondary">
                     <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
                     <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
                     <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
                 </TabsList>
 
                 <div className="mt-6">
-                    <TabsContent value="all" className="m-0">
-                        <OrderList orders={orders} loading={loading} />
-                    </TabsContent>
-                    <TabsContent value="completed" className="m-0">
-                        <OrderList orders={completedOrders} loading={loading} />
-                    </TabsContent>
-                    <TabsContent value="pending" className="m-0">
-                        <OrderList orders={pendingOrders} loading={loading} />
-                    </TabsContent>
+                    <TabsContent value="all"><OrderList orders={orders} loading={loading} /></TabsContent>
+                    <TabsContent value="completed"><OrderList orders={completedOrders} loading={loading} /></TabsContent>
+                    <TabsContent value="pending"><OrderList orders={pendingOrders} loading={loading} /></TabsContent>
                 </div>
             </Tabs>
         </div>
@@ -151,19 +148,14 @@ export function OrderHistoryClient() {
 }
 
 function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean }) {
-    if (loading) return <div className="text-center py-10 text-muted-foreground">Loading your orders...</div>
+    if (loading) return <div className="text-center py-10 animate-pulse">Syncing with services...</div>
     
-    if (orders.length === 0) {
-        return (
-            <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
-                <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-semibold">No orders found</h3>
-                <p className="text-muted-foreground text-sm mt-2">
-                    You haven&apos;t placed any orders in this category yet.
-                </p>
-            </Card>
-        )
-    }
+    if (orders.length === 0) return (
+        <Card className="p-12 text-center border-dashed">
+            <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">No orders found.</p>
+        </Card>
+    )
 
     return (
         <div className="space-y-4">
@@ -173,12 +165,12 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                         <div className="relative h-24 w-24 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                             <img src={order.image} alt={order.name} className="object-cover w-full h-full" />
                         </div>
-
-                        <div className="flex-1 space-y-1">
-                            <div className="flex items-start justify-between">
+                        
+                        <div className="flex-1 w-full">
+                            <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="font-semibold text-lg">{order.name}</h3>
-                                    <p className="text-sm text-muted-foreground">Sold by {order.sellerName}</p>
+                                    <h3 className="font-bold text-lg">{order.name}</h3>
+                                    <p className="text-sm font-semibold text-primary">Sold by {order.sellerName}</p>
                                 </div>
                                 <Badge
                                     variant={order.status === "completed" ? "default" : "secondary"}
