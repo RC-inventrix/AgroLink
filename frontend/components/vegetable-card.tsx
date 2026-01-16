@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {useRouter} from "next/navigation";
 
 
 interface Vegetable {
@@ -21,6 +22,12 @@ interface Vegetable {
 
 export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
     const router = useRouter()
+
+    const handleRedirect = () => {
+        sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
+        router.push("/VegetableList/quantity")
+    }
+
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -62,6 +69,46 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
     }
 
 
+    // const handleAddToCart = async () => {
+    //     setAdding(true)
+    //     setNotification(null)
+    //     const userId = sessionStorage.getItem("id") || "1"
+    //
+    //     try {
+    //         const res = await fetch("http://localhost:8080/cart/add", {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({
+    //                 userId: userId,
+    //                 productId: vegetable.id,
+    //                 productName: vegetable.name,
+    //                 pricePerKg: vegetable.price1kg,
+    //                 quantity: 1,
+    //                 imageUrl: vegetable.image,
+    //                 sellerName: vegetable.seller
+    //             })
+    //         })
+    //
+    //         if (res.ok) {
+    //             setNotification({
+    //                 message: `${vegetable.name} added to cart!`,
+    //                 type: 'success'
+    //             });
+    //         } else {
+    //             setNotification({
+    //                 message: "Failed to add item. Try again.",
+    //                 type: 'error'
+    //             });
+    //         }
+    //     } catch (error) {
+    //         setNotification({
+    //             message: "Connection error to cart service.",
+    //             type: 'error'
+    //         });
+    //     } finally {
+    //         setAdding(false)
+    //     }
+   // }
 
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative">
@@ -121,7 +168,11 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     </div>
                 </div>
 
-                <Button onClick={handleAddToCart} disabled={adding} className="w-full">
+                <Button
+                    onClick={handleRedirect}
+                    disabled={adding}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 transition-all active:scale-95"
+                >
                     {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
                     {adding ? "Adding..." : "Add to Cart"}
                 </Button>
