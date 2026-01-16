@@ -22,20 +22,45 @@ export function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card")
     const router = useRouter()
 
-    // --- UPDATED: Editable Address State ---
+    // --- State for Address (Initially empty, then fetched from DB) ---
     const [address, setAddress] = useState({
-        street: "123 Farm Road, Green Valley",
-        city: "Mumbai, Maharashtra 400001",
-        phone: "+91 98765 43210",
+        street: "",
+        city: "",
+        phone: "",
     })
 
+    // 1. NEW: Fetch Default Address from Database on Mount
     useEffect(() => {
-        if (notification && notification.type !== 'loading') {
-            const timer = setTimeout(() => setNotification(null), 4000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification]);
+        const fetchUserData = async () => {
+            const userId = sessionStorage.getItem("id")
+            const token = sessionStorage.getItem("token")
 
+            if (!userId || !token) return;
+
+            try {
+                // Adjust this URL to match your identity service's endpoint
+                const response = await fetch(`http://localhost:8080/auth/user/${userId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    // Mapping backend fields (address, district, phone) to UI state
+                    setAddress({
+                        street: userData.address || "Please add your street address",
+                        city: userData.district || "Update your city/district",
+                        phone: userData.phone || "No phone number saved",
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile data:", error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+    // 2. Load Cart Items from Session Storage
     useEffect(() => {
         const storedItems = sessionStorage.getItem("checkoutItems")
         if (storedItems) {
@@ -69,15 +94,17 @@ export function CheckoutPage() {
             if (paymentMethod === "cash") {
                 const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
-                // Note: You can now send the 'address' state to your backend if your API supports it
                 const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}` 
                     },
-                    // Optional: Sending the updated address to the backend
-                    body: JSON.stringify({ deliveryAddress: address })
+                    // Final address sent to the backend order record
+                    body: JSON.stringify({ 
+                        deliveryAddress: `${address.street}, ${address.city}`,
+                        contactPhone: address.phone 
+                    })
                 });
 
                 if (response.ok) {
@@ -100,8 +127,6 @@ export function CheckoutPage() {
                     setNotification({ message: "Redirecting to Stripe Secure Payment...", type: 'success' });
                     setTimeout(() => { window.location.href = data.url }, 1000);
                 }
-            } else {
-                setNotification({ message: "Order creation failed.", type: 'error' });
             }
         } catch (error) {
             setNotification({ message: "Network error.", type: 'error' });
@@ -127,20 +152,20 @@ export function CheckoutPage() {
                 </div>
             )}
 
-            <header className="sticky top-0 z-50 bg-primary border-b border-primary-foreground/10">
+            <header className="sticky top-0 z-50 bg-[#03230F] border-b border-primary-foreground/10">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="text-2xl font-bold text-primary-foreground">AgroLink.</div>
-                    <div className="text-primary-foreground/80 text-sm font-medium">Secure Checkout</div>
+                    <div className="text-2xl font-bold text-white">AgroLink.</div>
+                    <div className="text-white/80 text-sm font-medium">Secure Checkout</div>
                 </div>
             </header>
 
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-foreground mb-2">Complete Your Order</h1>
+                    <h1 className="text-3xl font-bold text-[#03230F] mb-2">Complete Your Order</h1>
                     <p className="text-muted-foreground">Review your items and shipping details</p>
                 </div>
 
-                {/* --- UPDATED: Editable Address Section --- */}
+                {/* --- Editable Address Section with Database Sync --- */}
                 <Card className="p-6 mb-6 border-2 shadow-sm transition-all hover:border-primary/20">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
@@ -155,17 +180,17 @@ export function CheckoutPage() {
                             className="text-primary hover:text-primary/80"
                             onClick={() => setIsEditingAddress(!isEditingAddress)}
                         >
-                            {isEditingAddress ? <><Save className="w-4 h-4 mr-2"/> Save</> : <><Edit2 className="w-4 h-4 mr-2"/> Edit</>}
+                            {isEditingAddress ? <><Save className="w-4 h-4 mr-2"/> Done</> : <><Edit2 className="w-4 h-4 mr-2"/> Change</>}
                         </Button>
                     </div>
 
                     {!isEditingAddress ? (
                         <div className="space-y-2 ml-1">
-                            <p className="text-foreground font-medium">{address.street}</p>
-                            <p className="text-muted-foreground">{address.city}</p>
+                            <p className="text-foreground font-medium">{address.street || "Loading street address..."}</p>
+                            <p className="text-muted-foreground">{address.city || "Loading location..."}</p>
                             <div className="flex items-center gap-2 text-primary font-medium pt-2">
                                 <Phone className="w-4 h-4" />
-                                <span>{address.phone}</span>
+                                <span>{address.phone || "Loading phone..."}</span>
                             </div>
                         </div>
                     ) : (
@@ -176,7 +201,6 @@ export function CheckoutPage() {
                                     id="street" 
                                     value={address.street} 
                                     onChange={(e) => setAddress({...address, street: e.target.value})}
-                                    placeholder="House No, Building, Street"
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -185,7 +209,6 @@ export function CheckoutPage() {
                                     id="city" 
                                     value={address.city} 
                                     onChange={(e) => setAddress({...address, city: e.target.value})}
-                                    placeholder="City, State, Zip"
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -194,25 +217,13 @@ export function CheckoutPage() {
                                     id="phone" 
                                     value={address.phone} 
                                     onChange={(e) => setAddress({...address, phone: e.target.value})}
-                                    placeholder="+91 XXXXX XXXXX"
                                 />
                             </div>
                         </div>
                     )}
                 </Card>
 
-                {/* Items Section */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <ShoppingBag className="w-5 h-5 text-primary" />
-                        <h2 className="text-xl font-semibold text-foreground">Your Items ({cartItems.length})</h2>
-                    </div>
-                    <div className="space-y-4">
-                        {cartItems.length === 0 ? <p>No items to checkout.</p> : cartItems.map((item) => <VegetableItem key={item.id} item={item} />)}
-                    </div>
-                </div>
-
-                {/* Summary & Payment */}
+                {/* Summary & Payment Card */}
                 <Card className="p-6 border-2 bg-card">
                     <h2 className="text-xl font-semibold text-foreground mb-4">Order Summary</h2>
                     <div className="space-y-3 mb-6">
@@ -225,7 +236,7 @@ export function CheckoutPage() {
                             <span className="font-medium">Rs. 30.00</span>
                         </div>
                         <div className="h-px bg-border my-3"></div>
-                        <div className="flex justify-between text-foreground text-xl font-bold">
+                        <div className="flex justify-between text-[#03230F] text-xl font-bold">
                             <span>Total Amount</span>
                             <span className="text-primary text-2xl">Rs. {total.toFixed(2)}</span>
                         </div>
@@ -234,12 +245,12 @@ export function CheckoutPage() {
                     <div className="mb-6 p-4 border border-border rounded-lg">
                         <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
                         <div className="space-y-3">
-                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition" style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}>
-                                <input type="radio" name="payment" value="card" checked={paymentMethod === "card"} onChange={() => setPaymentMethod("card")} className="w-4 h-4" />
+                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}>
+                                <input type="radio" checked={paymentMethod === "card"} onChange={() => setPaymentMethod("card")} className="w-4 h-4" />
                                 <span className="font-semibold">Credit/Debit Card</span>
                             </label>
-                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition" style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}>
-                                <input type="radio" name="payment" value="cash" checked={paymentMethod === "cash"} onChange={() => setPaymentMethod("cash")} className="w-4 h-4" />
+                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}>
+                                <input type="radio" checked={paymentMethod === "cash"} onChange={() => setPaymentMethod("cash")} className="w-4 h-4" />
                                 <span className="font-semibold">Cash on Delivery</span>
                             </label>
                         </div>
@@ -248,10 +259,10 @@ export function CheckoutPage() {
                     <Button
                         onClick={handleProceedToPayment}
                         disabled={loading || cartItems.length === 0 || isEditingAddress}
-                        className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold py-7 text-lg shadow-xl active:scale-95 transition-all"
+                        className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-7 text-lg shadow-xl active:scale-95 transition-all"
                         size="lg"
                     >
-                        {loading ? "Processing..." : isEditingAddress ? "Save Address to Continue" : `Proceed to ${paymentMethod === "card" ? "Payment" : "Order Confirmation"}`}
+                        {loading ? "Processing..." : isEditingAddress ? "Save Address to Continue" : `Confirm & Place Order`}
                     </Button>
                 </Card>
             </div>
