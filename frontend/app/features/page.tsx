@@ -21,7 +21,7 @@ export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
       
-      <Header />
+
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20">
         <div className="container mx-auto px-4 text-center">

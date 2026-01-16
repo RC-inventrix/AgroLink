@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2, Ban, MessageSquare } from "lucide-react"
+import { Trash2, Ban, MessageSquare, CheckCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
 export function UserManagement() {
-  const [users] = useState([
+  // NOTE: Methana 'setUsers' ekathu kara
+  const [users, setUsers] = useState([
     {
       id: 1,
       name: "Ahmed Hassan",
@@ -46,7 +47,29 @@ export function UserManagement() {
     },
   ])
 
-  /* Updated status and type colors to match the AgroLink design system */
+  // --- NEW FUNCTION: User Ban kirime logic eka ---
+  const handleBanUser = (userId: number) => {
+    // 1. Confirmation ekak gannawa (Optional)
+    const isConfirmed = window.confirm("Are you sure you want to ban this user?");
+    
+    if (isConfirmed) {
+      // 2. State eka update karanawa
+      setUsers(users.map((user) => 
+        user.id === userId ? { ...user, status: "banned" } : user
+      ));
+    }
+  };
+
+  // Optional: Ban eka ain karanna (Unban) function ekak
+  const handleUnbanUser = (userId: number) => {
+    if (window.confirm("Unban this user?")) {
+      setUsers(users.map((user) => 
+        user.id === userId ? { ...user, status: "active" } : user
+      ));
+    }
+  };
+
+  /* Helper functions for colors */
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -104,9 +127,32 @@ export function UserManagement() {
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
                     <MessageSquare className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-orange-600">
-                    <Ban className="h-4 w-4" />
-                  </Button>
+                  
+                  {/* --- UPDATED BAN BUTTON --- */}
+                  {user.status === "banned" ? (
+                    // User danata ban wela nam 'Unban' button eka pennanawa
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => handleUnbanUser(user.id)}
+                        title="Unban User"
+                    >
+                        <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    // Nathnam 'Ban' button eka pennanawa
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleBanUser(user.id)}
+                        title="Ban User"
+                    >
+                        <Ban className="h-4 w-4" />
+                    </Button>
+                  )}
+
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600">
                     <Trash2 className="h-4 w-4" />
                   </Button>

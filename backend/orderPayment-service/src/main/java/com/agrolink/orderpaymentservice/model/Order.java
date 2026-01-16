@@ -51,4 +51,7 @@ public class Order {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "sellerId")
+    private Long sellerId;
 }
