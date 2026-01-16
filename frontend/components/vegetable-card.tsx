@@ -26,6 +26,11 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
         router.push("/VegetableList/quantity")
     }
+
+    const handleRedirectBargain = () => {
+        sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
+        router.push("/buyer/bargain")
+    }
     const handleContactSeller = () => {
         router.push(`/buyer/chat?userId=${vegetable.sellerId}`);
     }
@@ -147,6 +152,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     {adding ? "Adding..." : "Add to Cart"}
                 </Button>
                 <Button
+                    onClick={handleRedirectBargain}
                     //onClick={() => router.push(`/bargain?productId=${vegetable.id}&sellerId=${vegetable.sellerId}`)}
                     className="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 transition-all active:scale-95"
                 >
