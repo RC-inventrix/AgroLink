@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
-import {Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoins} from "lucide-react"
+import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoins } from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation"
 
-
+// --- UPDATED INTERFACE ---
+// matches the data coming from VegetableListings
 interface Vegetable {
     id: string
     name: string
@@ -15,9 +15,11 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
-    sellerId: number 
+    sellerId: string  // <--- CHANGED FROM NUMBER TO STRING
     description: string
     rating: number
+    category?: string    // Added optional field to match parent
+    pricingType?: string // Added optional field to match parent
 }
 
 export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
@@ -32,9 +34,12 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
         router.push("/buyer/bargain")
     }
+
     const handleContactSeller = () => {
+        // IDs work better as strings in URLs
         router.push(`/buyer/chat?userId=${vegetable.sellerId}`);
     }
+
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -45,81 +50,35 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         }
     }, [notification]);
 
-
-
-
-    const handleAddToCart = async () => {
-        setAdding(true)
-        const userId = sessionStorage.getItem("id") || "1"
-        try {
-            const res = await fetch("http://localhost:8080/cart/add", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userId: userId,
-                    productId: vegetable.id,
-                    productName: vegetable.name,
-                    pricePerKg: vegetable.price1kg,
-                    quantity: 1,
-                    imageUrl: vegetable.image,
-                    sellerName: vegetable.seller,
-                    sellerId: vegetable.sellerId // --- NEW FIELD ADDED HERE ---
-                })
-            })
-            if (res.ok) setNotification({ message: `${vegetable.name} added to cart!`, type: 'success' });
-            else setNotification({ message: "Failed to add item.", type: 'error' });
-        } catch (error) {
-            setNotification({ message: "Connection error.", type: 'error' });
-        } finally { setAdding(false) }
-    }
-
-
-    // const handleAddToCart = async () => {
-    //     setAdding(true)
-    //     setNotification(null)
-    //     const userId = sessionStorage.getItem("id") || "1"
-    //
-    //     try {
-    //         const res = await fetch("http://localhost:8080/cart/add", {
-    //             method: "POST",
-    //             headers: { "Content-Type": "application/json" },
-    //             body: JSON.stringify({
-    //                 userId: userId,
-    //                 productId: vegetable.id,
-    //                 productName: vegetable.name,
-    //                 pricePerKg: vegetable.price1kg,
-    //                 quantity: 1,
-    //                 imageUrl: vegetable.image,
-    //                 sellerName: vegetable.seller
-    //             })
-    //         })
-    //
-    //         if (res.ok) {
-    //             setNotification({
-    //                 message: `${vegetable.name} added to cart!`,
-    //                 type: 'success'
-    //             });
-    //         } else {
-    //             setNotification({
-    //                 message: "Failed to add item. Try again.",
-    //                 type: 'error'
-    //             });
-    //         }
-    //     } catch (error) {
-    //         setNotification({
-    //             message: "Connection error to cart service.",
-    //             type: 'error'
-    //         });
-    //     } finally {
-    //         setAdding(false)
-    //     }
-   // }
+    const handleAddToCart = async () => {
+        setAdding(true)
+        const userId = sessionStorage.getItem("id") || "1"
+        try {
+            const res = await fetch("http://localhost:8080/cart/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: userId,
+                    productId: vegetable.id,
+                    productName: vegetable.name,
+                    pricePerKg: vegetable.price1kg,
+                    quantity: 1,
+                    imageUrl: vegetable.image,
+                    sellerName: vegetable.seller,
+                    sellerId: vegetable.sellerId
+                })
+            })
+            if (res.ok) setNotification({ message: `${vegetable.name} added to cart!`, type: 'success' });
+            else setNotification({ message: "Failed to add item.", type: 'error' });
+        } catch (error) {
+            setNotification({ message: "Connection error.", type: 'error' });
+        } finally { setAdding(false) }
+    }
 
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative">
             {notification && (
-                <div className={`absolute top-2 right-2 z-50 flex items-center gap-2 p-2 px-3 rounded-md shadow-lg border ${
-                    notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" : "bg-red-950 border-red-500 text-white"
+                <div className={`absolute top-2 right-2 z-50 flex items-center gap-2 p-2 px-3 rounded-md shadow-lg border ${notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" : "bg-red-950 border-red-500 text-white"
                 }`}>
                     {notification.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                     <span className="text-xs font-medium">{notification.message}</span>
@@ -140,17 +99,16 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                         </div>
                     </div>
                     <div>
-                    <Button
-                        variant="outline" size="icon" className="rounded-full border-primary/20 text-primary"
-                        onClick={handleContactSeller}
-                    >
-                        <MessageCircle className="h-5 w-5" />
-                    </Button>
-                    <span className="text-xs ml-2">Contact Seller</span>
+                        <Button
+                            variant="outline" size="icon" className="rounded-full border-primary/20 text-primary"
+                            onClick={handleContactSeller}
+                        >
+                            <MessageCircle className="h-5 w-5" />
+                        </Button>
+                        <span className="text-xs ml-2">Contact Seller</span>
                     </div>
                 </div>
 
-                {/* NEW: Displaying actual Seller Name */}
                 <div className="mb-4">
                     <p className="text-sm text-muted-foreground">
                         <span className="font-semibold text-foreground">Seller: </span>
@@ -183,7 +141,6 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                 </Button>
                 <Button
                     onClick={handleRedirectBargain}
-                    //onClick={() => router.push(`/bargain?productId=${vegetable.id}&sellerId=${vegetable.sellerId}`)}
                     className="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 transition-all active:scale-95"
                 >
                     <HandCoins className="h-4 w-4" />
