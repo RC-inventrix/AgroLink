@@ -5,91 +5,83 @@ import { Search, ChevronDown, Loader2 } from "lucide-react"
 import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import BuyerHeader from "./headers/BuyerHeader"
 
-// 1. Define the Interface (Matches your VegetableCard props)
+// 1. Define the Interface
+// This must match the props expected by VegetableCard
 interface Vegetable {
     id: string
     name: string
     image: string
-    price100g: number // We will calculate this
-    price1kg: number  // Maps to backend 'fixedPrice'
-    seller: string    // Placeholder for now
-    sellerId: string  // Added to match VegetableCard requirements
+    price100g: number
+    price1kg: number
+    seller: string
+    sellerId: string  // Ensure this is string
     description: string
     category: string
-    rating: number    // Placeholder for now
-    pricingType: string // Added to check if it's FIXED or BIDDING
+    rating: number
+    pricingType: string
 }
 
 export default function VegetableListings() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
-    const [priceRange, setPriceRange] = useState([0, 5000]) // Increased range for realistic prices
+    const [priceRange, setPriceRange] = useState([0, 5000])
 
     // 2. New State for Real Data
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
-    // 3. Fetch Data from Backend
-    // Inside vegetable-listings.tsx
-// Inside your VegetableListings component
-useEffect(() => {
-    const fetchProductsAndNames = async () => {
-        try {
-            const token = sessionStorage.getItem("token");
-            // 1. Fetch products from Product Catalog Service
-            const res = await fetch("http://localhost:8080/products");
-            if (!res.ok) throw new Error("Failed to fetch products");
-            const data = await res.json();
+    useEffect(() => {
+        const fetchProductsAndNames = async () => {
+            try {
+                const token = sessionStorage.getItem("token");
+                // 1. Fetch products
+                const res = await fetch("http://localhost:8080/products");
+                if (!res.ok) throw new Error("Failed to fetch products");
+                const data = await res.json();
 
-            // 2. Extract all unique farmerIds from the product list
-            const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
+                // 2. Extract unique farmerIds
+                const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
 
-            // 3. Fetch Full Names from Identity Service (Port 8080)
-            const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            const fullNameMap = nameRes.ok ? await nameRes.json() : {};
+                // 3. Fetch Full Names
+                const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
+                    method: "GET",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-            // 4. Map Backend Data to Frontend Interface with actual names
-            const mappedData = data.map((item: any) => ({
-                id: item.id?.toString() || "unique-id",
-                name: item.vegetableName,
-                image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
-                price1kg: item.fixedPrice || item.biddingPrice || 0,
-                price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
-                pricingType: item.pricingType,
-                description: item.description,
-                category: item.category,
-                sellerId: item.farmerId?.toString() || "",
-                
-                // Assign the actual name from the Identity Service map
-                seller: fullNameMap[item.farmerId] || "Unknown Farmer", 
-                
-                rating: 4.5
-            }));
+                // 4. Map Backend Data
+                const mappedData = data.map((item: any) => ({
+                    id: item.id?.toString() || "unique-id",
+                    name: item.vegetableName,
+                    image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
+                    price1kg: item.fixedPrice || item.biddingPrice || 0,
+                    price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
+                    pricingType: item.pricingType,
+                    description: item.description,
+                    category: item.category,
+                    sellerId: item.farmerId?.toString() || "", // This converts it to string
+                    seller: fullNameMap[item.farmerId] || "Unknown Farmer",
+                    rating: 4.5
+                }));
 
-            setVegetables(mappedData);
-        } catch (err) {
-            console.error("Error loading products:", err);
-            setError("Could not load products. Please ensure the backend is running.");
-        } finally {
-            setLoading(false);
-        }
-    };
+                setVegetables(mappedData);
+            } catch (err) {
+                console.error("Error loading products:", err);
+                setError("Could not load products. Please ensure the backend is running.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    fetchProductsAndNames();
-}, []);
+        fetchProductsAndNames();
+    }, []);
 
-    // 5. Filter Logic (Updated to use 'vegetables' state)
     const filteredVegetables = useMemo(() => {
         return vegetables.filter((veg) => {
             const matchesSearch = veg.name.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory
-            // Filter based on price per kg
             const matchesPrice = veg.price1kg >= priceRange[0] && veg.price1kg <= priceRange[1]
             return matchesSearch && matchesCategory && matchesPrice
         })
@@ -97,10 +89,8 @@ useEffect(() => {
 
     return (
         <div className="min-h-screen bg-background">
-
-            
             {/* Header Section */}
-            <div className="bg-[#f8f8f8] #EEC044 py-12">
+            <div className="bg-[#f8f8f8] py-12">
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
                     <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables directly from farmers.</p>
@@ -121,7 +111,6 @@ useEffect(() => {
                         />
                     </div>
 
-                    {/* Category Filter */}
                     <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
                         {["All", "Leafy", "Root", "Fruit", "Organic"].map((cat) => (
                             <Button
@@ -150,7 +139,6 @@ useEffect(() => {
                                     <span className="text-sm text-muted-foreground">Min: Rs. {priceRange[0]}</span>
                                     <span className="text-sm text-muted-foreground">Max: Rs. {priceRange[1]}</span>
                                 </div>
-                                {/* Simple Range Inputs for Demo */}
                                 <div className="flex gap-4">
                                     <input
                                         type="range"
@@ -176,12 +164,10 @@ useEffect(() => {
                     </div>
                 ) : (
                     <>
-                        {/* Results Count */}
                         <p className="text-muted-foreground mb-6">
                             Showing <span className="font-semibold text-foreground">{filteredVegetables.length}</span> results
                         </p>
 
-                        {/* Vegetables Grid */}
                         {filteredVegetables.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVegetables.map((veg) => (
