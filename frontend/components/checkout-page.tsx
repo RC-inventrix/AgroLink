@@ -2,41 +2,65 @@
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MapPin, Edit2, ShoppingBag, X, Check, AlertCircle, Loader2 } from "lucide-react"
+import { MapPin, Edit2, ShoppingBag, X, Check, AlertCircle, Loader2, Phone, Save } from "lucide-react"
 import { VegetableItem } from "@/components/vegetable-item"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export function CheckoutPage() {
-    // State for items loaded from Cart
     const [cartItems, setCartItems] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
+    const [isEditingAddress, setIsEditingAddress] = useState(false)
 
-    // --- Custom Notification State ---
     const [notification, setNotification] = useState<{
         message: string;
         type: 'success' | 'error' | 'loading';
     } | null>(null);
-    // State for Payment Method (Default to 'card')
-    const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card")
 
+    const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card")
     const router = useRouter()
 
-    const [address] = useState({
-        street: "123 Farm Road, Green Valley",
-        city: "Mumbai, Maharashtra 400001",
-        phone: "+91 98765 43210",
+    // --- State for Address (Initially empty, then fetched from DB) ---
+    const [address, setAddress] = useState({
+        street: "",
+        city: "",
+        phone: "",
     })
 
-    // Auto-hide notification (except for loading state)
+    // 1. NEW: Fetch Default Address from Database on Mount
     useEffect(() => {
-        if (notification && notification.type !== 'loading') {
-            const timer = setTimeout(() => setNotification(null), 4000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification]);
+        const fetchUserData = async () => {
+            const userId = sessionStorage.getItem("id")
+            const token = sessionStorage.getItem("token")
 
-    // 1. Load Items from Session Storage on Mount
+            if (!userId || !token) return;
+
+            try {
+                // Adjust this URL to match your identity service's endpoint
+                const response = await fetch(`http://localhost:8080/auth/user/${userId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    // Mapping backend fields (address, district, phone) to UI state
+                    setAddress({
+                        street: userData.address || "Please add your street address",
+                        city: userData.district || "Update your city/district",
+                        phone: userData.phone || "No phone number saved",
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile data:", error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+    // 2. Load Cart Items from Session Storage
     useEffect(() => {
         const storedItems = sessionStorage.getItem("checkoutItems")
         if (storedItems) {
@@ -60,7 +84,6 @@ export function CheckoutPage() {
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.pricePerKg, 0)
     const total = subtotal + 30 
 
-    // 2. Handle Payment Trigger (Logic for BOTH Card and Cash)
     const handleProceedToPayment = async () => {
         setLoading(true)
         setNotification({ message: "Preparing your secure payment session...", type: 'loading' });
@@ -68,24 +91,31 @@ export function CheckoutPage() {
         const userId = sessionStorage.getItem("id") || "1"
 
         try {
-            // --- OPTION A: CASH ON DELIVERY ---
             if (paymentMethod === "cash") {
-                // Call Backend to create order & clear cart FIRST
+                const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
                 const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
                     method: "POST",
-                })
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}` 
+                    },
+                    // Final address sent to the backend order record
+                    body: JSON.stringify({ 
+                        deliveryAddress: `${address.street}, ${address.city}`,
+                        contactPhone: address.phone 
+                    })
+                });
 
                 if (response.ok) {
-                    // Only redirect if backend saved it successfully
-                    router.push("/buyer/order-success")
+                    router.push("/buyer/order-success");
                 } else {
-                    console.error("Failed to place COD order")
-                    alert("Failed to place order. Please try again.")
+                    setNotification({ message: "Failed to place order. Check permissions.", type: 'error' });
                 }
-                return
+                return;
             }
 
-            // --- OPTION B: CARD PAYMENT (STRIPE) ---
+            // STRIPE OPTION
             const response = await fetch(`http://localhost:8080/api/payment/create-checkout-session?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -95,18 +125,11 @@ export function CheckoutPage() {
                 const data = await response.json()
                 if (data.url) {
                     setNotification({ message: "Redirecting to Stripe Secure Payment...", type: 'success' });
-                    // Small delay to let the user read the success state
-                    setTimeout(() => {
-                        window.location.href = data.url
-                    }, 1000);
-                } else {
-                    setNotification({ message: "Payment service failed to provide a URL.", type: 'error' });
+                    setTimeout(() => { window.location.href = data.url }, 1000);
                 }
-            } else {
-                setNotification({ message: "Order creation failed. Please try again.", type: 'error' });
             }
         } catch (error) {
-            setNotification({ message: "Network error. Unable to reach payment gateway.", type: 'error' });
+            setNotification({ message: "Network error.", type: 'error' });
         } finally {
             setLoading(false)
         }
@@ -114,8 +137,6 @@ export function CheckoutPage() {
 
     return (
         <div className="min-h-screen bg-background relative">
-            
-            {/* --- CUSTOM NOTIFICATION UI --- */}
             {notification && (
                 <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
                     notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" :
@@ -128,64 +149,81 @@ export function CheckoutPage() {
                         {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}
                         <p className="font-medium pr-4">{notification.message}</p>
                     </div>
-                    {notification.type !== 'loading' && (
-                        <button onClick={() => setNotification(null)} className="ml-auto hover:bg-white/10 p-1 rounded transition-colors">
-                            <X className="w-4 h-4 opacity-70" />
-                        </button>
-                    )}
                 </div>
             )}
 
-            <header className="sticky top-0 z-50 bg-primary border-b border-primary-foreground/10">
+            <header className="sticky top-0 z-50 bg-[#03230F] border-b border-primary-foreground/10">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="text-2xl font-bold text-primary-foreground">AgroLink.</div>
-                    </div>
-                    <div className="text-primary-foreground/80 text-sm font-medium">Secure Checkout</div>
+                    <div className="text-2xl font-bold text-white">AgroLink.</div>
+                    <div className="text-white/80 text-sm font-medium">Secure Checkout</div>
                 </div>
             </header>
 
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-foreground mb-2">Complete Your Order</h1>
+                    <h1 className="text-3xl font-bold text-[#03230F] mb-2">Complete Your Order</h1>
                     <p className="text-muted-foreground">Review your items and shipping details</p>
                 </div>
 
-                {/* Address Section */}
+                {/* --- Editable Address Section with Database Sync --- */}
                 <Card className="p-6 mb-6 border-2 shadow-sm transition-all hover:border-primary/20">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                                 <MapPin className="w-5 h-5 text-primary" />
                             </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-foreground">Delivery Address</h2>
+                            <h2 className="text-lg font-semibold text-foreground">Delivery Details</h2>
+                        </div>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-primary hover:text-primary/80"
+                            onClick={() => setIsEditingAddress(!isEditingAddress)}
+                        >
+                            {isEditingAddress ? <><Save className="w-4 h-4 mr-2"/> Done</> : <><Edit2 className="w-4 h-4 mr-2"/> Change</>}
+                        </Button>
+                    </div>
+
+                    {!isEditingAddress ? (
+                        <div className="space-y-2 ml-1">
+                            <p className="text-foreground font-medium">{address.street || "Loading street address..."}</p>
+                            <p className="text-muted-foreground">{address.city || "Loading location..."}</p>
+                            <div className="flex items-center gap-2 text-primary font-medium pt-2">
+                                <Phone className="w-4 h-4" />
+                                <span>{address.phone || "Loading phone..."}</span>
                             </div>
                         </div>
-                    </div>
-                    <div className="ml-13 space-y-1">
-                        <p className="text-foreground font-medium">{address.street}</p>
-                        <p className="text-muted-foreground">{address.city}</p>
-                        <p className="text-sm text-primary font-medium pt-2">{address.phone}</p>
-                    </div>
+                    ) : (
+                        <div className="grid gap-4 animate-in fade-in duration-300">
+                            <div className="grid gap-2">
+                                <Label htmlFor="street">Street Address</Label>
+                                <Input 
+                                    id="street" 
+                                    value={address.street} 
+                                    onChange={(e) => setAddress({...address, street: e.target.value})}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="city">City & Pincode</Label>
+                                <Input 
+                                    id="city" 
+                                    value={address.city} 
+                                    onChange={(e) => setAddress({...address, city: e.target.value})}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="phone">Mobile Number</Label>
+                                <Input 
+                                    id="phone" 
+                                    value={address.phone} 
+                                    onChange={(e) => setAddress({...address, phone: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
-                {/* Items Section */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <ShoppingBag className="w-5 h-5 text-primary" />
-                        <h2 className="text-xl font-semibold text-foreground">Your Items ({cartItems.length})</h2>
-                    </div>
-                    <div className="space-y-4">
-                        {cartItems.length === 0 ? (
-                            <p>No items to checkout.</p>
-                        ) : (
-                            cartItems.map((item) => <VegetableItem key={item.id} item={item} />)
-                        )}
-                    </div>
-                </div>
-
-                {/* Order Summary & Payment Method */}
+                {/* Summary & Payment Card */}
                 <Card className="p-6 border-2 bg-card">
                     <h2 className="text-xl font-semibold text-foreground mb-4">Order Summary</h2>
                     <div className="space-y-3 mb-6">
@@ -198,7 +236,7 @@ export function CheckoutPage() {
                             <span className="font-medium">Rs. 30.00</span>
                         </div>
                         <div className="h-px bg-border my-3"></div>
-                        <div className="flex justify-between text-foreground text-xl font-bold">
+                        <div className="flex justify-between text-[#03230F] text-xl font-bold">
                             <span>Total Amount</span>
                             <span className="text-primary text-2xl">Rs. {total.toFixed(2)}</span>
                         </div>
@@ -207,51 +245,24 @@ export function CheckoutPage() {
                     <div className="mb-6 p-4 border border-border rounded-lg">
                         <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
                         <div className="space-y-3">
-                            {/* Card Payment Option */}
-                            <label
-                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
-                                style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}
-                            >
-                                <input
-                                    type="radio"
-                                    name="payment"
-                                    value="card"
-                                    checked={paymentMethod === "card"}
-                                    onChange={(e) => setPaymentMethod(e.target.value as "card")}
-                                    className="w-4 h-4"
-                                />
-                                <div>
-                                    <p className="font-semibold text-foreground">Credit/Debit Card</p>
-                                </div>
+                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}>
+                                <input type="radio" checked={paymentMethod === "card"} onChange={() => setPaymentMethod("card")} className="w-4 h-4" />
+                                <span className="font-semibold">Credit/Debit Card</span>
                             </label>
-
-                            {/* Cash on Delivery Option */}
-                            <label
-                                className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
-                                style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}
-                            >
-                                <input
-                                    type="radio"
-                                    name="payment"
-                                    value="cash"
-                                    checked={paymentMethod === "cash"}
-                                    onChange={(e) => setPaymentMethod(e.target.value as "card" | "cash")}
-                                    className="w-4 h-4"
-                                />
-                                <div>
-                                    <p className="font-semibold text-foreground">Cash on Delivery</p>
-                                </div>
+                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}>
+                                <input type="radio" checked={paymentMethod === "cash"} onChange={() => setPaymentMethod("cash")} className="w-4 h-4" />
+                                <span className="font-semibold">Cash on Delivery</span>
                             </label>
                         </div>
                     </div>
 
                     <Button
                         onClick={handleProceedToPayment}
-                        disabled={loading || cartItems.length === 0}
-                        className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold py-7 text-lg shadow-xl active:scale-95 transition-all"
+                        disabled={loading || cartItems.length === 0 || isEditingAddress}
+                        className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-7 text-lg shadow-xl active:scale-95 transition-all"
                         size="lg"
                     >
-                        {loading ? "Processing..." : `Proceed to ${paymentMethod === "card" ? "Payment" : "Order Confirmation"}`}
+                        {loading ? "Processing..." : isEditingAddress ? "Save Address to Continue" : `Confirm & Place Order`}
                     </Button>
                 </Card>
             </div>
