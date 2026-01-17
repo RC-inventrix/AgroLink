@@ -3,6 +3,7 @@
 import { Users, UserCheck, UserX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+
 export function StatisticsCards() {
   /* Updated stats to use brand colors and simplified styling */
   const stats = [

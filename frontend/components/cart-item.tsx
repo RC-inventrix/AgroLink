@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import Image from "next/image"
+import { Trash2 } from "lucide-react" // Added icon
 
 interface Vegetable {
     id: string

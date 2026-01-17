@@ -1,7 +1,8 @@
 "use client"
 
+import { useState, useEffect } from "react" // Added useEffect
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, Clock } from "lucide-react"
+import { CheckCircle2, User } from "lucide-react"
 
 interface OrderCardProps {
     order: any
@@ -9,10 +10,37 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
+    const [buyerName, setBuyerName] = useState<string>("Loading...") // State for the name
+    
     const status = order.status?.toUpperCase();
     const isCompleted = status === "COMPLETED"
     const isProcessing = status === "PROCESSING"
     
+    // --- NEW: Fetch Buyer Name from Backend using userId ---
+    useEffect(() => {
+        const fetchBuyerName = async () => {
+            try {
+                // Adjust this URL to match your User Service endpoint
+                // Assuming you have an endpoint like /api/users/{id} or similar
+                const res = await fetch(`http://localhost:8080/auth/user/${order.userId}`);
+                if (res.ok) {
+                    const userData = await res.json();
+                    setBuyerName(userData.fullname || userData.username);
+                } else {
+                    setBuyerName(`Buyer #${order.userId}`); // Fallback to ID if not found
+                }
+            } catch (error) {
+                console.error("Failed to fetch user name:", error);
+                setBuyerName("Unknown Buyer");
+            }
+        };
+
+        if (order.userId) {
+            fetchBuyerName();
+        }
+    }, [order.userId]);
+
+    // Parsing itemsJson logic...
     let itemDetails = { name: "Fresh Vegetables", image: "/placeholder.svg", quantity: 0, pricePerKg: 0 };
     try {
         const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
@@ -51,9 +79,13 @@ export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
                             <h3 className="text-[22px] font-[800] text-[#0A2540] tracking-tight leading-none mb-1">
                                 {itemDetails.name}
                             </h3>
-                            <p className="text-[#697386] text-[15px] font-medium">
-                                By {order.sellerName || "Green Valley Farms"}
-                            </p>
+                            {/* UPDATED: Now displays the fetched buyerName state */}
+                            <div className="flex items-center gap-1.5 text-[#697386]">
+                                <User className="w-4 h-4" />
+                                <p className="text-[15px] font-medium">
+                                    Buyer: <span className="text-[#0A2540] font-semibold">{buyerName}</span>
+                                </p>
+                            </div>
                         </div>
 
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
@@ -61,7 +93,7 @@ export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
                         }`}>
                             <CheckCircle2 className="w-4 h-4" />
                             <span className="text-[13px] font-bold capitalize">
-                                {order.status.toLowerCase()}
+                                {order.status?.toLowerCase()}
                             </span>
                         </div>
                     </div>
@@ -93,7 +125,7 @@ export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
                 <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end">
                     <button
                         onClick={(e) => {
-                            e.stopPropagation(); // Critical: prevent click bubbling
+                            e.stopPropagation();
                             onStatusUpdate();
                         }}
                         className="text-[13px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700 transition-colors"
