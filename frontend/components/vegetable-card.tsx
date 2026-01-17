@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {useRouter} from "next/navigation";
+
 
 
 interface Vegetable {
