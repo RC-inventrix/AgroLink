@@ -45,9 +45,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         }
     }, [notification]);
 
-    const handleContactSeller = () => {
-        router.push(`/buyer/chat?userId=${vegetable.sellerId}`);
-    }
+
 
 
     const handleAddToCart = async () => {
