@@ -18,6 +18,7 @@ interface Vegetable {
     seller: string
     description: string
     rating: number
+    sellerId: number
 }
 
 export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegetable }) {
@@ -104,6 +105,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     quantity: finalQuantity, // Send the number, not the string
                     imageUrl: vegetable.image,
                     sellerName: vegetable.seller,
+                    sellerId: vegetable.sellerId
                 }),
             })
 
@@ -138,7 +140,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         <Card className="overflow-hidden border-2 border-black bg-white relative max-w-2xl">
             {notification && (
                 <div
-                    className={`absolute top-4 right-4 z-50 flex items-center gap-2 p-3 px-4 rounded-md shadow-lg border-2 animate-in fade-in slide-in-from-top-2 duration-300 ${
+                    className={`absolute top-4 right-4 z-5  0 flex items-center gap-2 p-3 px-4 rounded-md shadow-lg border-2 animate-in fade-in slide-in-from-top-2 duration-300 ${
                         notification.type === "success" ? "bg-white border-black text-black" : "bg-black border-red-600 text-white"
                     }`}
                 >
