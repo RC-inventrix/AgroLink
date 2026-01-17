@@ -1,61 +1,65 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
+import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
 import { Loader2 } from "lucide-react"
 
 // Interface matching the UI Component requirements
-interface BargainRequestUI {
+interface BargainItem {
     id: string
     name: string
-    buyerName: string
+    seller: string
     image: string
     pricePerHundredG: number
     pricePerKg: number
     requestedQuantityKg: number
-    actualPrice: number // Total Original Price
-    offeredPrice: number // Total Offered Price
+    actualPrice: number
+    requestedPrice: number
     discount: number
     status: string
+    vegetableId: string
 }
 
-export default function BargainPage() {
-    const [requests, setRequests] = useState<BargainRequestUI[]>([])
+export default function BuyerBargainPage() {
+    const [items, setItems] = useState<BargainItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const router = useRouter()
 
-    // This should come from your Auth Context. Hardcoded for testing as per instruction.
-    const currentSellerId = "seller123"
+    // Simulating logged-in user ID (Replace with actual auth logic)
+    const currentUserId = "1"
 
-    // Fetch Requests from Backend
+    // 1. Fetch Buyer's Requests
     useEffect(() => {
         const fetchBargains = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
+                const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
                 if (response.ok) {
                     const data = await response.json()
 
-                    // Map Backend Entity to UI Interface
-                    const mappedData: BargainRequestUI[] = data.map((item: any) => {
+                    const mappedData: BargainItem[] = data.map((item: any) => {
                         const originalTotal = item.originalPricePerKg * item.quantity;
+                        // Calculate discount percentage based on total prices
                         const discountAmount = originalTotal - item.suggestedPrice;
                         const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
 
                         return {
                             id: item.id.toString(),
+                            vegetableId: item.vegetableId,
                             name: item.vegetableName,
-                            buyerName: item.buyerName || "Anonymous Buyer",
+                            seller: item.sellerId,
                             image: item.vegetableImage || "/placeholder.svg",
                             pricePerHundredG: (item.originalPricePerKg || 0) / 10,
                             pricePerKg: item.originalPricePerKg || 0,
                             requestedQuantityKg: item.quantity,
                             actualPrice: originalTotal,
-                            offeredPrice: item.suggestedPrice,
+                            requestedPrice: item.suggestedPrice,
                             discount: Math.round(discountPercent),
-                            status: item.status // PENDING, ACCEPTED, REJECTED
+                            status: item.status
                         };
                     });
-                    setRequests(mappedData)
+                    setItems(mappedData)
                 }
             } catch (error) {
                 console.error("Failed to fetch bargains", error)
@@ -65,58 +69,91 @@ export default function BargainPage() {
         }
 
         fetchBargains()
-    }, [currentSellerId])
+    }, [])
 
-    // Handle Accept
-    const handleAcceptDeal = async (id: string) => {
+    // 2. Handle "Delete Request" (In-Progress) - Removes from DB
+    const handleDeleteRequest = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "ACCEPTED" })
+            const response = await fetch(`http://localhost:8080/api/bargains/${id}`, {
+                method: "DELETE",
             });
 
             if (response.ok) {
-                // Update local state to move item to Accepted tab
-                setRequests(prev => prev.map(item =>
-                    item.id === id ? { ...item, status: "ACCEPTED" } : item
-                ));
+                setItems(prev => prev.filter(item => item.id !== id));
+            } else {
+                alert("Failed to delete request");
             }
         } catch (error) {
-            console.error("Error accepting deal", error)
+            console.error("Error deleting bargain", error)
         }
     }
 
-    // Handle Reject
-    const handleRejectRequest = async (id: string) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "REJECTED" })
-            });
-
-            if (response.ok) {
-                // Update local state to move item to Rejected tab
-                setRequests(prev => prev.map(item =>
-                    item.id === id ? { ...item, status: "REJECTED" } : item
-                ));
-            }
-        } catch (error) {
-            console.error("Error rejecting deal", error)
-        }
-    }
-
-    // Handle Remove (UI Only)
-    // This removes the item from the current view list, but does not delete from DB
+    // 3. Handle "Remove" (Accepted/Rejected) - UI Only
     const handleRemoveFromUI = (id: string) => {
-        setRequests(prev => prev.filter(item => item.id !== id));
+        setItems(prev => prev.filter(item => item.id !== id));
     }
 
-    // Filter lists based on Status
-    const pendingItems = requests.filter(item => item.status === "PENDING")
-    const acceptedItems = requests.filter(item => item.status === "ACCEPTED")
-    const rejectedItems = requests.filter(item => item.status === "REJECTED")
+    // 4. Handle "Add to Cart" (Accepted) - Adds to Cart with Discounted Price
+    const handleAddToCart = async (item: BargainItem) => {
+        try {
+            // Calculate the effective Price Per Kg from the bargain deal
+            // Formula: Total Bargained Price / Total Quantity
+            const effectivePricePerKg = item.requestedPrice / item.requestedQuantityKg;
+
+            const cartPayload = {
+                userId: Number(currentUserId),
+                productId: Number(item.vegetableId), // Converting String ID to Long
+                productName: item.name,
+                imageUrl: item.image,
+                sellerName: item.seller,
+                quantity: item.requestedQuantityKg,
+                pricePerKg: effectivePricePerKg // Passing the calculated unit price
+            };
+
+            // NOTE: Updated path to /cart/add (without /api) as requested
+            const response = await fetch("http://localhost:8080/cart/add", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    // "X-User-Id": currentUserId // Optional if using Gateway/Security Context
+                },
+                body: JSON.stringify(cartPayload)
+            });
+
+            if (response.ok) {
+                alert(`${item.name} added to cart at discounted price!`);
+                // Optional: Remove from list after adding
+                // handleRemoveFromUI(item.id);
+            } else {
+                console.error("Failed to add to cart");
+                alert("Failed to add to cart");
+            }
+        } catch (error) {
+            console.error("Error adding to cart", error);
+        }
+    }
+
+    // 5. Handle "Bargain Again" (Rejected) - Redirects to Bargain Form
+    const handleBargainAgain = (item: BargainItem) => {
+        const vegetableData = {
+            id: item.vegetableId,
+            name: item.name,
+            image: item.image,
+            price1kg: item.pricePerKg,
+            price100g: item.pricePerHundredG,
+            seller: item.seller,
+            sellerId: item.seller,
+            description: "Bargain Again Request",
+        };
+
+        sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetableData));
+        router.push("/buyer/bargain");
+    }
+
+    // Filter Items
+    const pendingItems = items.filter(item => item.status === "PENDING")
+    const acceptedItems = items.filter(item => item.status === "ACCEPTED")
+    const rejectedItems = items.filter(item => item.status === "REJECTED")
 
     if (isLoading) {
         return (
@@ -131,8 +168,8 @@ export default function BargainPage() {
             {/* Header */}
             <div className="px-6 py-8 border-b border-border">
                 <div className="max-w-6xl mx-auto">
-                    <h1 className="text-4xl font-bold text-foreground mb-2">Bargain Requests from Buyers</h1>
-                    <p className="text-muted-foreground">Accept or negotiate price offers on your fresh vegetables</p>
+                    <h1 className="text-4xl font-bold text-foreground mb-2">My Bargain Requests</h1>
+                    <p className="text-muted-foreground">Manage your negotiations and add accepted offers to your cart</p>
                 </div>
             </div>
 
@@ -144,13 +181,13 @@ export default function BargainPage() {
                                 value="all"
                                 className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
                             >
-                                All Requests ({requests.length})
+                                All Requests ({items.length})
                             </TabsTrigger>
                             <TabsTrigger
-                                value="pending"
+                                value="in-progress"
                                 className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
                             >
-                                Pending ({pendingItems.length})
+                                In Progress ({pendingItems.length})
                             </TabsTrigger>
                             <TabsTrigger
                                 value="accepted"
@@ -171,52 +208,48 @@ export default function BargainPage() {
                 {/* Tab Content */}
                 <div className="p-6">
                     <div className="max-w-6xl mx-auto">
-                        {/* Tab Content - All Requests */}
+
+                        {/* All Requests */}
                         <TabsContent value="all" className="space-y-4 mt-6">
-                            {requests.length === 0 ? (
+                            {items.length === 0 ? (
                                 <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No bargaining requests found</p>
+                                    <p className="text-muted-foreground">No bargain history found.</p>
                                 </div>
                             ) : (
-                                requests.map((item) => (
+                                items.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
-                                        status="all"
-                                        // For "All" tab, allow actions if pending, or remove if resolved
-                                        onAccept={() => item.status === 'PENDING' && handleAcceptDeal(item.id)}
-                                        onReject={() => item.status === 'PENDING' && handleRejectRequest(item.id)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
+                                        status={item.status === 'PENDING' ? 'in-progress' : item.status.toLowerCase() as any}
+                                        onDelete={() => handleDeleteRequest(item.id)}
                                     />
                                 ))
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Pending */}
-                        <TabsContent value="pending" className="space-y-4 mt-6">
+                        {/* In Progress */}
+                        <TabsContent value="in-progress" className="space-y-4 mt-6">
                             {pendingItems.length === 0 ? (
                                 <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No pending bargaining requests</p>
+                                    <p className="text-muted-foreground">No active negotiations.</p>
                                 </div>
                             ) : (
                                 pendingItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
-                                        status="pending"
-                                        onAccept={() => handleAcceptDeal(item.id)}
-                                        onReject={() => handleRejectRequest(item.id)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
+                                        status="in-progress"
+                                        onDelete={() => handleDeleteRequest(item.id)}
                                     />
                                 ))
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Accepted */}
+                        {/* Accepted */}
                         <TabsContent value="accepted" className="space-y-4 mt-6">
                             {acceptedItems.length === 0 ? (
                                 <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No accepted bargaining requests</p>
+                                    <p className="text-muted-foreground">No accepted offers yet.</p>
                                 </div>
                             ) : (
                                 acceptedItems.map((item) => (
@@ -224,17 +257,18 @@ export default function BargainPage() {
                                         key={item.id}
                                         item={item}
                                         status="accepted"
-                                        onRemove={() => handleRemoveFromUI(item.id)}
+                                        onAddToCart={() => handleAddToCart(item)}
+                                        onDelete={() => handleRemoveFromUI(item.id)}
                                     />
                                 ))
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Rejected */}
+                        {/* Rejected */}
                         <TabsContent value="rejected" className="space-y-4 mt-6">
                             {rejectedItems.length === 0 ? (
                                 <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No rejected bargaining requests</p>
+                                    <p className="text-muted-foreground">No rejected requests.</p>
                                 </div>
                             ) : (
                                 rejectedItems.map((item) => (
@@ -242,11 +276,13 @@ export default function BargainPage() {
                                         key={item.id}
                                         item={item}
                                         status="rejected"
+                                        onBargainAgain={() => handleBargainAgain(item)}
                                         onDelete={() => handleRemoveFromUI(item.id)}
                                     />
                                 ))
                             )}
                         </TabsContent>
+
                     </div>
                 </div>
             </Tabs>
