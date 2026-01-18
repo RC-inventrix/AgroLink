@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare, Book } from 'lucide-react';
 
 interface SellerSidebarProps {
     unreadCount: number; // Chat count
@@ -62,6 +62,14 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({ unreadCount, orderCount =
                             {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                     )}
+                </Link>
+
+                <Link href="/seller/item-requests" 
+                    className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'item-requests' ? 'active bg-gray-100 font-semibold' : ''}`}>
+                    <div className='flex items-center gap-3'>
+                        <Book size={20} />
+                        <span>Item Requests</span>
+                    </div>
                 </Link>
             </nav>
         </aside>

@@ -1,6 +1,7 @@
 package com.agrolink.orderpaymentservice.Controller;
 
 import com.agrolink.orderpaymentservice.model.Requirement;
+import com.agrolink.orderpaymentservice.model.RequirementStatus;
 import com.agrolink.orderpaymentservice.repository.RequirementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -44,5 +45,12 @@ public class RequirementController {
     public ResponseEntity<?> deleteRequirement(@PathVariable Long id) {
         requirementRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<Requirement>> getByStatus(@PathVariable RequirementStatus status) {
+        // Spring automatically converts the String "OPEN" from the URL
+        // to the RequirementStatus.OPEN enum constant.
+        return ResponseEntity.ok(requirementRepository.findByStatusOrderByCreatedAtDesc(status));
     }
 }
