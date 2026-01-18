@@ -40,6 +40,3 @@ public class Requirement {
     private String description;
 }
 
-enum RequirementStatus {
-    OPEN, CLOSED, FULFILLED
-}
