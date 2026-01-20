@@ -8,6 +8,7 @@ import { ConversationList, type Conversation } from "@/components/chat/conversat
 import { MessageView, type Message } from "@/components/chat/message-view"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { DashboardHeader } from "@/components/dashboard-header"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 
 function ChatContent() {
@@ -219,7 +220,7 @@ function ChatContent() {
 
     return (
         <>
-            <DashboardHeader />
+            <BuyerHeader />
             <div className="flex">
                 <DashboardNav unreadCount={totalUnread} />
                 <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">

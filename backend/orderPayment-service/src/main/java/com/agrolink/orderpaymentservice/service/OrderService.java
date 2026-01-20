@@ -15,12 +15,17 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
+    // Update your existing createOrder method in OrderService.java
     @Transactional
     public Order createOrder(Order order) {
-        // 2. Clean one-liner to ensure status is never null
         if (order.getStatus() == null) {
             order.setStatus(OrderStatus.CREATED);
         }
+
+        // Generate random 6-digit OTP
+        String generatedOtp = String.valueOf((int)((Math.random() * 900000) + 100000));
+        order.setOtp(generatedOtp);
+
         return orderRepository.save(order);
     }
 

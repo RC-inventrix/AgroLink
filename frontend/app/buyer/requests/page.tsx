@@ -13,6 +13,7 @@ import DashboardHeader from "@/components/header"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DashboardNav } from "@/components/dashboard-nav"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 interface Requirement {
     id: number;
@@ -182,7 +183,7 @@ export default function MyRequirementsPage() {
 
     return (
         <div className="relative min-h-screen bg-gray-50">
-            <DashboardHeader/>
+            <BuyerHeader />
 
             {/* DELETE POPUP */}
             {showDeletePopup && (

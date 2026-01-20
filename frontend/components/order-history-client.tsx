@@ -4,11 +4,13 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, CheckCircle, Clock } from "lucide-react"
+import { Package, CheckCircle, Clock, KeyRound, Hash } from "lucide-react" // Added Hash icon
 import { format } from "date-fns"
+import BuyerHeader from "./headers/BuyerHeader"
 
 interface OrderItem {
     id: string
+    displayOrderId: string | number; // Added field for the actual DB ID
     name: string
     quantity: number
     pricePerKg: number
@@ -17,6 +19,7 @@ interface OrderItem {
     orderDate: Date
     status: "completed" | "pending"
     totalPrice: number
+    otp?: string 
 }
 
 export function OrderHistoryClient() {
@@ -30,10 +33,9 @@ export function OrderHistoryClient() {
     }, [])
 
     const fetchOrders = async () => {
-        // --- DIRECTLY ACCESS ID FROM SESSION STORAGE ---
-        const userId = sessionStorage.getItem("id") 
+        const userId = sessionStorage.getItem("id")
         const token = sessionStorage.getItem("token")
-        
+
         if (!userId) {
             console.error("User ID not found in session storage")
             setLoading(false)
@@ -41,11 +43,10 @@ export function OrderHistoryClient() {
         }
 
         try {
-            // 1. Fetch Orders from Order Service using the direct userId
             const res = await fetch(`${gatewayUrl}/api/buyer/orders/${userId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
-            
+
             if (res.ok) {
                 const backendOrders = await res.json()
                 const rawItemsList: any[] = []
@@ -57,31 +58,30 @@ export function OrderHistoryClient() {
                         if (order.itemsJson && order.itemsJson.startsWith("[")) {
                             parsedItems = JSON.parse(order.itemsJson)
                         } else {
-                            parsedItems = [{ 
-                                productName: "Order Items", 
-                                quantity: 1, 
-                                pricePerKg: order.amount / 100 
+                            parsedItems = [{
+                                productName: "Order Items",
+                                quantity: 1,
+                                pricePerKg: order.amount / 100
                             }]
                         }
                     } catch (e) { console.error("JSON Parse error", e) }
 
                     parsedItems.forEach((item: any) => {
-                        // Collect seller ID (usually an ID from the backend)
-                        const sId = item.sellerId || order.sellerId 
+                        const sId = item.sellerId || order.sellerId
                         if (sId) sellerIds.add(sId)
-                        
+
                         rawItemsList.push({
-                            orderId: order.id,
+                            orderId: order.id, // This is the numerical ID from the database
                             itemData: item,
                             status: order.status === "COMPLETED" ? "completed" : "pending",
                             createdAt: order.createdAt,
                             amount: order.amount,
-                            sellerId: sId
+                            sellerId: sId,
+                            otp: order.otp 
                         })
                     })
                 })
 
-                // 2. Fetch Seller Names from Identity Service using sellerIds collected
                 let sellerNameMap: Record<string, string> = {}
                 if (sellerIds.size > 0) {
                     try {
@@ -95,9 +95,14 @@ export function OrderHistoryClient() {
                     } catch (err) { console.error("Identity service fetch failed", err) }
                 }
 
-                // 3. Final mapping to the UI structure
-                const finalOrders: OrderItem[] = rawItemsList.map((entry, index) => ({
+                // Sorting by date descending
+                const sortedRawList = rawItemsList.sort((a, b) => 
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+
+                const finalOrders: OrderItem[] = sortedRawList.map((entry, index) => ({
                     id: `${entry.orderId}-${index}`,
+                    displayOrderId: entry.orderId, // Mapping the actual Order ID
                     name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
                     quantity: entry.itemData.quantity || 1,
                     pricePerKg: entry.itemData.pricePerKg || 0,
@@ -105,7 +110,8 @@ export function OrderHistoryClient() {
                     sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
                     orderDate: new Date(entry.createdAt),
                     status: entry.status,
-                    totalPrice: (entry.amount / 100)
+                    totalPrice: (entry.amount / 100),
+                    otp: entry.otp 
                 }))
 
                 setOrders(finalOrders)
@@ -121,29 +127,34 @@ export function OrderHistoryClient() {
     const pendingOrders = orders.filter((o) => o.status === "pending")
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
-            
-            <Tabs defaultValue="all" className="w-full">
-                <TabsList className="bg-secondary">
-                    <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
-                    <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
-                    <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
-                </TabsList>
+        <div>
+            <BuyerHeader />
+            <div className="flex">
+                <div className="p-8 w-full">
+                    <h1 className="text-3xl font-bold tracking-tight mb-6 text-[#03230F]">Order History</h1>
 
-                <div className="mt-6">
-                    <TabsContent value="all"><OrderList orders={orders} loading={loading} /></TabsContent>
-                    <TabsContent value="completed"><OrderList orders={completedOrders} loading={loading} /></TabsContent>
-                    <TabsContent value="pending"><OrderList orders={pendingOrders} loading={loading} /></TabsContent>
+                    <Tabs defaultValue="all" className="w-full">
+                        <TabsList className="bg-secondary">
+                            <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
+                            <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
+                            <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
+                        </TabsList>
+
+                        <div className="mt-6">
+                            <TabsContent value="all"><OrderList orders={orders} loading={loading} /></TabsContent>
+                            <TabsContent value="completed"><OrderList orders={completedOrders} loading={loading} /></TabsContent>
+                            <TabsContent value="pending"><OrderList orders={pendingOrders} loading={loading} /></TabsContent>
+                        </div>
+                    </Tabs>
                 </div>
-            </Tabs>
+            </div>
         </div>
     )
 }
 
 function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean }) {
-    if (loading) return <div className="text-center py-10 animate-pulse">Syncing with services...</div>
-    
+    if (loading) return <div className="text-center py-10 animate-pulse text-gray-400">Syncing with AgroLink services...</div>
+
     if (orders.length === 0) return (
         <Card className="p-12 text-center border-dashed">
             <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
@@ -154,19 +165,23 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
     return (
         <div className="space-y-4">
             {orders.map((order) => (
-                <Card key={order.id} className="p-6 border-l-4 border-l-primary/20">
-                    <div className="flex flex-col md:flex-row gap-6 items-center">
+                <Card key={order.id} className="p-6 border-l-4 border-l-[#EEC044]">
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-secondary flex-shrink-0 border">
-                             <img src={order.image} className="object-cover w-full h-full" alt={order.name} />
+                            <img src={order.image} className="object-cover w-full h-full" alt={order.name} />
                         </div>
-                        
+
                         <div className="flex-1 w-full">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="font-bold text-lg">{order.name}</h3>
-                                    <p className="text-sm font-semibold text-primary">Sold by {order.sellerName}</p>
+                                    {/* --- DISPLAY ORDER ID HERE --- */}
+                                    <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1">
+                                        <Hash size={10} /> ORDER #{order.displayOrderId}
+                                    </p>
+                                    <h3 className="font-bold text-lg text-[#03230F]">{order.name}</h3>
+                                    <p className="text-sm font-semibold text-[#2d5016]">Sold by {order.sellerName}</p>
                                 </div>
-                                <Badge variant={order.status === "completed" ? "default" : "secondary"}>
+                                <Badge variant={order.status === "completed" ? "default" : "secondary"} className={order.status === "pending" ? "bg-yellow-100 text-yellow-700" : ""}>
                                     {order.status === "completed" ? "Completed" : "Pending"}
                                 </Badge>
                             </div>
@@ -177,6 +192,20 @@ function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean 
                                 <div><p className="text-xs text-muted-foreground">Date</p><p className="font-bold">{format(order.orderDate, "MMM d, yyyy")}</p></div>
                                 <div><p className="text-xs text-muted-foreground">Total</p><p className="font-bold text-[#2d5016]">Rs. {order.totalPrice.toFixed(2)}</p></div>
                             </div>
+
+                            {order.status === "pending" && order.otp && (
+                                <div className="mt-6 p-4 bg-green-50 border-2 border-dashed border-[#03230F]/10 rounded-2xl flex justify-between items-center animate-in slide-in-from-top duration-300">
+                                    <div>
+                                        <p className="flex items-center gap-2 text-[10px] font-black uppercase text-[#03230F]">
+                                            <KeyRound className="w-3 h-3 text-[#EEC044]" /> Delivery Handover OTP
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 font-medium">Provide this code to the seller to confirm delivery</p>
+                                    </div>
+                                    <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-4 py-1 rounded-lg border shadow-sm">
+                                        {order.otp}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Card>

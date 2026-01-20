@@ -30,4 +30,5 @@ public class RequirementCleanupService {
             log.error("Error during automatic cleanup: {}", e.getMessage());
         }
     }
+
 }

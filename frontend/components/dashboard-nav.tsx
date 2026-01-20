@@ -11,7 +11,6 @@ const navItems = [
   { href: "/buyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/VegetableList", label: "Browse Products", icon: ShoppingBag },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
-  { href: "/buyer/wishlist", label: "Wishlist", icon: Heart },
   { href: "/buyer/order-history", label: "My Orders", icon: Package },
   { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },

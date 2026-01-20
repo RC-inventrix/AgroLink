@@ -15,7 +15,7 @@ interface Vegetable {
     price100g: number // We will calculate this
     price1kg: number  // Maps to backend 'fixedPrice'
     seller: string    // Placeholder for now
-    sellerId: string  // Added to match VegetableCard requirements
+    sellerId: number  // Added to match VegetableCard requirements
     description: string
     category: string
     rating: number    // Placeholder for now
@@ -64,7 +64,7 @@ useEffect(() => {
                 pricingType: item.pricingType,
                 description: item.description,
                 category: item.category,
-                sellerId: item.farmerId.toString(),
+                sellerId: item.farmerId,
                 
                 // Assign the actual name from the Identity Service map
                 seller: fullNameMap[item.farmerId] || "Unknown Farmer", 

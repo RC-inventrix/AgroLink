@@ -9,23 +9,23 @@ import { toast } from "sonner"
 interface OrdersListProps {
     initialOrders: any[]
     onOrderUpdated: () => void
+    onOfferAction?: (offerId: number, newStatus: string) => Promise<void>
 }
 
-export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
+export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: OrdersListProps) {
     const [activeTab, setActiveTab] = useState<"pending" | "processing" | "completed">("pending")
     const [isUpdating, setIsUpdating] = useState(false)
-    
-    // --- SAFE CLIENT-SIDE STATE FOR SELLER ID ---
     const [sellerId, setSellerId] = useState<string | null>(null)
 
-    // Ensure sessionStorage is accessed only on the client side
     useEffect(() => {
         const id = sessionStorage.getItem("id")
         setSellerId(id)
     }, [])
 
+    // Helper to get time for sorting
+    const getTime = (dateStr: string) => new Date(dateStr).getTime();
+
     // --- CALCULATE TAB COUNTS ---
-    // We use useMemo to recalculate counts only when initialOrders or sellerId changes
     const counts = useMemo(() => {
         if (!sellerId) return { pending: 0, processing: 0, completed: 0 };
 
@@ -35,26 +35,24 @@ export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
 
         return {
             pending: myOrders.filter((o) => 
-                ["PAID", "COD_CONFIRMED", "CREATED"].includes(o.status?.toUpperCase())
+                ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
             ).length,
             processing: myOrders.filter((o) => o.status?.toUpperCase() === "PROCESSING").length,
             completed: myOrders.filter((o) => o.status?.toUpperCase() === "COMPLETED").length,
         };
     }, [initialOrders, sellerId]);
 
-    // --- FILTERED ORDERS FOR DISPLAY ---
+    // --- FILTERED AND SORTED ORDERS FOR DISPLAY ---
     const filteredOrders = useMemo(() => {
         if (!sellerId) return [];
 
-        return initialOrders.filter((order) => {
-            // 1. Check if the order belongs to this seller
+        const filtered = initialOrders.filter((order) => {
             const isMyOrder = order.sellerId?.toString() === sellerId?.toString()
             if (!isMyOrder) return false
 
-            // 2. Filter by status for the active tab
             const status = order.status?.toUpperCase()
             if (activeTab === "pending") {
-                return ["PAID", "COD_CONFIRMED", "CREATED"].includes(status)
+                return ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(status)
             }
             if (activeTab === "processing") {
                 return status === "PROCESSING"
@@ -63,14 +61,17 @@ export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
                 return status === "COMPLETED"
             }
             return false
-        })
+        });
+
+        // --- SORTING LOGIC: Descending Order (Newest First) ---
+        return filtered.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
+        
     }, [initialOrders, sellerId, activeTab]);
 
     const handleUpdateStatus = async (orderId: number, currentStatus: string) => {
         setIsUpdating(true)
         const token = sessionStorage.getItem("token");
         
-        // Determine the next status based on current status
         let nextStatus = "PROCESSING"
         if (currentStatus === "PROCESSING") nextStatus = "COMPLETED"
 
@@ -79,19 +80,19 @@ export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // Added auth header for 403 prevention
+                    'Authorization': `Bearer ${token}`
                 }
             })
 
             if (response.ok) {
                 toast.success(`Order marked as ${nextStatus.toLowerCase()}`)
-                onOrderUpdated() // Refresh the list from the parent
+                onOrderUpdated()
             } else {
                 toast.error("Failed to update order status")
             }
         } catch (error) {
             console.error("Update Error:", error)
-            toast.error("Server error. Please check if the backend is running.")
+            toast.error("Server error.")
         } finally {
             setIsUpdating(false)
         }
@@ -99,53 +100,33 @@ export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
 
     return (
         <div className="space-y-6">
-            {/* Tab Navigation with Dynamic Counts */}
+            {/* Tab Navigation */}
             <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto">
-                <Button 
-                    variant={activeTab === "pending" ? "default" : "outline"} 
-                    onClick={() => setActiveTab("pending")}
-                    disabled={isUpdating}
-                    className="flex items-center gap-2"
-                >
-                    Pending
-                    <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === 'pending' ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
-                        {counts.pending}
-                    </span>
-                </Button>
-
-                <Button 
-                    variant={activeTab === "processing" ? "default" : "outline"} 
-                    onClick={() => setActiveTab("processing")}
-                    disabled={isUpdating}
-                    className="flex items-center gap-2"
-                >
-                    Processing
-                    <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === 'processing' ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
-                        {counts.processing}
-                    </span>
-                </Button>
-
-                <Button 
-                    variant={activeTab === "completed" ? "default" : "outline"} 
-                    onClick={() => setActiveTab("completed")}
-                    disabled={isUpdating}
-                    className="flex items-center gap-2"
-                >
-                    Completed
-                    <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === 'completed' ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
-                        {counts.completed}
-                    </span>
-                </Button>
+                {(["pending", "processing", "completed"] as const).map((tab) => (
+                    <Button 
+                        key={tab}
+                        variant={activeTab === tab ? "default" : "outline"} 
+                        onClick={() => setActiveTab(tab)}
+                        disabled={isUpdating}
+                        className="flex items-center gap-2 capitalize"
+                    >
+                        {tab}
+                        <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === tab ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
+                            {counts[tab]}
+                        </span>
+                    </Button>
+                ))}
             </div>
 
-            {/* Orders Display */}
+            {/* Orders Display (Now Sorted) */}
             <div className="grid grid-cols-1 gap-4">
                 {filteredOrders.length > 0 ? (
                     filteredOrders.map((order) => (
                         <OrderCard
                             key={order.id}
                             order={order}
-                            onStatusUpdate={() => handleUpdateStatus(order.id, order.status)}
+                            onStatusUpdate={order.isOfferOrder ? undefined : () => handleUpdateStatus(order.id, order.status)}
+                            onOfferAction={order.isOfferOrder ? onOfferAction : undefined}
                         />
                     ))
                 ) : (
@@ -153,7 +134,7 @@ export function OrdersList({ initialOrders, onOrderUpdated }: OrdersListProps) {
                         <p className="text-muted-foreground">
                             {!sellerId 
                                 ? "Verifying seller identity..." 
-                                : `No orders found for your account in ${activeTab}.`}
+                                : `No orders found in ${activeTab}.`}
                         </p>
                     </Card>
                 )}

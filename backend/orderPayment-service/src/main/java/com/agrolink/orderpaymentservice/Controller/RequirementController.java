@@ -53,4 +53,13 @@ public class RequirementController {
         // to the RequirementStatus.OPEN enum constant.
         return ResponseEntity.ok(requirementRepository.findByStatusOrderByCreatedAtDesc(status));
     }
+
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Requirement> getRequirementById(@PathVariable Long id) {
+        return requirementRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
