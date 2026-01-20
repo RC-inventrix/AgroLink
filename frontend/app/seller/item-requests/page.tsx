@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, ChangeEvent } from 'react'
-import SellerHeader from '@/components/headers/BuyerHeader'
+import SellerHeader from '@/components/headers/SellerHeader'
 import SellerSidebar from '../dashboard/SellerSideBar'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import '../dashboard/SellerDashboard.css';
+
 
 interface Requirement {
     id: number;

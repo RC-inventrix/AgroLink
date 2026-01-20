@@ -54,4 +54,7 @@ public class Order {
 
     @Column(name = "sellerId")
     private Long sellerId;
+
+    @Column(name = "otp")
+    private String otp;
 }

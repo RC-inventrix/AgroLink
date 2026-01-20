@@ -44,6 +44,10 @@ public class PaymentService {
      * Now pre-creates orders in the database with status CREATED.
      */
 
+    private String generateOtp() {
+        return String.valueOf((int)((Math.random() * 900000) + 100000));
+    }
+
     @Transactional
     public CheckoutResponse initiateCheckout(Long userId) throws StripeException {
         // 1. Fetch Cart Items
@@ -111,7 +115,8 @@ public class PaymentService {
                     .currency("lkr")
                     .status(OrderStatus.CREATED)
                     .itemsJson(itemJson)
-                    .stripeId(session.getId()) // --- UNIQUE STRIPE ID FROM SESSION ---
+                    .stripeId(session.getId())
+                    .otp(generateOtp())
                     .build();
 
             orderRepository.save(pendingOrder);
@@ -151,6 +156,7 @@ public class PaymentService {
                         .status(OrderStatus.COD_CONFIRMED)
                         .itemsJson(itemsJson)
                         .sellerId(Long.valueOf(item.getSellerId()))
+                        .otp(generateOtp())
                         .build();
 
                 orderRepository.save(order);

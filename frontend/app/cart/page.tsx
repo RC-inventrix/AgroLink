@@ -7,6 +7,7 @@ import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react"
 import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 interface CartItemData {
   id: number
@@ -130,7 +131,7 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      <Header />
+      <BuyerHeader/>
 
       {/* --- NOTIFICATION UI --- */}
       {notification && (

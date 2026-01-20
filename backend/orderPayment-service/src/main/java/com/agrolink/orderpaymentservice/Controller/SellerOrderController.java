@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -53,5 +54,21 @@ public class SellerOrderController {
             // Return 400 Bad Request if the status string is invalid
             return ResponseEntity.badRequest().body("Invalid status provided");
         }
+    }
+
+    // Add this method to SellerOrderController.java
+    @PostMapping("/{orderId}/verify-otp")
+    public ResponseEntity<?> verifyOrderOtp(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
+        return orderRepository.findById(orderId).map(order -> {
+            String inputOtp = payload.get("otp");
+
+            if (order.getOtp() != null && order.getOtp().equals(inputOtp)) {
+                order.setStatus(OrderStatus.COMPLETED);
+                orderRepository.save(order);
+                return ResponseEntity.ok().body(Map.of("message", "Order verified and completed successfully"));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("message", "Invalid OTP code. Please try again."));
+            }
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

@@ -19,6 +19,7 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 // Remaining Static Mock Data (Wishlist & Bargains)
 const wishlistItems = [
@@ -181,7 +182,7 @@ export default function BuyerDashboard() {
     return (
         <ProtectedRoute>
             <div className="min-h-screen bg-background">
-                <DashboardHeader />
+                <BuyerHeader />
                 <div className="flex">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
