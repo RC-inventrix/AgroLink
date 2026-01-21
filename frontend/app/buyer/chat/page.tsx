@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react"
+import { useEffect, useState, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation" 
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { ConversationList, type Conversation } from "@/components/chat/conversation-list"
 import { MessageView, type Message } from "@/components/chat/message-view"
 import { DashboardNav } from "@/components/dashboard-nav"
-import { DashboardHeader } from "@/components/dashboard-header"
-
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 function ChatContent() {
     const searchParams = useSearchParams();
@@ -30,12 +29,26 @@ function ChatContent() {
         scrollToBottom();
     }, [messages, selectedConversationId]);
 
-    // --- 1. HANDLE URL PARAMETER & AUTO-OPEN ---
+    // --- FIX 1: SYNC THE REF WITH THE STATE ---
+    // This allows the WebSocket callback to see the current active chat ID
+    useEffect(() => {
+        selectedIdRef.current = selectedConversationId;
+    }, [selectedConversationId]);
+
+    // --- FIX 2: WRAP SELECTION LOGIC ---
+    // Clears unread markers when you click a conversation
+    const handleSelectConversation = (id: string) => {
+        setSelectedConversationId(id);
+        setConversations(prev => prev.map(conv => 
+            conv.id === id ? { ...conv, unread: false, unreadCount: 0 } : conv
+        ));
+    };
+
+    // --- HANDLE URL PARAMETER ---
     useEffect(() => {
         const userIdFromUrl = searchParams.get("userId");
-        
         if (userIdFromUrl && !isLoading) {
-            setSelectedConversationId(userIdFromUrl);
+            handleSelectConversation(userIdFromUrl);
             
             const exists = conversations.some(conv => conv.id === userIdFromUrl);
             if (!exists) {
@@ -60,16 +73,14 @@ function ChatContent() {
                             };
                             setConversations(prev => [newConv, ...prev]);
                         }
-                    } catch (err) {
-                        console.error("Failed to resolve contact name:", err);
-                    }
+                    } catch (err) { console.error(err); }
                 };
                 resolveNewContact();
             }
         }
     }, [searchParams, isLoading, conversations.length]);
 
-    // --- 2. WEBSOCKET SETUP ---
+    // --- WEBSOCKET SETUP ---
     useEffect(() => {
         const socket = new SockJS(`${baseUrl}/ws`); 
         const client = new Client({
@@ -90,14 +101,18 @@ function ChatContent() {
                             }]);
                         }
 
+                        // --- FIX 3: UPDATE UNREAD COUNT AND STATUS ---
                         setConversations((prev) => {
                             const updated = prev.map(conv => {
                                 if (conv.id.toString() === newMessage.senderId.toString()) {
+                                    const isCurrentlyActive = currentActiveId === newMessage.senderId.toString();
                                     return { 
                                         ...conv, 
                                         lastMessage: newMessage.content, 
                                         timestamp: newMessage.timestamp,
-                                        unread: currentActiveId !== newMessage.senderId.toString(),
+                                        // Set unread true and increment count ONLY if not currently viewing this chat
+                                        unread: !isCurrentlyActive,
+                                        unreadCount: isCurrentlyActive ? 0 : (conv.unreadCount || 0) + 1,
                                         online: true 
                                     };
                                 }
@@ -114,17 +129,15 @@ function ChatContent() {
         return () => { void client.deactivate(); };
     }, [baseUrl]);
 
-    // --- 3. FETCH CONTACTS ---
+    // --- FETCH CONTACTS ---
     useEffect(() => {
         const fetchContacts = async () => {
             const token = sessionStorage.getItem("token"); 
             if (!token) return;
-            
             try {
                 const res = await fetch(`${baseUrl}/api/chat/contacts`, {
                     method: "GET", headers: { "Authorization": `Bearer ${token}` }
                 });
-                
                 if (res.ok) {
                     const ids: number[] = await res.json();
                     const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${ids.join(',')}`, {
@@ -132,31 +145,25 @@ function ChatContent() {
                     });
                     const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-                    const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
-                        return {
-                            id: id.toString(),
-                            name: fullNameMap[id] || `User ${id}`, 
-                            lastMessage: "Click to start chatting", 
-                            avatar: "/buyer-dashboard/farmer-portrait.png",
-                            online: false,
-                            timestamp: new Date().toISOString(), 
-                            unread: false,
-                            unreadCount: 0,
-                            starred: false,
-                        };
+                    const mapped: Conversation[] = ids.map((id) => ({
+                        id: id.toString(),
+                        name: fullNameMap[id] || `User ${id}`, 
+                        lastMessage: "Click to start chatting", 
+                        avatar: "/buyer-dashboard/farmer-portrait.png",
+                        online: false,
+                        timestamp: new Date().toISOString(), 
+                        unread: false,
+                        unreadCount: 0,
+                        starred: false,
                     }));
                     setConversations(mapped);
                 }
-            } catch (err) { 
-                console.error("Fetch error:", err); 
-            } finally { 
-                setIsLoading(false); // <--- THIS STOPS THE LOADING SPINNER
-            }
+            } catch (err) { console.error(err); } finally { setIsLoading(false); }
         };
         fetchContacts();
     }, [baseUrl]);
 
-    // --- 4. FETCH HISTORY ---
+    // --- FETCH HISTORY ---
     useEffect(() => {
         if (!selectedConversationId) return;
         const fetchHistory = async () => {
@@ -177,12 +184,11 @@ function ChatContent() {
                         isRead: m.isRead 
                     })));
                 }
-            } catch (err) { console.error("History fetch error:", err); }
+            } catch (err) { console.error(err); }
         };
         fetchHistory();
     }, [selectedConversationId, baseUrl]);
 
-    // --- 5. SEND MESSAGE ---
     const handleSendMessage = (content: string) => {
         if (stompClient?.connected && selectedConversationId) {
             const myId = sessionStorage.getItem("id");
@@ -202,8 +208,7 @@ function ChatContent() {
         }
     };
 
-    const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
-    const activeConversation = selectedConversation || (selectedConversationId ? {
+    const activeConversation = conversations.find((conv) => conv.id === selectedConversationId) || (selectedConversationId ? {
         id: selectedConversationId,
         name: "Loading Chat...",
         lastMessage: "",
@@ -219,7 +224,7 @@ function ChatContent() {
 
     return (
         <>
-            <DashboardHeader />
+            <BuyerHeader />
             <div className="flex">
                 <DashboardNav unreadCount={totalUnread} />
                 <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
@@ -232,7 +237,8 @@ function ChatContent() {
                             <ConversationList 
                                 conversations={conversations} 
                                 selectedId={selectedConversationId} 
-                                onSelect={setSelectedConversationId} 
+                                // Updated to use the custom handler
+                                onSelect={handleSelectConversation} 
                                 onDelete={() => {}} 
                             />
                             <div className="flex-1 flex flex-col relative bg-white">
@@ -246,7 +252,7 @@ function ChatContent() {
                                         <div ref={messagesEndRef} className="h-1" />
                                     </div>
                                 ) : (
-                                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                                    <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm font-medium">
                                         Select a contact to start messaging
                                     </div>
                                 )}

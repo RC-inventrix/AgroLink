@@ -15,6 +15,7 @@ interface Vegetable {
     seller: string
     description: string
     rating: number
+    sellerId: number
 }
 
 export default function Page() {

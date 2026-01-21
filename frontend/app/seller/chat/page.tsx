@@ -21,7 +21,6 @@ function ChatContent() {
     const AUTH_SERVICE_URL = "http://localhost:8080"; 
     const CHAT_SERVICE_URL = "http://localhost:8083"; 
     
-    // SYNC REF: Crucial for the WebSocket listener to access the current selected ID
     const selectedIdRef = useRef("");
     useEffect(() => {
         selectedIdRef.current = selectedConversationId;
@@ -36,7 +35,7 @@ function ChatContent() {
         scrollToBottom();
     }, [messages]);
 
-    // --- 1. SYNC READ STATUS WITH BACKEND ---
+    // --- 1. SYNC READ STATUS ---
     const syncReadStatus = useCallback(async (senderId: string) => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
@@ -52,7 +51,6 @@ function ChatContent() {
         }
     }, [CHAT_SERVICE_URL]);
 
-    // Trigger sync when chat is selected or new messages arrive in the active chat
     useEffect(() => {
         if (selectedConversationId) {
             setConversations(prev => prev.map(conv => 
@@ -64,13 +62,21 @@ function ChatContent() {
         }
     }, [selectedConversationId, messages.length, syncReadStatus]);
 
-    // --- 2. HANDLE URL PARAMETER ---
+    // --- 2. FIXED: HANDLE URL PARAMETER ---
+    // Changed "userId" to "receiverId" to match your ItemRequestsPage redirect
     useEffect(() => {
-        const userIdFromUrl = searchParams.get("userId");
-        if (userIdFromUrl && !isLoading) {
-            setSelectedConversationId(userIdFromUrl);
-            const exists = conversations.some(conv => conv.id === userIdFromUrl);
-            if (!exists) resolveAndAddContact(userIdFromUrl);
+        const receiverIdFromUrl = searchParams.get("receiverId"); 
+        
+        if (receiverIdFromUrl) {
+            setSelectedConversationId(receiverIdFromUrl);
+            
+            // Check if this contact already exists in the sidebar
+            const exists = conversations.some(conv => conv.id === receiverIdFromUrl);
+            
+            // If they don't exist and we've finished the initial load, add them
+            if (!exists && !isLoading) {
+                resolveAndAddContact(receiverIdFromUrl);
+            }
         }
     }, [searchParams, isLoading, conversations.length]);
 
@@ -89,14 +95,16 @@ function ChatContent() {
                     avatar: "/buyer-dashboard/farmer-portrait.png",
                     online: false,
                     timestamp: new Date().toISOString(),
-                    unread: false, unreadCount: 0, starred: false,
+                    unread: false, 
+                    unreadCount: 0, 
+                    starred: false,
                 };
                 setConversations(prev => prev.some(c => c.id === id) ? prev : [newConv, ...prev]);
             }
         } catch (err) { console.error("Failed to resolve contact:", err); }
     };
 
-    // --- 3. WEBSOCKET CONNECTION & RECEIVING LOGIC ---
+    // --- 3. WEBSOCKET LOGIC ---
     useEffect(() => {
         const socket = new SockJS(`${CHAT_SERVICE_URL}/ws`); 
         const client = new Client({
@@ -115,7 +123,7 @@ function ChatContent() {
                                 content: newMessage.content, timestamp: newMessage.timestamp,
                                 isCurrentUser: false, isRead: true 
                             }]);
-                            syncReadStatus(senderIdStr); // Mark as read immediately
+                            syncReadStatus(senderIdStr); 
                         }
 
                         setConversations((prev) => {
@@ -191,7 +199,7 @@ function ChatContent() {
         fetchHistory();
     }, [selectedConversationId, CHAT_SERVICE_URL]);
 
-    // --- 5. SEND MESSAGE LOGIC ---
+    // --- 5. SEND MESSAGE ---
     const handleSendMessage = (content: string) => {
         if (stompClient?.connected && selectedConversationId) {
             const myId = sessionStorage.getItem("id");
@@ -206,18 +214,17 @@ function ChatContent() {
         }
     };
 
-    const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
-    const activeConversation = selectedConversation || (selectedConversationId ? {
-        id: selectedConversationId, name: "Loading...", avatar: "/avatar.png",
+    const activeConversation = conversations.find((conv) => conv.id === selectedConversationId) || (selectedConversationId ? {
+        id: selectedConversationId, name: "Loading...", avatar: "/buyer-dashboard/farmer-portrait.png",
         unreadCount: 0, lastMessage: "", timestamp: new Date().toISOString(), unread: false, online: false, starred: false
     } : null);
-
-    const totalUnread = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
     return (
         <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
             {isLoading ? (
-                <div className="flex-1 flex items-center justify-center animate-pulse text-[#2d5016]">Loading chats...</div>
+                <div className="flex-1 flex items-center justify-center animate-pulse text-[#2d5016] font-bold uppercase tracking-widest">
+                    Loading chats...
+                </div>
             ) : (
                 <>
                     <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={() => {}} />
@@ -228,7 +235,9 @@ function ChatContent() {
                                 <div ref={messagesEndRef} className="h-1" />
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a contact to start messaging</div>
+                            <div className="flex-1 flex items-center justify-center text-muted-foreground font-medium uppercase text-xs tracking-tighter">
+                                Select a contact to start messaging
+                            </div>
                         )}
                     </div>
                 </>
@@ -239,14 +248,14 @@ function ChatContent() {
 
 export default function ChatPage() {
     return (
-        <>
+        <div className="min-h-screen bg-gray-50">
             <SellerHeader />
             <div className="flex">
                 <SellerSidebar unreadCount={0} activePage="chat" />
-                <Suspense fallback={<div>Loading interface...</div>}>
+                <Suspense fallback={<div className="p-10 font-bold">Loading interface...</div>}>
                     <ChatContent />
                 </Suspense>
             </div>
-        </>
+        </div>
     );
 }
