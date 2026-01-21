@@ -24,6 +24,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
+    // NEW CHANGE: Endpoint to get products by Farmer ID
+    // Frontend will call: GET http://localhost:8080/products/farmer/{id}
+    @GetMapping("/farmer/{farmerId}")
+    public ResponseEntity<List<Product>> getProductsByFarmerId(@PathVariable Long farmerId) {
+        return ResponseEntity.ok(productService.getProductsByFarmerId(farmerId));
+    }
     // @ModelAttribute is perfect for "Multipart" forms (Files + Text data)
     // It automatically maps the form fields to your DTO variables.
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

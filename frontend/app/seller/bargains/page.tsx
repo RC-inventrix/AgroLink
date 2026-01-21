@@ -25,10 +25,11 @@ export default function BargainPage() {
     const [isLoading, setIsLoading] = useState(true)
 
     // This should come from your Auth Context. Hardcoded for testing as per instruction.
-    const currentSellerId = "seller123"
+
 
     // Fetch Requests from Backend
     useEffect(() => {
+        const currentSellerId = sessionStorage.getItem("id")
         const fetchBargains = async () => {
             try {
                 const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
@@ -65,7 +66,7 @@ export default function BargainPage() {
         }
 
         fetchBargains()
-    }, [currentSellerId])
+    }, [])
 
     // Handle Accept
     const handleAcceptDeal = async (id: string) => {
