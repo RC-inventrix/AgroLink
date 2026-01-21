@@ -104,13 +104,13 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                     className={`nav-item flex items-center justify-between p-3 rounded-lg transition-colors ${activePage === 'chat' ? 'active bg-[#D4A017] text-black font-semibold shadow-sm' : ''}`}>
                     <div className="flex items-center gap-3">
                         <MessageSquare size={20} />
-                        <span>Chat</span>
-                    </div>
-                    {unreadCount > 0 && (
+                        <span>Chat</span>{unreadCount > 0 && (
                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                             {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                     )}
+                    </div>
+                    
                 </Link>
 
                 <Link href="/seller/item-requests" 
