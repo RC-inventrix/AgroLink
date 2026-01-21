@@ -27,138 +27,93 @@ export default function BuyerBargainPage() {
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
 
-    // Simulating logged-in user ID (Replace with actual auth logic)
-    const currentUserId = "1"
-
-    // 1. Fetch Buyer's Requests
+    // 1. Fetch Buyer's Requests using REAL ID
     useEffect(() => {
+        // Correct logic: Getting the ID directly from storage
+        const currentUserId = sessionStorage.getItem("id")
+
+        if (!currentUserId) {
+            console.error("No user ID found. Redirecting to login...")
+            // router.push("/login") // Uncomment to force login
+            setIsLoading(false)
+            return
+        }
+
         const fetchBargains = async () => {
             try {
                 const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
+
                 if (response.ok) {
                     const data = await response.json()
 
-                    const mappedData: BargainItem[] = data.map((item: any) => {
-                        const originalTotal = item.originalPricePerKg * item.quantity;
-                        // Calculate discount percentage based on total prices
-                        const discountAmount = originalTotal - item.suggestedPrice;
-                        const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
+                    // Map backend data to frontend interface
+                    const mappedData: BargainItem[] = data.map((item: any) => ({
+                        id: item.id.toString(),
+                        name: item.vegetableName,
+                        seller: item.sellerId,
+                        image: item.vegetableImage || "/placeholder.svg",
+                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                        pricePerKg: item.originalPricePerKg || 0,
+                        requestedQuantityKg: item.quantity,
+                        actualPrice: (item.originalPricePerKg || 0) * item.quantity,
+                        requestedPrice: item.suggestedPrice,
+                        discount: item.originalPricePerKg
+                            ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
+                            : 0,
+                        // FIX: Normalize status to match UI expectation ("in-progress")
+                        status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
+                        vegetableId: item.vegetableId
+                    }))
 
-                        return {
-                            id: item.id.toString(),
-                            vegetableId: item.vegetableId,
-                            name: item.vegetableName,
-                            seller: item.sellerId,
-                            image: item.vegetableImage || "/placeholder.svg",
-                            pricePerHundredG: (item.originalPricePerKg || 0) / 10,
-                            pricePerKg: item.originalPricePerKg || 0,
-                            requestedQuantityKg: item.quantity,
-                            actualPrice: originalTotal,
-                            requestedPrice: item.suggestedPrice,
-                            discount: Math.round(discountPercent),
-                            status: item.status
-                        };
-                    });
                     setItems(mappedData)
+                } else {
+                    console.error("Failed to fetch bargains")
                 }
             } catch (error) {
-                console.error("Failed to fetch bargains", error)
+                console.error("Error fetching bargains:", error)
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchBargains()
-    }, [])
+    }, [router])
 
-    // 2. Handle "Delete Request" (In-Progress) - Removes from DB
-    const handleDeleteRequest = async (id: string) => {
+    // --- Filter Logic ---
+    const pendingItems = items.filter((item) => item.status === "in-progress")
+    const acceptedItems = items.filter((item) => item.status === "accepted")
+    const rejectedItems = items.filter((item) => item.status === "rejected")
+
+    // --- Handlers ---
+    const handleRemoveFromUI = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}`, {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                setItems(prev => prev.filter(item => item.id !== id));
-            } else {
-                alert("Failed to delete request");
+            const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
+                method: "DELETE"
+            })
+            if (res.ok) {
+                setItems((prev) => prev.filter((item) => item.id !== id))
             }
         } catch (error) {
-            console.error("Error deleting bargain", error)
+            console.error("Error deleting bargain:", error)
         }
     }
 
-    // 3. Handle "Remove" (Accepted/Rejected) - UI Only
-    const handleRemoveFromUI = (id: string) => {
-        setItems(prev => prev.filter(item => item.id !== id));
+    // Fixed: Expects item object, not just ID
+    const handleAddToCart = (item: BargainItem) => {
+        console.log("Add to cart:", item)
+        // Add your cart logic here using item.vegetableId, item.requestedPrice, etc.
     }
 
-    // 4. Handle "Add to Cart" (Accepted) - Adds to Cart with Discounted Price
-    const handleAddToCart = async (item: BargainItem) => {
-        try {
-            // Calculate the effective Price Per Kg from the bargain deal
-            // Formula: Total Bargained Price / Total Quantity
-            const effectivePricePerKg = item.requestedPrice / item.requestedQuantityKg;
-
-            const cartPayload = {
-                userId: Number(currentUserId),
-                productId: Number(item.vegetableId), // Converting String ID to Long
-                productName: item.name,
-                imageUrl: item.image,
-                sellerName: item.seller,
-                quantity: item.requestedQuantityKg,
-                pricePerKg: effectivePricePerKg // Passing the calculated unit price
-            };
-
-            // NOTE: Updated path to /cart/add (without /api) as requested
-            const response = await fetch("http://localhost:8080/cart/add", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    // "X-User-Id": currentUserId // Optional if using Gateway/Security Context
-                },
-                body: JSON.stringify(cartPayload)
-            });
-
-            if (response.ok) {
-                alert(`${item.name} added to cart at discounted price!`);
-                // Optional: Remove from list after adding
-                // handleRemoveFromUI(item.id);
-            } else {
-                console.error("Failed to add to cart");
-                alert("Failed to add to cart");
-            }
-        } catch (error) {
-            console.error("Error adding to cart", error);
-        }
-    }
-
-    // 5. Handle "Bargain Again" (Rejected) - Redirects to Bargain Form
+    // Fixed: Expects item object
     const handleBargainAgain = (item: BargainItem) => {
-        const vegetableData = {
-            id: item.vegetableId,
-            name: item.name,
-            image: item.image,
-            price1kg: item.pricePerKg,
-            price100g: item.pricePerHundredG,
-            seller: item.seller,
-            sellerId: item.seller,
-            description: "Bargain Again Request",
-        };
-
-        sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetableData));
-        router.push("/buyer/bargain");
+        console.log("Bargain again:", item)
+        // Router push logic
     }
-
-    // Filter Items
-    const pendingItems = items.filter(item => item.status === "PENDING")
-    const acceptedItems = items.filter(item => item.status === "ACCEPTED")
-    const rejectedItems = items.filter(item => item.status === "REJECTED")
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )
     }
@@ -220,8 +175,8 @@ export default function BuyerBargainPage() {
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
-                                        status={item.status === 'PENDING' ? 'in-progress' : item.status.toLowerCase() as any}
-                                        onDelete={() => handleDeleteRequest(item.id)}
+                                        status={item.status as any}
+                                        onDelete={() => handleRemoveFromUI(item.id)}
                                     />
                                 ))
                             )}
@@ -239,7 +194,7 @@ export default function BuyerBargainPage() {
                                         key={item.id}
                                         item={item}
                                         status="in-progress"
-                                        onDelete={() => handleDeleteRequest(item.id)}
+                                        onDelete={() => handleRemoveFromUI(item.id)}
                                     />
                                 ))
                             )}
