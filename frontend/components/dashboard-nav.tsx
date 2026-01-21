@@ -12,7 +12,7 @@ const navItems = [
   { href: "/VegetableList", label: "Browse Products", icon: ShoppingBag },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/buyer/order-history", label: "My Orders", icon: Package },
-  { href: "/buyer/bargains", label: "Bargains", icon: TrendingUp },
+  { href: "/buyer/bargain-history", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
   { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
 ]

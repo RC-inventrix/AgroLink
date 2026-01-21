@@ -56,7 +56,7 @@ useEffect(() => {
 
             // 4. Map Backend Data to Frontend Interface with actual names
             const mappedData = data.map((item: any) => ({
-                id: item.id.toString(),
+                id: item.id?.toString() || "unique-id",
                 name: item.vegetableName,
                 image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
                 price1kg: item.fixedPrice || item.biddingPrice || 0,
@@ -64,7 +64,7 @@ useEffect(() => {
                 pricingType: item.pricingType,
                 description: item.description,
                 category: item.category,
-                sellerId: item.farmerId,
+                sellerId: item.farmerId?.toString() || "",
                 
                 // Assign the actual name from the Identity Service map
                 seller: fullNameMap[item.farmerId] || "Unknown Farmer", 
