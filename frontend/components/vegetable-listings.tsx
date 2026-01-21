@@ -6,8 +6,7 @@ import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-// 1. Define the Interface
-// This must match the props expected by VegetableCard
+// Interface (Unchanged)
 interface Vegetable {
     id: string
     name: string
@@ -15,7 +14,7 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
-    sellerId: string  // Ensure this is string
+    sellerId: string
     description: string
     category: string
     rating: number
@@ -27,31 +26,38 @@ export default function VegetableListings() {
     const [selectedCategory, setSelectedCategory] = useState("All")
     const [priceRange, setPriceRange] = useState([0, 5000])
 
-    // 2. New State for Real Data
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
+    // UPDATED: Fetch logic to use Farmer ID
     useEffect(() => {
-        const fetchProductsAndNames = async () => {
+        const fetchFarmerProducts = async () => {
             try {
                 const token = sessionStorage.getItem("token");
-                // 1. Fetch products
-                const res = await fetch("http://localhost:8080/products");
+                const farmerId = sessionStorage.getItem("id"); // Retrieve Farmer ID
+
+                // 1. Check if user is logged in
+                if (!farmerId) {
+                    setError("User ID not found. Please log in.");
+                    setLoading(false);
+                    return;
+                }
+
+                // 2. Fetch products ONLY for this farmer using the NEW endpoint
+                const res = await fetch(`http://localhost:8080/products/farmer/${farmerId}`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                        // Add Content-Type if necessary, though GET usually doesn't need it
+                    }
+                });
+
                 if (!res.ok) throw new Error("Failed to fetch products");
                 const data = await res.json();
 
-                // 2. Extract unique farmerIds
-                const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
-
-                // 3. Fetch Full Names
-                const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
-                    method: "GET",
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-                const fullNameMap = nameRes.ok ? await nameRes.json() : {};
-
-                // 4. Map Backend Data
+                // 3. Map Backend Data to UI Interface
+                // Since these are the farmer's own products, we can set seller to "Me" or fetch name if preferred.
                 const mappedData = data.map((item: any) => ({
                     id: item.id?.toString() || "unique-id",
                     name: item.vegetableName,
@@ -61,8 +67,8 @@ export default function VegetableListings() {
                     pricingType: item.pricingType,
                     description: item.description,
                     category: item.category,
-                    sellerId: item.farmerId?.toString() || "", // This converts it to string
-                    seller: fullNameMap[item.farmerId] || "Unknown Farmer",
+                    sellerId: item.farmerId?.toString() || "",
+                    seller: "Me", // Logic changed: You are viewing your own profile
                     rating: 4.5
                 }));
 
@@ -75,7 +81,7 @@ export default function VegetableListings() {
             }
         };
 
-        fetchProductsAndNames();
+        fetchFarmerProducts();
     }, []);
 
     const filteredVegetables = useMemo(() => {
@@ -89,28 +95,27 @@ export default function VegetableListings() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header Section */}
             <div className="bg-[#f8f8f8] py-12">
                 <div className="container mx-auto px-4">
-                    <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
-                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables directly from farmers.</p>
+                    <h1 className="text-4xl font-bold mb-4">My Product Listings</h1>
+                    <p className="text-xl opacity-90">Manage the vegetables you are selling.</p>
                 </div>
             </div>
 
             <div className="container mx-auto px-4 py-8">
-                {/* Search and Filter Section */}
+                {/* Search and Filters */}
                 <div className="flex flex-col md:flex-row gap-4 mb-8">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search vegetables..."
+                            placeholder="Search your vegetables..."
                             className="pl-10 w-full"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-
+                    {/* ... (Categories Buttons remain the same) ... */}
                     <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
                         {["All", "Leafy", "Root", "Fruit", "Organic"].map((cat) => (
                             <Button
@@ -122,34 +127,6 @@ export default function VegetableListings() {
                                 {cat}
                             </Button>
                         ))}
-                    </div>
-                </div>
-
-                {/* Filters Panel */}
-                <div className="bg-card rounded-lg p-6 mb-8 border border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-lg">Filters</h3>
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">Price Range (per kg)</label>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Min: Rs. {priceRange[0]}</span>
-                                    <span className="text-sm text-muted-foreground">Max: Rs. {priceRange[1]}</span>
-                                </div>
-                                <div className="flex gap-4">
-                                    <input
-                                        type="range"
-                                        min="0" max="5000"
-                                        value={priceRange[1]}
-                                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -165,9 +142,8 @@ export default function VegetableListings() {
                 ) : (
                     <>
                         <p className="text-muted-foreground mb-6">
-                            Showing <span className="font-semibold text-foreground">{filteredVegetables.length}</span> results
+                            You have <span className="font-semibold text-foreground">{filteredVegetables.length}</span> active listings
                         </p>
-
                         {filteredVegetables.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVegetables.map((veg) => (
@@ -176,7 +152,7 @@ export default function VegetableListings() {
                             </div>
                         ) : (
                             <div className="text-center py-12">
-                                <p className="text-muted-foreground text-lg">No vegetables found matching your criteria.</p>
+                                <p className="text-muted-foreground text-lg">You haven't uploaded any products yet.</p>
                             </div>
                         )}
                     </>
