@@ -68,6 +68,10 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    public List<Product> getProductsByFarmerId(Long farmerId) {
+        return productRepository.findByFarmerId(farmerId);
+    }
+
     public Product updateProduct(Long id, Product updated) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
