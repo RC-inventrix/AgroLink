@@ -18,17 +18,17 @@ public class OrderService {
     // Update your existing createOrder method in OrderService.java
     @Transactional
     public Order createOrder(Order order) {
+        // Ensure initial status
         if (order.getStatus() == null) {
             order.setStatus(OrderStatus.CREATED);
         }
 
-        // Generate random 6-digit OTP
+        // Generate the handover verification code
         String generatedOtp = String.valueOf((int)((Math.random() * 900000) + 100000));
         order.setOtp(generatedOtp);
 
         return orderRepository.save(order);
     }
-
     @Transactional
     public Order markAsPaid(String stripeId, String email, String name) {
         // 3. The "Modern" way to handle Optionals
