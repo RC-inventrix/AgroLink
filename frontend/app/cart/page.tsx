@@ -7,17 +7,18 @@ import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react"
 import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 interface CartItemData {
-    id: number
-    productId: number
-    productName: string
-    imageUrl: string
-    pricePerKg: number
-    quantity: number
-    sellerName: string
-    sellerId: number
-    selected: boolean
+  id: number
+  productId: number
+  productName: string
+  imageUrl: string
+  pricePerKg: number
+  quantity: number
+  sellerName: string
+  sellerId: number
+  selected: boolean
 }
 
 export default function Cart() {
@@ -91,7 +92,21 @@ export default function Cart() {
         } finally {
             setDeletingId(null);
         }
+      } catch (error) {
+        setNotification({ message: "Failed to load your cart. Please refresh.", type: 'error' });
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchCart()
+  }, [])
+
+  const toggleItem = (id: string) => {
+    const numericId = parseInt(id);
+    setItems(items.map((item) =>
+      (item.id === numericId ? { ...item, selected: !item.selected } : item)
+    ))
+  }
 
     const selectedItems = items.filter((item) => item.selected)
     const totalPrice = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
@@ -99,6 +114,7 @@ export default function Cart() {
     const handleSelectAll = (checked: boolean) => {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
+  }
 
     const handleCheckout = () => {
         if (selectedItems.length === 0) {
