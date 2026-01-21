@@ -129,7 +129,7 @@ export default function BuyerDashboard() {
 
         const syncDashboardData = async () => {
             try {
-                const res = await fetch(`${gatewayUrl}/api/chat/contacts`, {
+                const res = await fetch(`http://localhost:8083/api/chat/contacts`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -146,7 +146,7 @@ export default function BuyerDashboard() {
                     const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
                     const data = await Promise.all(ids.map(async (senderId) => {
-                        const countRes = await fetch(`${gatewayUrl}/api/chat/unread-count/${senderId}`, {
+                        const countRes = await fetch(`http://localhost:8083/api/chat/unread-count/${senderId}`, {
                             headers: { "Authorization": `Bearer ${token}` }
                         });
                         const count = countRes.ok ? await countRes.json() : 0;
