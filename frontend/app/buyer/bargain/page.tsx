@@ -100,7 +100,7 @@ export default function BargainPage() {
         // 1. Get the user email directly (NO JSON.parse needed)
         // This assumes you stored it like: sessionStorage.setItem("userEmail", "test@gmail.com")
         const currentBuyerName = sessionStorage.getItem("userEmail") || "Guest Buyer"
-
+        const currentUserId = sessionStorage.getItem("id") || "1";
         // if (storedUser) {
         //     try {
         //         const parsedUser = JSON.parse(storedUser)
@@ -128,6 +128,7 @@ export default function BargainPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-User-Id': currentUserId,
                 },
                 body: JSON.stringify(bargainData),
             })
