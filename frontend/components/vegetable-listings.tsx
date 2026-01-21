@@ -15,7 +15,7 @@ interface Vegetable {
     price100g: number // We will calculate this
     price1kg: number  // Maps to backend 'fixedPrice'
     seller: string    // Placeholder for now
-    sellerId: string  // Added to match VegetableCard requirements
+    sellerId: number  // Added to match VegetableCard requirements
     description: string
     category: string
     rating: number    // Placeholder for now

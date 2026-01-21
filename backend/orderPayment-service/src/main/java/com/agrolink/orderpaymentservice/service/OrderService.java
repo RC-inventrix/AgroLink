@@ -15,15 +15,20 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
+    // Update your existing createOrder method in OrderService.java
     @Transactional
     public Order createOrder(Order order) {
-        // 2. Clean one-liner to ensure status is never null
+        // Ensure initial status
         if (order.getStatus() == null) {
             order.setStatus(OrderStatus.CREATED);
         }
+
+        // Generate the handover verification code
+        String generatedOtp = String.valueOf((int)((Math.random() * 900000) + 100000));
+        order.setOtp(generatedOtp);
+
         return orderRepository.save(order);
     }
-
     @Transactional
     public Order markAsPaid(String stripeId, String email, String name) {
         // 3. The "Modern" way to handle Optionals
