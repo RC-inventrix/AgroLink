@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
+import { Toaster } from "sonner" // 1. Import Toaster
 
 export default function Home() {
     const [orders, setOrders] = useState<any[]>([])
@@ -32,14 +33,13 @@ export default function Home() {
     const totalRevenue = orders.reduce((acc, order) => acc + (order.amount / 100), 0)
 
     return (
-        // Changed: Added h-screen and overflow-hidden to the root div
         <div className="flex flex-col h-screen bg-background overflow-hidden">
+            {/* 2. Add Toaster to the top level to enable popup notifications */}
+            <Toaster position="top-center" richColors /> 
+            
             <SellerHeader />
             
-            {/* Changed: flex-1 and overflow-hidden here ensure the sidebar/main content fill remaining space */}
             <div className="flex flex-1 overflow-hidden">
-                
-                {/* Ensure SellerSidebar has min-h-full or h-full internally */}
                 <SellerSidebar unreadCount={0} activePage="orders" />
                 
                 <main className="flex-1 overflow-y-auto">
