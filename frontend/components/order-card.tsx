@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, User, Hash, KeyRound, AlertCircle } from "lucide-react" // Added AlertCircle
+import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -13,6 +13,26 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+
+// --- HELPER COMPONENT: STAR RATING ---
+function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    onClick={() => interactive && setRating?.(star)}
+                    className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-transform active:scale-90`}
+                >
+                    <Star
+                        className={`w-5 h-5 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+}
 
 interface OrderCardProps {
     order: any
@@ -25,7 +45,12 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
     const [otpInput, setOtpInput] = useState("")
     const [isVerifying, setIsVerifying] = useState(false)
-    const [error, setError] = useState<string | null>(null) // New state for inline error
+    const [error, setError] = useState<string | null>(null)
+    
+    // --- REVIEW STATES ---
+    const [reviewRating, setReviewRating] = useState(0)
+    const [reviewComment, setReviewComment] = useState("")
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false)
     
     const status = order.status?.toUpperCase();
     const isCompleted = status === "COMPLETED"
@@ -33,6 +58,13 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     const isOfferOrder = order.isOfferOrder 
     
     const token = typeof window !== 'undefined' ? sessionStorage.getItem("token") : null;
+
+    // Check if seller has already reviewed (Expects 'orderReview' from Backend)
+    const existingReview = order.orderReview?.sellerRating ? {
+        rating: order.orderReview.sellerRating,
+        comment: order.orderReview.sellerComment,
+        date: order.orderReview.sellerReviewedAt
+    } : null;
 
     useEffect(() => {
         const fetchBuyerName = async () => {
@@ -50,14 +82,11 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
             }
         };
 
-        if (order.userId) {
-            fetchBuyerName();
-        }
+        if (order.userId) fetchBuyerName();
     }, [order.userId]);
 
     const handleVerifyOtp = async () => {
-        setError(null); // Clear previous errors
-
+        setError(null);
         if (otpInput.length !== 6) {
             setError("Please enter a 6-digit code.");
             return;
@@ -85,15 +114,46 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 if (onStatusUpdate) onStatusUpdate();
             } else {
                 const data = await res.json();
-                // Set the error message returned from the backend
                 setError(data.message || "Invalid OTP. Please try again.");
-                toast.error("Verification failed.");
             }
         } catch (err) {
-            setError("Connection error. Please check your internet.");
-            toast.error("Server error.");
+            setError("Connection error.");
         } finally {
             setIsVerifying(false);
+        }
+    };
+
+    const handleSubmitReview = async () => {
+        if (reviewRating === 0) {
+            toast.error("Please select a rating.");
+            return;
+        }
+
+        setIsSubmittingReview(true);
+        const userId = sessionStorage.getItem("id");
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/reviews/${order.id}?userId=${userId}`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ rating: reviewRating, comment: reviewComment })
+            });
+
+            if (res.ok) {
+                toast.success("Review submitted!");
+                
+                // Use the parent's refresh logic without triggering a status change
+                if (onStatusUpdate) {
+                    onStatusUpdate(); 
+                }
+            }
+        } catch (err) {
+            toast.error("Server error.");
+        } finally {
+            setIsSubmittingReview(false);
         }
     };
 
@@ -123,7 +183,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                         <img 
                             src={itemDetails.image || "/placeholder.svg"} 
                             alt={itemDetails.name} 
-                            className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                            className="w-full h-full object-cover"
                         />
                     </div>
 
@@ -132,9 +192,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             <div className="space-y-1">
                                 <div className="flex items-center gap-1 text-[#A3ACBA] mb-1">
                                     <Hash className="w-3 h-3" />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider">
-                                        order #{order.id}
-                                    </span>
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">order #{order.id}</span>
                                 </div>
                                 <h3 className="text-[22px] font-[800] text-[#0A2540] tracking-tight leading-none mb-1">{itemDetails.name}</h3>
                                 <div className="flex items-center gap-1.5 text-[#697386]">
@@ -150,15 +208,55 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
                         <div className="mt-8 grid grid-cols-3 gap-12 max-w-2xl">
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Quantity</p><p className="text-[18px] font-[700] text-[#1A1F25]">{itemDetails.quantity} kg</p></div>
-                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Price per kg</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {itemDetails.pricePerKg}</p></div>
+                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Price</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {itemDetails.pricePerKg}</p></div>
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Total</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {(order.amount / 100).toLocaleString()}</p></div>
-                        </div>
-
-                        <div className="mt-6">
-                            <p className="text-[13px] text-[#A3ACBA] font-medium">Ordered on <span className="text-[#697386] font-semibold">{orderDate}</span></p>
                         </div>
                     </div>
                 </div>
+
+                {/* --- COMPLETED ORDER: REVIEW SECTION --- */}
+                {isCompleted && (
+                    <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100">
+                        {existingReview ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-bold uppercase text-[#A3ACBA] tracking-widest">Your Review</span>
+                                    <div className="h-[1px] flex-1 bg-gray-200"></div>
+                                </div>
+                                <StarRating rating={existingReview.rating} />
+                                <p className="text-sm text-[#4A5568] italic">"{existingReview.comment}"</p>
+                                <div className="flex items-center gap-1.5 text-green-600 mt-2">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span className="text-[11px] font-black uppercase">Reviewed</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <MessageSquare className="w-4 h-4 text-[#03230F]" />
+                                    <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate the Buyer</h4>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <StarRating rating={reviewRating} setRating={setReviewRating} interactive={true} />
+                                    <textarea 
+                                        placeholder="Add a comment about the buyer or transaction..."
+                                        className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#03230F] outline-none transition-all"
+                                        rows={2}
+                                        value={reviewComment}
+                                        onChange={(e) => setReviewComment(e.target.value)}
+                                    />
+                                    <Button 
+                                        onClick={handleSubmitReview}
+                                        disabled={isSubmittingReview || reviewRating === 0}
+                                        className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest"
+                                    >
+                                        {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {!isCompleted && (
                     <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end">
@@ -166,13 +264,13 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (isProcessing || isOfferOrder) {
-                                    setError(null); // Reset error when opening
+                                    setError(null);
                                     setIsOtpModalOpen(true);
                                 } else if (onStatusUpdate) {
                                     onStatusUpdate();
                                 }
                             }}
-                            className="text-[13px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700 transition-colors"
+                            className="text-[13px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700"
                         >
                             {isProcessing || isOfferOrder ? "Verify & Complete" : "Accept This Order"}
                         </button>
@@ -180,6 +278,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 )}
             </Card>
 
+            {/* OTP Modal remains the same as your original code... */}
             <Dialog open={isOtpModalOpen} onOpenChange={(open) => {
                 setIsOtpModalOpen(open);
                 if (!open) {
@@ -195,11 +294,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                         <DialogTitle className="text-2xl font-black text-[#03230F] uppercase tracking-tight">
                             Verify Delivery
                         </DialogTitle>
-                        <p className="text-sm text-gray-500 font-medium">
-                            Enter the 6-digit handover code provided by the buyer to complete this order.
-                        </p>
                     </DialogHeader>
-                    
                     <div className="py-6 space-y-4">
                         <Input
                             type="text"
@@ -207,28 +302,25 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             maxLength={6}
                             value={otpInput}
                             onChange={(e) => {
-                                setError(null); // Clear error while typing
+                                setError(null);
                                 setOtpInput(e.target.value.replace(/\D/g, ""));
                             }}
                             className={`text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl border-2 transition-all duration-300 ${
                                 error ? "border-red-500 bg-red-50 focus-visible:ring-red-500" : "border-gray-100 focus-visible:ring-[#03230F]"
                             }`}
                         />
-                        
-                        {/* --- ERROR MESSAGE DISPLAY --- */}
                         {error && (
-                            <div className="flex items-center justify-center gap-2 text-red-600 animate-in fade-in slide-in-from-top-1">
+                            <div className="flex items-center justify-center gap-2 text-red-600">
                                 <AlertCircle className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-wider">{error}</span>
                             </div>
                         )}
                     </div>
-
                     <DialogFooter className="sm:justify-center">
                         <Button
                             onClick={handleVerifyOtp}
                             disabled={isVerifying || otpInput.length !== 6}
-                            className="w-full h-14 rounded-2xl bg-[#03230F] hover:bg-black text-[#EEC044] font-black uppercase tracking-widest transition-all"
+                            className="w-full h-14 rounded-2xl bg-[#03230F] hover:bg-black text-[#EEC044] font-black uppercase tracking-widest"
                         >
                             {isVerifying ? "Verifying..." : "Confirm Delivery"}
                         </Button>

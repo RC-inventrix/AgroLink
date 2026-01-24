@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Save, Loader2, X, Check, AlertCircle } from "lucide-react"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState({
@@ -127,7 +128,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      <DashboardHeader />
+      <BuyerHeader/>
 
       {/* --- CUSTOM NOTIFICATION UI --- */}
       {notification && (

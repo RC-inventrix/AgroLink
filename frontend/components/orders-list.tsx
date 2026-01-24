@@ -34,7 +34,7 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
         );
 
         return {
-            pending: myOrders.filter((o) => 
+            pending: myOrders.filter((o) =>
                 ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
             ).length,
             processing: myOrders.filter((o) => o.status?.toUpperCase() === "PROCESSING").length,
@@ -65,20 +65,20 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
 
         // --- SORTING LOGIC: Descending Order (Newest First) ---
         return filtered.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
-        
+
     }, [initialOrders, sellerId, activeTab]);
 
     const handleUpdateStatus = async (orderId: number, currentStatus: string) => {
         setIsUpdating(true)
         const token = sessionStorage.getItem("token");
-        
+
         let nextStatus = "PROCESSING"
         if (currentStatus === "PROCESSING") nextStatus = "COMPLETED"
 
         try {
             const response = await fetch(`http://localhost:8080/api/seller/orders/${orderId}/status?status=${nextStatus}`, {
                 method: 'PUT',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
@@ -103,9 +103,9 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             {/* Tab Navigation */}
             <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto">
                 {(["pending", "processing", "completed"] as const).map((tab) => (
-                    <Button 
+                    <Button
                         key={tab}
-                        variant={activeTab === tab ? "default" : "outline"} 
+                        variant={activeTab === tab ? "default" : "outline"}
                         onClick={() => setActiveTab(tab)}
                         disabled={isUpdating}
                         className="flex items-center gap-2 capitalize"
@@ -125,15 +125,19 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
                         <OrderCard
                             key={order.id}
                             order={order}
-                            onStatusUpdate={order.isOfferOrder ? undefined : () => handleUpdateStatus(order.id, order.status)}
+                            // Only pass the status update logic if the order is NOT completed
+                            onStatusUpdate={order.status?.toUpperCase() === "COMPLETED"
+                                ? onOrderUpdated  // Just refresh the data
+                                : () => handleUpdateStatus(order.id, order.status) // Change status
+                            }
                             onOfferAction={order.isOfferOrder ? onOfferAction : undefined}
                         />
                     ))
                 ) : (
                     <Card className="p-12 text-center border-none shadow-sm">
                         <p className="text-muted-foreground">
-                            {!sellerId 
-                                ? "Verifying seller identity..." 
+                            {!sellerId
+                                ? "Verifying seller identity..."
                                 : `No orders found in ${activeTab}.`}
                         </p>
                     </Card>
