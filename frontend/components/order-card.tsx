@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 // --- HELPER COMPONENT: STAR RATING ---
 function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
@@ -36,27 +37,27 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
 
 interface OrderCardProps {
     order: any
-    onStatusUpdate?: () => void 
+    onStatusUpdate?: () => void
     onOfferAction?: (offerId: number, newStatus: string) => Promise<void>
 }
 
 export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardProps) {
-    const [buyerName, setBuyerName] = useState<string>("Loading...") 
+    const [buyerName, setBuyerName] = useState<string>("Loading...")
     const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
     const [otpInput, setOtpInput] = useState("")
     const [isVerifying, setIsVerifying] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    
+
     // --- REVIEW STATES ---
     const [reviewRating, setReviewRating] = useState(0)
     const [reviewComment, setReviewComment] = useState("")
     const [isSubmittingReview, setIsSubmittingReview] = useState(false)
-    
+
     const status = order.status?.toUpperCase();
     const isCompleted = status === "COMPLETED"
     const isProcessing = status === "PROCESSING"
-    const isOfferOrder = order.isOfferOrder 
-    
+    const isOfferOrder = order.isOfferOrder
+
     const token = typeof window !== 'undefined' ? sessionStorage.getItem("token") : null;
 
     // Logic to check database reviews
@@ -71,7 +72,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                     const userData = await res.json();
                     setBuyerName(userData.fullname || userData.username);
                 } else {
-                    setBuyerName(`Buyer #${order.userId}`); 
+                    setBuyerName(`Buyer #${order.userId}`);
                 }
             } catch (error) {
                 console.error("Failed to fetch user name:", error);
@@ -91,13 +92,13 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
         setIsVerifying(true);
         try {
-            const endpoint = isOfferOrder 
+            const endpoint = isOfferOrder
                 ? `http://localhost:8080/api/offers/${order.id}/verify-otp`
                 : `http://localhost:8080/api/seller/orders/${order.id}/verify-otp`;
 
             const res = await fetch(endpoint, {
                 method: "POST",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
@@ -132,7 +133,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         try {
             const res = await fetch(`http://localhost:8080/api/reviews/${order.id}?userId=${userId}`, {
                 method: "POST",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
@@ -141,7 +142,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
             if (res.ok) {
                 toast.success("Review submitted!");
-                if (onStatusUpdate) onStatusUpdate(); 
+                if (onStatusUpdate) onStatusUpdate();
             } else {
                 toast.error("Failed to submit review.");
             }
@@ -183,7 +184,16 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                 <h3 className="text-[22px] font-[800] text-[#0A2540] tracking-tight leading-none mb-1">{itemDetails.name}</h3>
                                 <div className="flex items-center gap-1.5 text-[#697386]">
                                     <User className="w-4 h-4" />
-                                    <p className="text-[15px] font-medium">Buyer: <span className="text-[#0A2540] font-semibold">{buyerName}</span></p>
+                                    <p className="text-[15px] font-medium">
+                                        Buyer:{" "}
+                                        {/* WRAP THE NAME IN A LINK */}
+                                        <Link
+                                            href={`/user/${order.userId}`}
+                                            className="text-[#0A2540] font-bold hover:text-[#166534] hover:underline transition-all cursor-pointer"
+                                        >
+                                            {buyerName}
+                                        </Link>
+                                    </p>
                                 </div>
                             </div>
                             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isCompleted ? "bg-[#F0FDF4] border-[#DCFCE7] text-[#166534]" : "bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E]"}`}>
@@ -203,14 +213,14 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 {isCompleted && (
                     <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            
+
                             {/* COLUMN 1: BUYER'S FEEDBACK (What they said about the product/seller) */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2">
                                     <User className="w-4 h-4 text-[#03230F]" />
                                     <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Buyer's Feedback</h4>
                                 </div>
-                                
+
                                 {buyerHasReviewed ? (
                                     <div className="space-y-3">
                                         <StarRating rating={order.orderReview.buyerRating} />
@@ -247,14 +257,14 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                         </div>
                                         <div className="flex flex-col gap-3">
                                             <StarRating rating={reviewRating} setRating={setReviewRating} interactive={true} />
-                                            <textarea 
+                                            <textarea
                                                 placeholder="How was the transaction? (e.g. Prompt pickup, polite...)"
                                                 className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#03230F] outline-none transition-all bg-white"
                                                 rows={2}
                                                 value={reviewComment}
                                                 onChange={(e) => setReviewComment(e.target.value)}
                                             />
-                                            <Button 
+                                            <Button
                                                 onClick={handleSubmitReview}
                                                 disabled={isSubmittingReview || reviewRating === 0}
                                                 className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest"
@@ -315,9 +325,8 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                 setError(null);
                                 setOtpInput(e.target.value.replace(/\D/g, ""));
                             }}
-                            className={`text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl border-2 transition-all duration-300 ${
-                                error ? "border-red-500 bg-red-50 focus-visible:ring-red-500" : "border-gray-100 focus-visible:ring-[#03230F]"
-                            }`}
+                            className={`text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl border-2 transition-all duration-300 ${error ? "border-red-500 bg-red-50 focus-visible:ring-red-500" : "border-gray-100 focus-visible:ring-[#03230F]"
+                                }`}
                         />
                         {error && (
                             <div className="flex items-center justify-center gap-2 text-red-600">

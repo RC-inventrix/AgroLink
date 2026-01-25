@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "order_reviews")
+
 public class OrderReview {
 
     @Id
@@ -37,4 +38,6 @@ public class OrderReview {
     private Long sellerId;
 
     private Long buyerId;
+
+
 }

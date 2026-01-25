@@ -1,11 +1,13 @@
 package com.agrolink.orderpaymentservice.service;
 
 import com.agrolink.orderpaymentservice.dto.ReviewRequest;
+import com.agrolink.orderpaymentservice.dto.ReviewResponse;
 import com.agrolink.orderpaymentservice.model.Order;
 import com.agrolink.orderpaymentservice.model.OrderReview;
 import com.agrolink.orderpaymentservice.model.OrderStatus;
 import com.agrolink.orderpaymentservice.repository.OrderRepository;
 import com.agrolink.orderpaymentservice.repository.OrderReviewRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ReviewService {
@@ -74,5 +77,36 @@ public class ReviewService {
                 "totalReviews", completedReviews.size(),
                 "reviews", completedReviews
         );
+    }
+
+    public List<ReviewResponse> getUserReviews(Long userId, String role) {
+        if ("SELLER".equalsIgnoreCase(role)) {
+            // Logic: If I am a Seller, show me what BUYERS wrote about me
+            List<OrderReview> reviews = reviewRepository.findReviewsAboutSeller(userId);
+
+            return reviews.stream().map(r -> ReviewResponse.builder()
+                            .id(r.getId())
+                            .reviewerId(r.getOrder().getUserId()) // The reviewer is the Buyer
+                            .rating(r.getBuyerRating())            // The rating given by the Buyer
+                            .comment(r.getBuyerComment())          // The comment given by the Buyer
+                            .date(r.getBuyerReviewedAt())
+                            .build())
+                    .collect(Collectors.toList());
+
+        } else if ("BUYER".equalsIgnoreCase(role)) {
+            // Logic: If I am a Buyer, show me what SELLERS wrote about me
+            List<OrderReview> reviews = reviewRepository.findReviewsAboutBuyer(userId);
+
+            return reviews.stream().map(r -> ReviewResponse.builder()
+                            .id(r.getId())
+                            .reviewerId(r.getOrder().getSellerId()) // The reviewer is the Seller
+                            .rating(r.getSellerRating())            // The rating given by the Seller
+                            .comment(r.getSellerComment())          // The comment given by the Seller
+                            .date(r.getSellerReviewedAt())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        return List.of();
     }
 }

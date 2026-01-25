@@ -9,6 +9,7 @@ import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
 import BuyerHeader from "./headers/BuyerHeader"
+import Link from "next/link"
 
 // --- HELPER COMPONENT: STAR RATING ---
 function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
@@ -43,6 +44,7 @@ interface OrderItem {
     totalPrice: number
     otp?: string
     orderReview?: any 
+    sellerId?: string
 }
 
 export function OrderHistoryClient() {
@@ -102,23 +104,31 @@ export function OrderHistoryClient() {
                     if (nameRes.ok) sellerNameMap = await nameRes.json()
                 }
 
-                const finalOrders: OrderItem[] = rawItemsList
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .map((entry, index) => ({
-                        id: `${entry.orderId}-${index}`,
-                        displayOrderId: entry.orderId,
-                        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
-                        quantity: entry.itemData.quantity || 1,
-                        pricePerKg: entry.itemData.pricePerKg || 0,
-                        image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
-                        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
-                        orderDate: new Date(entry.createdAt),
-                        status: entry.status,
-                        totalPrice: (entry.amount / 100),
-                        otp: entry.otp, // PASSING OTP TO INTERFACE
-                        orderReview: entry.orderReview
-                    }))
-                setOrders(finalOrders)
+                // Inside fetchOrders function...
+
+const finalOrders: OrderItem[] = rawItemsList
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map((entry, index) => ({
+        id: `${entry.orderId}-${index}`,
+        displayOrderId: entry.orderId,
+        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
+        quantity: entry.itemData.quantity || 1,
+        pricePerKg: entry.itemData.pricePerKg || 0,
+        image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
+        
+        // --- FIX: Add this line ---
+        sellerId: entry.sellerId, 
+        // --------------------------
+
+        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
+        orderDate: new Date(entry.createdAt),
+        status: entry.status,
+        totalPrice: (entry.amount / 100),
+        otp: entry.otp,
+        orderReview: entry.orderReview
+    }))
+
+setOrders(finalOrders)
             }
         } catch (error) { console.error("Order fetch failed", error) } 
         finally { setLoading(false) }
@@ -200,7 +210,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
                                 <h3 className="font-bold text-lg text-[#03230F]">{order.name}</h3>
-                                <p className="text-sm font-semibold text-[#2d5016]">Sold by {order.sellerName}</p>
+                                <p className="text-sm font-semibold text-[#2d5016]">Sold by <Link href={`/user/${order.sellerId}?role=SELLER`}>{order.sellerName}</Link></p>
                             </div>
                             <Badge variant={order.status === "completed" ? "default" : "secondary"}>{order.status}</Badge>
                         </div>
