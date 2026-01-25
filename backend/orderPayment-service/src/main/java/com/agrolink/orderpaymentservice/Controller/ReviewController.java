@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -33,6 +34,15 @@ public class ReviewController {
 
         List<ReviewResponse> reviews = reviewService.getUserReviews(userId, role);
         return ResponseEntity.ok(reviews);
+    }
+
+    @GetMapping("/stats/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getRatingStats(
+            @PathVariable Long userId,
+            @RequestParam String role) {
+
+        // Returns JSON: { "average": 4.5, "count": 12 }
+        return ResponseEntity.ok(reviewService.getUserRatingStats(userId, role));
     }
 
 }

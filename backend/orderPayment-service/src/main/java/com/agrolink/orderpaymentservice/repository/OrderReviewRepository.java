@@ -24,4 +24,18 @@ public interface OrderReviewRepository extends JpaRepository<OrderReview, Long> 
     // (This retrieves what SELLERS wrote about this Buyer)
     @Query("SELECT r FROM OrderReview r WHERE r.order.userId = :buyerId AND r.sellerRating IS NOT NULL")
     List<OrderReview> findReviewsAboutBuyer(@Param("buyerId") Long buyerId);
+
+    @Query("SELECT AVG(r.sellerRating) FROM OrderReview r WHERE r.order.sellerId = :sellerId AND r.sellerRating IS NOT NULL")
+    Double getAverageSellerRating(@Param("sellerId") Long sellerId);
+
+    // Calculate Average Rating for a BUYER
+    @Query("SELECT AVG(r.buyerRating) FROM OrderReview r WHERE r.order.userId = :buyerId AND r.buyerRating IS NOT NULL")
+    Double getAverageBuyerRating(@Param("buyerId") Long buyerId);
+
+    // Optional: Count total reviews
+    @Query("SELECT COUNT(r) FROM OrderReview r WHERE r.order.sellerId = :sellerId AND r.sellerRating IS NOT NULL")
+    Long countSellerReviews(@Param("sellerId") Long sellerId);
+
+    @Query("SELECT COUNT(r) FROM OrderReview r WHERE r.order.userId = :buyerId AND r.buyerRating IS NOT NULL")
+    Long countBuyerReviews(@Param("buyerId") Long buyerId);
 }
