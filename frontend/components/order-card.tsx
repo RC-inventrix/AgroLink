@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare } from "lucide-react"
+import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare, Clock } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -59,12 +59,9 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     
     const token = typeof window !== 'undefined' ? sessionStorage.getItem("token") : null;
 
-    // Check if seller has already reviewed (Expects 'orderReview' from Backend)
-    const existingReview = order.orderReview?.sellerRating ? {
-        rating: order.orderReview.sellerRating,
-        comment: order.orderReview.sellerComment,
-        date: order.orderReview.sellerReviewedAt
-    } : null;
+    // Logic to check database reviews
+    const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
+    const buyerHasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
 
     useEffect(() => {
         const fetchBuyerName = async () => {
@@ -144,11 +141,9 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
             if (res.ok) {
                 toast.success("Review submitted!");
-                
-                // Use the parent's refresh logic without triggering a status change
-                if (onStatusUpdate) {
-                    onStatusUpdate(); 
-                }
+                if (onStatusUpdate) onStatusUpdate(); 
+            } else {
+                toast.error("Failed to submit review.");
             }
         } catch (err) {
             toast.error("Server error.");
@@ -157,7 +152,6 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         }
     };
 
-    // Parsing itemsJson logic...
     let itemDetails = { name: "Fresh Vegetables", image: "/placeholder.svg", quantity: 0, pricePerKg: 0 };
     try {
         const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
@@ -171,22 +165,14 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         }
     } catch (e) { console.error("Error parsing itemsJson", e); }
 
-    const orderDate = new Date(order.createdAt).toLocaleDateString("en-US", {
-        year: "numeric", month: "short", day: "numeric",
-    });
-
     return (
         <>
             <Card className="p-0 border border-gray-100 bg-white rounded-[20px] shadow-sm overflow-hidden transition-all hover:shadow-md mb-4">
+                {/* ... Main Card Info Part (Image, Name, Qty, Total) - Keep your existing styling here ... */}
                 <div className="flex p-8 gap-8 relative flex-col sm:flex-row items-center sm:items-start">
                     <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden flex-shrink-0 bg-[#F1F1F1] border border-gray-50 flex items-center justify-center">
-                        <img 
-                            src={itemDetails.image || "/placeholder.svg"} 
-                            alt={itemDetails.name} 
-                            className="w-full h-full object-cover"
-                        />
+                        <img src={itemDetails.image || "/placeholder.svg"} alt={itemDetails.name} className="w-full h-full object-cover" />
                     </div>
-
                     <div className="flex-1 flex flex-col w-full">
                         <div className="flex justify-between items-start w-full">
                             <div className="space-y-1">
@@ -205,7 +191,6 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                 <span className="text-[13px] font-bold capitalize">{order.status?.toLowerCase()}</span>
                             </div>
                         </div>
-
                         <div className="mt-8 grid grid-cols-3 gap-12 max-w-2xl">
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Quantity</p><p className="text-[18px] font-[700] text-[#1A1F25]">{itemDetails.quantity} kg</p></div>
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Price</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {itemDetails.pricePerKg}</p></div>
@@ -214,47 +199,74 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                     </div>
                 </div>
 
-                {/* --- COMPLETED ORDER: REVIEW SECTION --- */}
+                {/* --- TWO COLUMN REVIEW SECTION FOR COMPLETED ORDERS --- */}
                 {isCompleted && (
                     <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100">
-                        {existingReview ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-bold uppercase text-[#A3ACBA] tracking-widest">Your Review</span>
-                                    <div className="h-[1px] flex-1 bg-gray-200"></div>
-                                </div>
-                                <StarRating rating={existingReview.rating} />
-                                <p className="text-sm text-[#4A5568] italic">"{existingReview.comment}"</p>
-                                <div className="flex items-center gap-1.5 text-green-600 mt-2">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span className="text-[11px] font-black uppercase">Reviewed</span>
-                                </div>
-                            </div>
-                        ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            {/* COLUMN 1: BUYER'S FEEDBACK (What they said about the product/seller) */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2">
-                                    <MessageSquare className="w-4 h-4 text-[#03230F]" />
-                                    <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate the Buyer</h4>
+                                    <User className="w-4 h-4 text-[#03230F]" />
+                                    <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Buyer's Feedback</h4>
                                 </div>
-                                <div className="flex flex-col gap-3">
-                                    <StarRating rating={reviewRating} setRating={setReviewRating} interactive={true} />
-                                    <textarea 
-                                        placeholder="Add a comment about the buyer or transaction..."
-                                        className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#03230F] outline-none transition-all"
-                                        rows={2}
-                                        value={reviewComment}
-                                        onChange={(e) => setReviewComment(e.target.value)}
-                                    />
-                                    <Button 
-                                        onClick={handleSubmitReview}
-                                        disabled={isSubmittingReview || reviewRating === 0}
-                                        className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest"
-                                    >
-                                        {isSubmittingReview ? "Submitting..." : "Submit Review"}
-                                    </Button>
-                                </div>
+                                
+                                {buyerHasReviewed ? (
+                                    <div className="space-y-3">
+                                        <StarRating rating={order.orderReview.buyerRating} />
+                                        <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                            "{order.orderReview.buyerComment}"
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-6 text-center bg-white/50 rounded-xl border border-dashed border-gray-200">
+                                        <Clock className="w-6 h-6 text-gray-300 mb-1" />
+                                        <p className="text-[11px] text-gray-400 font-medium">Buyer hasn't reviewed yet.</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            {/* COLUMN 2: SELLER'S FEEDBACK (Form or Submitted Review) */}
+                            <div className="space-y-4 border-l-0 md:border-l md:pl-8 border-gray-200">
+                                {sellerHasReviewed ? (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                            <span className="text-[11px] font-black uppercase text-green-600 tracking-widest">Your Review to Buyer</span>
+                                        </div>
+                                        <StarRating rating={order.orderReview.sellerRating} />
+                                        <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                            "{order.orderReview.sellerComment}"
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="w-4 h-4 text-[#03230F]" />
+                                            <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate the Buyer</h4>
+                                        </div>
+                                        <div className="flex flex-col gap-3">
+                                            <StarRating rating={reviewRating} setRating={setReviewRating} interactive={true} />
+                                            <textarea 
+                                                placeholder="How was the transaction? (e.g. Prompt pickup, polite...)"
+                                                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#03230F] outline-none transition-all bg-white"
+                                                rows={2}
+                                                value={reviewComment}
+                                                onChange={(e) => setReviewComment(e.target.value)}
+                                            />
+                                            <Button 
+                                                onClick={handleSubmitReview}
+                                                disabled={isSubmittingReview || reviewRating === 0}
+                                                className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest"
+                                            >
+                                                {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
                     </div>
                 )}
 
@@ -278,7 +290,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 )}
             </Card>
 
-            {/* OTP Modal remains the same as your original code... */}
+            {/* OTP Modal Dialog... */}
             <Dialog open={isOtpModalOpen} onOpenChange={(open) => {
                 setIsOtpModalOpen(open);
                 if (!open) {
@@ -291,9 +303,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                         <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center mb-2">
                             <KeyRound className="w-8 h-8 text-[#166534]" />
                         </div>
-                        <DialogTitle className="text-2xl font-black text-[#03230F] uppercase tracking-tight">
-                            Verify Delivery
-                        </DialogTitle>
+                        <DialogTitle className="text-2xl font-black text-[#03230F] uppercase tracking-tight">Verify Delivery</DialogTitle>
                     </DialogHeader>
                     <div className="py-6 space-y-4">
                         <Input
