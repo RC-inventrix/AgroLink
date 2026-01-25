@@ -109,4 +109,31 @@ public class ReviewService {
 
         return List.of();
     }
+
+    public Double calculateUserRating(Long userId, String role) {
+        Double average = 0.0;
+
+        if ("SELLER".equalsIgnoreCase(role)) {
+            average = reviewRepository.getAverageSellerRating(userId);
+        } else if ("BUYER".equalsIgnoreCase(role)) {
+            average = reviewRepository.getAverageBuyerRating(userId);
+        }
+
+        // If user has no reviews, database returns null. Convert to 0.0
+        return average != null ? Math.round(average * 10.0) / 10.0 : 0.0; // Rounds to 1 decimal place (e.g. 4.5)
+    }
+
+    // Optional: Get detailed stats (Average + Count)
+    public Map<String, Object> getUserRatingStats(Long userId, String role) {
+        Double avg = calculateUserRating(userId, role);
+        Long count = 0L;
+
+        if ("SELLER".equalsIgnoreCase(role)) {
+            count = reviewRepository.countSellerReviews(userId);
+        } else {
+            count = reviewRepository.countBuyerReviews(userId);
+        }
+
+        return Map.of("average", avg, "count", count);
+    }
 }
