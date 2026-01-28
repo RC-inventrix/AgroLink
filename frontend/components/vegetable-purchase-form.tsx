@@ -25,8 +25,8 @@ interface Vegetable {
     deliveryAvailable: boolean
     baseCharge?: number
     extraRatePerKm?: number
-    sellerLatitude?: number
-    sellerLongitude?: number
+    pickupLatitude?: number
+    pickupLongitude?: number
 }
 
 export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegetable }) {
@@ -65,16 +65,16 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
     useEffect(() => {
         if (
             vegetable.deliveryAvailable &&
-            vegetable.sellerLatitude &&
-            vegetable.sellerLongitude &&
+            vegetable.pickupLatitude &&
+            vegetable.pickupLongitude &&
             deliveryLocation.latitude &&
             deliveryLocation.longitude &&
             vegetable.baseCharge !== undefined &&
             vegetable.extraRatePerKm !== undefined
         ) {
             const distance = calculateDistance(
-                vegetable.sellerLatitude,
-                vegetable.sellerLongitude,
+                vegetable.pickupLatitude,
+                vegetable.pickupLongitude,
                 deliveryLocation.latitude,
                 deliveryLocation.longitude
             )
@@ -147,7 +147,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         }
 
         // Validate delivery location if delivery is available
-        if (vegetable.deliveryAvailable && !deliveryLocation.latitude) {
+        if (vegetable.deliveryAvailable && (!deliveryLocation.latitude || !deliveryLocation.longitude)) {
             setNotification({
                 message: "Please select a delivery address",
                 type: "error"

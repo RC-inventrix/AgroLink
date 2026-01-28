@@ -394,7 +394,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <div className="bg-muted/30 rounded-lg p-6 mb-8 animate-in zoom-in-95 duration-300">
                             <h3 className="text-base font-semibold mb-6 text-foreground">Delivery Charges</h3>
                             <div className="mb-6">
-                                <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 5km (LKR)</Label>
+                                <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 5 km (LKR)</Label>
                                 <Input
                                     required
                                     id="baseCharge"
@@ -406,7 +406,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km (After 5km)</Label>
+                                <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km - After 5 km (LKR)</Label>
                                 <Input
                                     required
                                     id="extraRatePerKm"
