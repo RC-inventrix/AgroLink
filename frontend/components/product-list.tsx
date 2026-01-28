@@ -13,6 +13,13 @@ interface Product {
     pricePerHundred: number
     pricePerKg: number
     seller: string
+    // New delivery fields
+    deliveryAvailable: boolean
+    baseCharge?: number
+    extraRatePerKm?: number
+    pickupLatitude?: number
+    pickupLongitude?: number
+    pickupAddress?: string
 }
 
 export default function ProductList() {
@@ -64,7 +71,13 @@ export default function ProductList() {
                 rating: 0,
                 pricePerHundred: (item.fixedPrice / 10) || 0,
                 pricePerKg: item.fixedPrice || 0,
-                seller: "My Farm"
+                seller: "My Farm",
+                deliveryAvailable: item.deliveryAvailable || false,
+                baseCharge: item.deliveryFeeFirst3Km || undefined,
+                extraRatePerKm: item.deliveryFeePerKm || undefined,
+                pickupLatitude: item.pickupLatitude || undefined,
+                pickupLongitude: item.pickupLongitude || undefined,
+                pickupAddress: item.pickupAddress || undefined,
             }))
 
             setProducts(mappedProducts)

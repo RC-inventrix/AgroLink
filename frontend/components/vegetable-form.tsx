@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import LocationPicker from "@/components/LocationPicker"
 
 export default function VegetableForm() {
     const router = useRouter()
@@ -41,8 +42,17 @@ export default function VegetableForm() {
         biddingEndDate: "",
         description: "",
         willDeliver: "no",
-        deliveryCharge3km: "",
-        deliveryChargePerKm: "",
+        baseCharge: "",  // Renamed from deliveryCharge3km
+        extraRatePerKm: "",  // Renamed from deliveryChargePerKm
+        useCustomPickupLocation: false,
+        pickupLocation: {
+            province: "",
+            district: "",
+            city: "",
+            streetAddress: "",
+            latitude: null as number | null,
+            longitude: null as number | null,
+        },
     })
 
     const [images, setImages] = useState<File[]>([])
@@ -60,6 +70,14 @@ export default function VegetableForm() {
 
     const handleRadioChange = (value: string, field: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
+    }
+
+    const handleLocationChange = (location: typeof formData.pickupLocation) => {
+        setFormData((prev) => ({ ...prev, pickupLocation: location }))
+    }
+
+    const handleCheckboxChange = (checked: boolean) => {
+        setFormData((prev) => ({ ...prev, useCustomPickupLocation: checked }))
     }
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,10 +143,17 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     if (formData.willDeliver === "yes") {
         data.append("deliveryAvailable", "true")
-        data.append("deliveryFeeFirst3Km", formData.deliveryCharge3km)
-        data.append("deliveryFeePerKm", formData.deliveryChargePerKm)
+        data.append("deliveryFeeFirst3Km", formData.baseCharge)
+        data.append("deliveryFeePerKm", formData.extraRatePerKm)
     } else {
         data.append("deliveryAvailable", "false")
+    }
+
+    // Append pickup location if custom location is used
+    if (formData.useCustomPickupLocation && formData.pickupLocation.latitude && formData.pickupLocation.longitude) {
+        data.append("pickupLatitude", formData.pickupLocation.latitude.toString())
+        data.append("pickupLongitude", formData.pickupLocation.longitude.toString())
+        data.append("pickupAddress", `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`)
     }
 
     images.forEach((image) => {
@@ -321,6 +346,34 @@ const handleSubmit = async (e: React.FormEvent) => {
                         />
                     </div>
 
+                    {/* Pickup Location Section */}
+                    <div className="mb-8 pb-8 border-b border-border">
+                        <Label className="text-base font-semibold mb-4 block">Pickup Location</Label>
+                        <div className="mb-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.useCustomPickupLocation}
+                                    onChange={(e) => handleCheckboxChange(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">Use a different pickup location for this product</span>
+                            </label>
+                        </div>
+                        {formData.useCustomPickupLocation && (
+                            <div className="mt-4 animate-in fade-in duration-300">
+                                <LocationPicker
+                                    value={formData.pickupLocation}
+                                    onChange={handleLocationChange}
+                                    variant="light"
+                                    showStreetAddress={true}
+                                    required={false}
+                                    label="Custom Pickup Location"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     {/* Delivery Option */}
                     <div className="mb-8 pb-8 border-b border-border">
                         <Label className="text-base font-semibold mb-4 block">Will You Deliver?</Label>
@@ -341,25 +394,27 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <div className="bg-muted/30 rounded-lg p-6 mb-8 animate-in zoom-in-95 duration-300">
                             <h3 className="text-base font-semibold mb-6 text-foreground">Delivery Charges</h3>
                             <div className="mb-6">
-                                <Label htmlFor="deliveryCharge3km" className="text-base font-semibold mb-2 block">Delivery Charge for First 3 km (LKR)</Label>
+                                <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 5km (LKR)</Label>
                                 <Input
                                     required
-                                    id="deliveryCharge3km"
-                                    name="deliveryCharge3km"
+                                    id="baseCharge"
+                                    name="baseCharge"
                                     type="number"
-                                    value={formData.deliveryCharge3km}
+                                    value={formData.baseCharge}
                                     onChange={handleInputChange}
+                                    placeholder="e.g. 200"
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="deliveryChargePerKm" className="text-base font-semibold mb-2 block">Charge Per km (After 3 km)</Label>
+                                <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km (After 5km)</Label>
                                 <Input
                                     required
-                                    id="deliveryChargePerKm"
-                                    name="deliveryChargePerKm"
+                                    id="extraRatePerKm"
+                                    name="extraRatePerKm"
                                     type="number"
-                                    value={formData.deliveryChargePerKm}
+                                    value={formData.extraRatePerKm}
                                     onChange={handleInputChange}
+                                    placeholder="e.g. 50"
                                 />
                             </div>
                         </div>
