@@ -142,7 +142,7 @@ export default function ProductCard({
 
         {/* Delivery Info */}
         <div className="mb-3 pb-3 border-b border-border">
-          {product.deliveryAvailable ? (
+          {product.deliveryAvailable && product.baseCharge !== undefined && product.extraRatePerKm !== undefined ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <span className="text-base">🚚</span>
               <span>Delivery: Rs {product.baseCharge} base + Rs {product.extraRatePerKm}/km</span>
