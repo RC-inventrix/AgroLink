@@ -19,7 +19,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findBySellerId(Long sellerId);
 
-    // Add to OrderRepository.java
+
     @Query("SELECT new com.agrolink.orderpaymentservice.dto.SellerAnalyticsDTO(" +
             "SUM(CASE WHEN o.status = 'COMPLETED' THEN o.amount ELSE 0 END), " +
             "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END), " +

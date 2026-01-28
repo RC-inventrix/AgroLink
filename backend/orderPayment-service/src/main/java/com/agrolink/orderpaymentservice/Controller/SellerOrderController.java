@@ -1,11 +1,16 @@
 package com.agrolink.orderpaymentservice.Controller;
 
 import com.agrolink.orderpaymentservice.dto.SellerAnalyticsDTO;
+import com.agrolink.orderpaymentservice.model.CancelledOrder;
+import com.agrolink.orderpaymentservice.model.CancelledOrderNotification;
 import com.agrolink.orderpaymentservice.model.Order;
 import com.agrolink.orderpaymentservice.model.OrderStatus;
+import com.agrolink.orderpaymentservice.repository.CancelledOrderNotificationRepository;
+import com.agrolink.orderpaymentservice.repository.CancelledOrderRepository;
 import com.agrolink.orderpaymentservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +23,8 @@ import java.util.Optional;
 public class SellerOrderController {
 
     private final OrderRepository orderRepository;
+    private final CancelledOrderRepository cancelledOrderRepository;
+    private final CancelledOrderNotificationRepository notificationRepository;
 
     // 1. Get All Orders
     @GetMapping("")
@@ -85,5 +92,42 @@ public class SellerOrderController {
         }
 
         return ResponseEntity.ok(analytics);
+    }
+
+
+
+    @PostMapping("/{orderId}/cancel")
+    @Transactional
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
+        String reason = payload.get("reason");
+
+        return orderRepository.findById(orderId).map(order -> {
+            // 1. Update Order Status
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+
+            // 2. Save Audit Record in the cancelled_orders table
+            CancelledOrder cancellationRecord = CancelledOrder.builder()
+                    .orderId(order.getId())
+                    .cancelledById(order.getSellerId())
+                    .otherPartyId(order.getUserId())
+                    .reason(reason)
+                    .build();
+            cancelledOrderRepository.save(cancellationRecord);
+
+            // 3. Create the specific CancelledOrderNotification
+            String msg = "Your Order #" + order.getId() + " was cancelled by the seller. Reason: " + reason;
+
+            CancelledOrderNotification notification = CancelledOrderNotification.builder()
+                    .buyerId(order.getUserId())
+                    .orderId(order.getId())
+                    .message(msg)
+                    .read(false)
+                    .build();
+
+            notificationRepository.save(notification);
+
+            return ResponseEntity.ok().body(Map.of("message", "Order cancelled and notification sent."));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }
