@@ -12,6 +12,13 @@ interface Product {
   pricePerHundred: number
   pricePerKg: number
   seller: string
+  // New delivery fields
+  deliveryAvailable: boolean
+  baseCharge?: number
+  extraRatePerKm?: number
+  pickupLatitude?: number
+  pickupLongitude?: number
+  pickupAddress?: string
 }
 
 interface ProductCardProps {
@@ -133,10 +140,20 @@ export default function ProductCard({
         {/* Description */}
         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.description}</p>
 
-        {/* Seller */}
-        {/* <p className="text-xs text-muted-foreground mb-3">
-          <span className="font-semibold">Seller:</span> {product.seller}
-        </p> */}
+        {/* Delivery Info */}
+        <div className="mb-3 pb-3 border-b border-border">
+          {product.deliveryAvailable && product.baseCharge !== undefined && product.extraRatePerKm !== undefined ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="text-base">🚚</span>
+              <span>Delivery: Rs {product.baseCharge} base + Rs {product.extraRatePerKm}/km</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="text-base">📍</span>
+              <span>Pickup Only</span>
+            </div>
+          )}
+        </div>
 
         {/* Pricing */}
         <div className="grid grid-cols-2 gap-3">

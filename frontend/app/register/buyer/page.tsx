@@ -4,13 +4,20 @@ import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import ProtectedRoute from "@/components/protected-route"
 import { X, Check, AlertCircle } from "lucide-react"
+import LocationPicker from "@/components/LocationPicker"
 
 export default function BuyerRegistration() {
     const router = useRouter()
     const [formData, setFormData] = useState({
         businessName: "",
-        deliveryAddress: "",
-        district: "",
+        location: {
+            province: "",
+            district: "",
+            city: "",
+            streetAddress: "",
+            latitude: null as number | null,
+            longitude: null as number | null,
+        },
         zipCode: "",
     })
     const [isLoading, setIsLoading] = useState(false)
@@ -40,6 +47,10 @@ export default function BuyerRegistration() {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
+    const handleLocationChange = (location: typeof formData.location) => {
+        setFormData({ ...formData, location })
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -52,8 +63,11 @@ export default function BuyerRegistration() {
                 ...step1Data,
                 role: "Buyer",
                 businessName: formData.businessName,
-                streetAddress: formData.deliveryAddress,
-                district: formData.district,
+                streetAddress: `${formData.location.streetAddress}, ${formData.location.city}`,
+                district: formData.location.district,
+                province: formData.location.province,
+                latitude: formData.location.latitude,
+                longitude: formData.location.longitude,
                 zipcode: formData.zipCode,
                 businessRegOrNic: "" 
             }
@@ -140,38 +154,25 @@ export default function BuyerRegistration() {
                                     />
                                 </div>
 
+                                {/* Location Picker */}
+                                <LocationPicker
+                                    value={formData.location}
+                                    onChange={handleLocationChange}
+                                    variant="dark"
+                                    showStreetAddress={true}
+                                    required={true}
+                                    label="Delivery Address"
+                                />
+
                                 <div className="space-y-1">
-                                    <label className="text-white text-xs font-semibold ml-1">Delivery Address</label>
+                                    <label className="text-white text-xs font-semibold ml-1">Zip Code</label>
                                     <input 
-                                        name="deliveryAddress" 
-                                        placeholder="Street, City" 
+                                        name="zipCode" 
+                                        placeholder="12345" 
                                         onChange={handleInputChange} 
                                         className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all" 
                                         required 
                                     />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-white text-xs font-semibold ml-1">District</label>
-                                        <input 
-                                            name="district" 
-                                            placeholder="e.g. Colombo" 
-                                            onChange={handleInputChange} 
-                                            className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all" 
-                                            required 
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-white text-xs font-semibold ml-1">Zip Code</label>
-                                        <input 
-                                            name="zipCode" 
-                                            placeholder="12345" 
-                                            onChange={handleInputChange} 
-                                            className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all" 
-                                            required 
-                                        />
-                                    </div>
                                 </div>
 
                                 <button 
