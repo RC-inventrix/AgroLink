@@ -1,5 +1,6 @@
 package com.agrolink.orderpaymentservice.Controller;
 
+import com.agrolink.orderpaymentservice.dto.SellerAnalyticsDTO;
 import com.agrolink.orderpaymentservice.model.Order;
 import com.agrolink.orderpaymentservice.model.OrderStatus;
 import com.agrolink.orderpaymentservice.repository.OrderRepository;
@@ -32,8 +33,7 @@ public class SellerOrderController {
     }
 
     // 2. Update Order Status
-    // FIX: Changed return type from ResponseEntity<Order> to ResponseEntity<?>
-    // This allows returning an Order on success and a "Void" (empty) response on error.
+
     @PutMapping("/{orderId}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long orderId, @RequestParam String status) {
         // 1. Check if Order exists
@@ -56,7 +56,7 @@ public class SellerOrderController {
         }
     }
 
-    // Add this method to SellerOrderController.java
+
     @PostMapping("/{orderId}/verify-otp")
     public ResponseEntity<?> verifyOrderOtp(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
         return orderRepository.findById(orderId).map(order -> {
@@ -70,5 +70,20 @@ public class SellerOrderController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Invalid OTP code. Please try again."));
             }
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+
+
+    @GetMapping("/{sellerId}/analytics")
+    public ResponseEntity<SellerAnalyticsDTO> getSellerAnalytics(@PathVariable Long sellerId) {
+
+        SellerAnalyticsDTO analytics = orderRepository.getSellerAnalytics(sellerId);
+
+
+        if (analytics.getTotalCompletedIncome() == null) {
+            analytics.setTotalCompletedIncome(0L);
+        }
+
+        return ResponseEntity.ok(analytics);
     }
 }
