@@ -2,12 +2,14 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { ShoppingCart, Loader2, X, Check, AlertCircle } from "lucide-react"
+import { ShoppingCart, Loader2, X, Check, AlertCircle, MapPin, Truck } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {router} from "next/client";
 import {useRouter} from "next/navigation";
 import {Router} from "next/router";
+import LocationPicker from "@/components/LocationPicker"
+import { calculateDistance, calculateDeliveryFee } from "@/lib/geo-utils"
 
 interface Vegetable {
     id: string
@@ -19,6 +21,12 @@ interface Vegetable {
     description: string
     rating: number
     sellerId: number
+    // New fields
+    deliveryAvailable: boolean
+    baseCharge?: number
+    extraRatePerKm?: number
+    sellerLatitude?: number
+    sellerLongitude?: number
 }
 
 export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegetable }) {
@@ -33,12 +41,51 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         type: "success" | "error"
     } | null>(null)
 
+    // Delivery address state
+    const [showLocationPicker, setShowLocationPicker] = useState(false)
+    const [deliveryLocation, setDeliveryLocation] = useState({
+        province: "",
+        district: "",
+        city: "",
+        streetAddress: "",
+        latitude: null as number | null,
+        longitude: null as number | null,
+    })
+    const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null)
+    const [deliveryFee, setDeliveryFee] = useState<number>(0)
+
     useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => setNotification(null), 3000)
             return () => clearTimeout(timer)
         }
     }, [notification])
+
+    // Calculate delivery fee when location changes
+    useEffect(() => {
+        if (
+            vegetable.deliveryAvailable &&
+            vegetable.sellerLatitude &&
+            vegetable.sellerLongitude &&
+            deliveryLocation.latitude &&
+            deliveryLocation.longitude &&
+            vegetable.baseCharge !== undefined &&
+            vegetable.extraRatePerKm !== undefined
+        ) {
+            const distance = calculateDistance(
+                vegetable.sellerLatitude,
+                vegetable.sellerLongitude,
+                deliveryLocation.latitude,
+                deliveryLocation.longitude
+            )
+            setDeliveryDistance(distance)
+            const fee = calculateDeliveryFee(distance, vegetable.baseCharge, vegetable.extraRatePerKm)
+            setDeliveryFee(fee)
+        } else {
+            setDeliveryDistance(null)
+            setDeliveryFee(0)
+        }
+    }, [deliveryLocation, vegetable])
 
     // CHANGE 2: Helper to safely get the number for calculations
     const getQuantityNumber = () => {
@@ -47,6 +94,16 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
     }
 
     const calculateTotalPrice = () => {
+        const qty = getQuantityNumber()
+        const itemTotal = vegetable.price1kg * qty
+        const total = itemTotal + deliveryFee
+        return total.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })
+    }
+
+    const calculateItemTotal = () => {
         const qty = getQuantityNumber()
         const total = vegetable.price1kg * qty
         return total.toLocaleString('en-US', {
@@ -89,6 +146,15 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
             return
         }
 
+        // Validate delivery location if delivery is available
+        if (vegetable.deliveryAvailable && !deliveryLocation.latitude) {
+            setNotification({
+                message: "Please select a delivery address",
+                type: "error"
+            })
+            return
+        }
+
         setAdding(true)
         setNotification(null)
         const userId = sessionStorage.getItem("id") || "1"
@@ -102,10 +168,16 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     productId: vegetable.id,
                     productName: vegetable.name,
                     pricePerKg: vegetable.price1kg,
-                    quantity: finalQuantity, // Send the number, not the string
+                    quantity: finalQuantity,
                     imageUrl: vegetable.image,
                     sellerName: vegetable.seller,
-                    sellerId: vegetable.sellerId
+                    sellerId: vegetable.sellerId,
+                    // Add delivery info
+                    deliveryFee: deliveryFee,
+                    deliveryAddress: deliveryLocation.city 
+                        ? `${deliveryLocation.streetAddress}, ${deliveryLocation.city}, ${deliveryLocation.district}` 
+                        : "",
+                    distance: deliveryDistance || 0
                 }),
             })
 
@@ -191,6 +263,66 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     </div>
 
                     <div className="space-y-4">
+                        {/* Delivery Address Section */}
+                        {vegetable.deliveryAvailable && (
+                            <div className="border-2 border-black rounded-lg p-4 bg-gray-50">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="block text-sm font-bold text-black">
+                                        <MapPin className="inline w-4 h-4 mr-1" />
+                                        Delivery Address
+                                    </label>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowLocationPicker(!showLocationPicker)}
+                                        className="text-xs"
+                                    >
+                                        {deliveryLocation.city ? "Change" : "Select"} Address
+                                    </Button>
+                                </div>
+
+                                {deliveryLocation.city ? (
+                                    <div className="text-sm text-gray-700">
+                                        <p className="font-semibold">{deliveryLocation.city}, {deliveryLocation.district}</p>
+                                        <p className="text-xs">{deliveryLocation.streetAddress}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">No address selected</p>
+                                )}
+
+                                {showLocationPicker && (
+                                    <div className="mt-4 animate-in fade-in duration-300">
+                                        <LocationPicker
+                                            value={deliveryLocation}
+                                            onChange={setDeliveryLocation}
+                                            variant="light"
+                                            showStreetAddress={true}
+                                            required={false}
+                                            label=""
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Delivery Info Display */}
+                                {deliveryDistance !== null && deliveryFee > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-gray-300 space-y-1">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-600">Distance:</span>
+                                            <span className="font-semibold">{deliveryDistance} km</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-600">
+                                                <Truck className="inline w-3 h-3 mr-1" />
+                                                Delivery Fee:
+                                            </span>
+                                            <span className="font-bold text-black">Rs. {deliveryFee.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="border-2 border-black rounded-lg p-4">
                             <label htmlFor="quantity" className="block text-sm font-bold text-black mb-2">
                                 Quantity (kg)
@@ -208,7 +340,20 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                         </div>
 
                         <div className="bg-black text-white rounded-lg p-4">
-                            <p className="text-sm text-gray-300 mb-2">Total Price</p>
+                            <p className="text-sm text-gray-300 mb-2">Order Summary</p>
+                            <div className="space-y-2 mb-3 text-sm">
+                                <div className="flex justify-between">
+                                    <span>Item Total:</span>
+                                    <span>Rs. {calculateItemTotal()}</span>
+                                </div>
+                                {deliveryFee > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Delivery Fee:</span>
+                                        <span>Rs. {deliveryFee.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="border-t border-gray-600 pt-2"></div>
+                            </div>
                             <p className="text-3xl font-bold">Rs. {calculateTotalPrice()}</p>
                             <p className="text-xs text-gray-400 mt-2">
                                 {quantity || 0} kg @ Rs. {vegetable.price1kg}/kg
