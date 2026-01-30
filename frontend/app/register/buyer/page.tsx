@@ -59,16 +59,23 @@ export default function BuyerRegistration() {
         try {
             const step1Data = JSON.parse(sessionStorage.getItem("registerDataStep1") || "{}")
 
+            // --- PAYLOAD UPDATE ---
+            // We now send city, province, lat, long as separate fields
+            // to match the updated Backend DTO.
             const payload = {
                 ...step1Data,
                 role: "Buyer",
                 businessName: formData.businessName,
-                streetAddress: `${formData.location.streetAddress}, ${formData.location.city}`,
+                // Send specific street address (don't concatenate city here)
+                streetAddress: formData.location.streetAddress,
+                // Send location details explicitly
+                city: formData.location.city,
                 district: formData.location.district,
                 province: formData.location.province,
                 latitude: formData.location.latitude,
                 longitude: formData.location.longitude,
                 zipcode: formData.zipCode,
+                // Buyers don't have a Business Reg/NIC field in this form, so we send empty
                 businessRegOrNic: ""
             }
 
@@ -137,12 +144,7 @@ export default function BuyerRegistration() {
 
                 <div className="h-screen flex">
                     <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                        {/* SCROLLBAR FIX APPLIED HERE:
-                           1. Added 'overflow-y-auto' to enable scrolling.
-                           2. Removed 'justify-center' to prevent cutting off top content.
-                           3. Added 'py-10' for vertical spacing.
-                           4. Added custom scrollbar styles to match the theme.
-                        */}
+                        {/* Scrollbar and Layout Container */}
                         <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                             <div className="mb-6">
                                 <h1 className="text-4xl font-bold text-white mb-2">Buyer Registration</h1>

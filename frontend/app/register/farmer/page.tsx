@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -65,7 +66,9 @@ export default function FarmerRegistration() {
                 ...step1Data,
                 role: "Farmer",
                 businessName: formData.businessName,
-                streetAddress: `${formData.location.streetAddress}, ${formData.location.city}`,
+                // Send street and city separately for better data structure
+                streetAddress: formData.location.streetAddress,
+                city: formData.location.city,
                 district: formData.location.district,
                 province: formData.location.province,
                 latitude: formData.location.latitude,
@@ -141,12 +144,6 @@ export default function FarmerRegistration() {
 
             <div className="h-screen flex">
                 <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                    {/* SCROLLBAR FIX APPLIED HERE:
-                       1. Added 'overflow-y-auto' to enable scrolling.
-                       2. Removed 'justify-center' to prevent cutting off top content.
-                       3. Added 'py-10' for vertical spacing.
-                       4. Added custom scrollbar styles to match the theme.
-                    */}
                     <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                         <div className="mb-6">
                             <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h1>
