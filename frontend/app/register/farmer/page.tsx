@@ -100,9 +100,9 @@ export default function FarmerRegistration() {
             console.error("Full Registration Error:", error);
 
             if (error.message === "Failed to fetch") {
-                setNotification({ 
-                    message: "CONNECTION ERROR: Cannot reach server. Please check your connection.", 
-                    type: 'error' 
+                setNotification({
+                    message: "CONNECTION ERROR: Cannot reach server. Please check your connection.",
+                    type: 'error'
                 });
             } else {
                 setNotification({ message: "ERROR: " + error.message, type: 'error' });
@@ -114,13 +114,13 @@ export default function FarmerRegistration() {
 
     return (
         <main className="min-h-screen bg-white relative overflow-hidden">
-            
+
             {/* --- CUSTOM NOTIFICATION UI --- */}
             {notification && (
                 <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
-                    notification.type === 'success' 
-                    ? "bg-[#03230F] border-green-500 text-white" 
-                    : "bg-red-950 border-red-500 text-white"
+                    notification.type === 'success'
+                        ? "bg-[#03230F] border-green-500 text-white"
+                        : "bg-red-950 border-red-500 text-white"
                 }`}>
                     <div className="flex items-center gap-3">
                         {notification.type === 'success' ? (
@@ -130,8 +130,8 @@ export default function FarmerRegistration() {
                         )}
                         <p className="font-medium pr-4">{notification.message}</p>
                     </div>
-                    <button 
-                        onClick={() => setNotification(null)} 
+                    <button
+                        onClick={() => setNotification(null)}
                         className="ml-auto hover:bg-white/10 p-1 rounded transition-colors"
                     >
                         <X className="w-4 h-4 opacity-70" />
@@ -141,7 +141,13 @@ export default function FarmerRegistration() {
 
             <div className="h-screen flex">
                 <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                    <div className="relative z-10 flex flex-col px-8 pt-4 md:px-12 md:pt-6 lg:pt-8 max-w-md mx-auto w-full h-full justify-center">
+                    {/* SCROLLBAR FIX APPLIED HERE:
+                       1. Added 'overflow-y-auto' to enable scrolling.
+                       2. Removed 'justify-center' to prevent cutting off top content.
+                       3. Added 'py-10' for vertical spacing.
+                       4. Added custom scrollbar styles to match the theme.
+                    */}
+                    <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                         <div className="mb-6">
                             <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h1>
                             <p className="text-[#EEC044] text-sm font-medium tracking-wide">Step 2: Farm Details</p>
@@ -173,9 +179,9 @@ export default function FarmerRegistration() {
                                 <input type="text" name="registrationNumber" placeholder="Business Reg No / NIC" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
                             </div>
 
-                            <button 
-                                type="submit" 
-                                disabled={isLoading} 
+                            <button
+                                type="submit"
+                                disabled={isLoading}
                                 className="w-full py-4 px-5 mt-4 bg-[#EEC044] text-[#03230F] font-bold rounded-xl shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (
