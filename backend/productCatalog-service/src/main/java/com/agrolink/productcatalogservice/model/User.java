@@ -1,4 +1,4 @@
-package com.agrolink.orderpaymentservice.model;
+package com.agrolink.productcatalogservice.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
