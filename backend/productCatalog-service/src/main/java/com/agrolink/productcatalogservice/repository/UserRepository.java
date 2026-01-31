@@ -1,6 +1,6 @@
-package com.agrolink.orderpaymentservice.repository;
+package com.agrolink.productcatalogservice.repository;
 
-import com.agrolink.orderpaymentservice.model.User;
+import com.agrolink.productcatalogservice.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

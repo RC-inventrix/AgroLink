@@ -1,6 +1,6 @@
-package com.agrolink.orderpaymentservice.Controller;
+package com.agrolink.productcatalogservice.controller;
 
-import com.agrolink.orderpaymentservice.repository.UserRepository;
+import com.agrolink.productcatalogservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
