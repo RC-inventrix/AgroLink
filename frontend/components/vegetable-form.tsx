@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Eye, Upload, X, Check, AlertCircle } from "lucide-react"
+import { Eye, Upload, X, Check, AlertCircle, MapPin, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -15,6 +15,7 @@ import LocationPicker from "@/components/LocationPicker"
 export default function VegetableForm() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+    const [defaultAddress, setDefaultAddress] = useState<string | null>(null)
 
     // --- Custom Notification State ---
     const [notification, setNotification] = useState<{
@@ -30,6 +31,40 @@ export default function VegetableForm() {
         }
     }, [notification]);
 
+    // --- Fetch User Default Address ---
+    useEffect(() => {
+        const fetchUserAddress = async () => {
+            const myId = sessionStorage.getItem("id");
+            const token = sessionStorage.getItem("token");
+            if (myId) {
+                try {
+                    // Fetching from the new endpoint we created in orderpaymentservice
+                    const res = await fetch(`http://localhost:8080/api/users/${myId}/address`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+                    if (res.ok) {
+                        const userData = await res.json();
+                        // Construct a clean address string from the response
+                        // Assuming the backend returns fields like address, city, district
+                        const parts = [
+                            userData.address,
+                            userData.city,
+                            userData.district
+                        ].filter(Boolean); // Remove null/undefined/empty strings
+
+                        setDefaultAddress(parts.join(", "));
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user address", error);
+                }
+            }
+        };
+
+        fetchUserAddress();
+    }, []);
+
     // --- Form State ---
     const [formData, setFormData] = useState({
         vegetableName: "",
@@ -42,9 +77,9 @@ export default function VegetableForm() {
         biddingEndDate: "",
         description: "",
         willDeliver: "no",
-        baseCharge: "",  // Renamed from deliveryCharge3km
-        extraRatePerKm: "",  // Renamed from deliveryChargePerKm
-        useCustomPickupLocation: false,
+        baseCharge: "",
+        extraRatePerKm: "",
+        useCustomPickupLocation: false, // false = Default, true = Custom
         pickupLocation: {
             province: "",
             district: "",
@@ -76,8 +111,12 @@ export default function VegetableForm() {
         setFormData((prev) => ({ ...prev, pickupLocation: location }))
     }
 
-    const handleCheckboxChange = (checked: boolean) => {
-        setFormData((prev) => ({ ...prev, useCustomPickupLocation: checked }))
+    // Updated Handler for Location Type (Default vs Custom)
+    const handleLocationTypeChange = (value: string) => {
+        setFormData((prev) => ({
+            ...prev,
+            useCustomPickupLocation: value === "custom"
+        }))
     }
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,101 +138,95 @@ export default function VegetableForm() {
         setImagePreviews((prev) => prev.filter((_, i) => i !== index))
     }
 
-   // --- Submit Logic ---
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setNotification(null)
+    // --- Submit Logic ---
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setNotification(null)
 
-    // 1. Retrieve the Farmer ID and Token from session storage
-    const myId = sessionStorage.getItem("id");
-    const token = sessionStorage.getItem("token");
+        const myId = sessionStorage.getItem("id");
+        const token = sessionStorage.getItem("token");
 
-    // Basic Validation: Ensure the user is logged in
-    if (!myId) {
-        setNotification({ message: "User session not found. Please log in again.", type: 'error' });
-        setIsLoading(false);
-        return;
-    }
+        if (!myId) {
+            setNotification({ message: "User session not found. Please log in again.", type: 'error' });
+            setIsLoading(false);
+            return;
+        }
 
-    if (images.length === 0) {
-        setNotification({ message: "Please upload at least one image.", type: 'error' });
-        setIsLoading(false);
-        return;
-    }
+        if (images.length === 0) {
+            setNotification({ message: "Please upload at least one image.", type: 'error' });
+            setIsLoading(false);
+            return;
+        }
 
-    const data = new FormData()
-    
-    // 2. Append the farmerId to the FormData
-    data.append("farmerId", myId) 
-    
-    data.append("vegetableName", formData.vegetableName)
-    data.append("category", formData.category)
-    data.append("quantity", formData.quantity)
-    data.append("pricingType", formData.pricingType.toUpperCase())
-    data.append("description", formData.description)
+        const data = new FormData()
+        data.append("farmerId", myId)
+        data.append("vegetableName", formData.vegetableName)
+        data.append("category", formData.category)
+        data.append("quantity", formData.quantity)
+        data.append("pricingType", formData.pricingType.toUpperCase())
+        data.append("description", formData.description)
 
-    if (formData.pricingType === "fixed") {
-        data.append("fixedPrice", formData.fixedPrice)
-    } else {
-        data.append("biddingPrice", formData.biddingPrice)
-        if (formData.biddingStartDate) data.append("biddingStartDate", formData.biddingStartDate)
-        if (formData.biddingEndDate) data.append("biddingEndDate", formData.biddingEndDate)
-    }
+        if (formData.pricingType === "fixed") {
+            data.append("fixedPrice", formData.fixedPrice)
+        } else {
+            data.append("biddingPrice", formData.biddingPrice)
+            if (formData.biddingStartDate) data.append("biddingStartDate", formData.biddingStartDate)
+            if (formData.biddingEndDate) data.append("biddingEndDate", formData.biddingEndDate)
+        }
 
-    if (formData.willDeliver === "yes") {
-        data.append("deliveryAvailable", "true")
-        data.append("deliveryFeeFirst3Km", formData.baseCharge)
-        data.append("deliveryFeePerKm", formData.extraRatePerKm)
-    } else {
-        data.append("deliveryAvailable", "false")
-    }
+        if (formData.willDeliver === "yes") {
+            data.append("deliveryAvailable", "true")
+            data.append("deliveryFeeFirst3Km", formData.baseCharge)
+            data.append("deliveryFeePerKm", formData.extraRatePerKm)
+        } else {
+            data.append("deliveryAvailable", "false")
+        }
 
-    // Append pickup location if custom location is used
-    if (formData.useCustomPickupLocation && formData.pickupLocation.latitude && formData.pickupLocation.longitude) {
-        data.append("pickupLatitude", formData.pickupLocation.latitude.toString())
-        data.append("pickupLongitude", formData.pickupLocation.longitude.toString())
-        data.append("pickupAddress", `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`)
-    }
+        // Append pickup location ONLY if custom location is used
+        if (formData.useCustomPickupLocation && formData.pickupLocation.latitude && formData.pickupLocation.longitude) {
+            data.append("pickupLatitude", formData.pickupLocation.latitude.toString())
+            data.append("pickupLongitude", formData.pickupLocation.longitude.toString())
+            data.append("pickupAddress", `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`)
+        }
 
-    images.forEach((image) => {
-        data.append("images", image)
-    })
-
-    try {
-        const res = await fetch("http://localhost:8080/products", {
-            method: "POST",
-            headers: {
-                // Include the token for authentication if your backend requires it
-                "Authorization": `Bearer ${token}` 
-            },
-            body: data,
+        images.forEach((image) => {
+            data.append("images", image)
         })
 
-        if (res.ok) {
-            setNotification({ message: "Product listed successfully!", type: 'success' });
-            setTimeout(() => router.push("/seller/dashboard"), 2000);
-        } else {
-            const errorData = await res.json().catch(() => null);
-            const message = errorData?.message || "Failed to add product.";
-            setNotification({ message, type: 'error' });
+        try {
+            const res = await fetch("http://localhost:8080/products", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: data,
+            })
+
+            if (res.ok) {
+                setNotification({ message: "Product listed successfully!", type: 'success' });
+                setTimeout(() => router.push("/seller/dashboard"), 2000);
+            } else {
+                const errorData = await res.json().catch(() => null);
+                const message = errorData?.message || "Failed to add product.";
+                setNotification({ message, type: 'error' });
+            }
+        } catch (error) {
+            setNotification({ message: "Connection error. Is the server running?", type: 'error' });
+        } finally {
+            setIsLoading(false)
         }
-    } catch (error) {
-        setNotification({ message: "Connection error. Is the server running?", type: 'error' });
-    } finally {
-        setIsLoading(false)
     }
-}
 
     return (
         <main className="min-h-screen bg-background relative overflow-x-hidden">
-            
+
             {/* CUSTOM NOTIFICATION COMPONENT */}
             {notification && (
                 <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
-                    notification.type === 'success' 
-                    ? "bg-[#03230F] border-green-500 text-white" 
-                    : "bg-red-950 border-red-500 text-white"
+                    notification.type === 'success'
+                        ? "bg-[#03230F] border-green-500 text-white"
+                        : "bg-red-950 border-red-500 text-white"
                 }`}>
                     <div className="flex items-center gap-3">
                         {notification.type === 'success' ? (
@@ -203,8 +236,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                         )}
                         <p className="font-medium pr-4">{notification.message}</p>
                     </div>
-                    <button 
-                        onClick={() => setNotification(null)} 
+                    <button
+                        onClick={() => setNotification(null)}
                         className="ml-auto hover:bg-white/10 p-1 rounded transition-colors"
                     >
                         <X className="w-4 h-4 opacity-70" />
@@ -346,32 +379,70 @@ const handleSubmit = async (e: React.FormEvent) => {
                         />
                     </div>
 
-                    {/* Pickup Location Section */}
+                    {/* Pickup Location Section - UPDATED */}
                     <div className="mb-8 pb-8 border-b border-border">
                         <Label className="text-base font-semibold mb-4 block">Pickup Location</Label>
-                        <div className="mb-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.useCustomPickupLocation}
-                                    onChange={(e) => handleCheckboxChange(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-primary"
-                                />
-                                <span className="text-sm text-muted-foreground">Use a different pickup location for this product</span>
-                            </label>
-                        </div>
-                        {formData.useCustomPickupLocation && (
-                            <div className="mt-4 animate-in fade-in duration-300">
-                                <LocationPicker
-                                    value={formData.pickupLocation}
-                                    onChange={handleLocationChange}
-                                    variant="light"
-                                    showStreetAddress={true}
-                                    required={false}
-                                    label="Custom Pickup Location"
-                                />
+
+                        <RadioGroup
+                            value={formData.useCustomPickupLocation ? "custom" : "default"}
+                            onValueChange={handleLocationTypeChange}
+                            className="grid gap-4"
+                        >
+                            {/* Option 1: Default Address */}
+                            <div>
+                                <div className="flex items-start space-x-3 space-y-0">
+                                    <RadioGroupItem value="default" id="loc-default" className="mt-1" />
+                                    <div className="grid gap-1.5 leading-none w-full">
+                                        <Label htmlFor="loc-default" className="cursor-pointer font-medium">
+                                            Use My Registered Address
+                                        </Label>
+
+                                        {/* Display the fetched address */}
+                                        <div className={`mt-2 p-3 rounded-md border text-sm flex items-start gap-3 transition-colors ${
+                                            !formData.useCustomPickupLocation
+                                                ? "bg-primary/5 border-primary text-foreground"
+                                                : "bg-muted/40 border-transparent text-muted-foreground"
+                                        }`}>
+                                            <Home className="w-4 h-4 mt-0.5 shrink-0" />
+                                            {defaultAddress ? (
+                                                <span>{defaultAddress}</span>
+                                            ) : (
+                                                <span className="italic opacity-70">Loading your address...</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+
+                            {/* Option 2: Custom Location */}
+                            <div>
+                                <div className="flex items-center space-x-3 space-y-0 mb-3">
+                                    <RadioGroupItem value="custom" id="loc-custom" />
+                                    <Label htmlFor="loc-custom" className="cursor-pointer font-medium">
+                                        Use a Different Pickup Location
+                                    </Label>
+                                </div>
+
+                                {formData.useCustomPickupLocation && (
+                                    <div className="pl-7 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="bg-muted/10 p-4 rounded-lg border border-border">
+                                            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                                                <MapPin className="w-4 h-4" />
+                                                <span>Select the exact pickup location on the map</span>
+                                            </div>
+                                            <LocationPicker
+                                                value={formData.pickupLocation}
+                                                onChange={handleLocationChange}
+                                                variant="light"
+                                                showStreetAddress={true}
+                                                required={true}
+                                                label="Custom Pickup Location"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </RadioGroup>
                     </div>
 
                     {/* Delivery Option */}
@@ -446,10 +517,10 @@ const handleSubmit = async (e: React.FormEvent) => {
                             <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {imagePreviews.map((preview, index) => (
                                     <div key={index} className="relative group aspect-square">
-                                        <img 
-                                            src={preview} 
-                                            alt="Preview" 
-                                            className="w-full h-full object-cover rounded-lg border border-border" 
+                                        <img
+                                            src={preview}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover rounded-lg border border-border"
                                         />
                                         <button
                                             type="button"
@@ -466,18 +537,18 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                     {/* Action Buttons */}
                     <div className="flex gap-4">
-                        <Button 
-                            disabled={isLoading} 
-                            type="submit" 
-                            size="lg" 
+                        <Button
+                            disabled={isLoading}
+                            type="submit"
+                            size="lg"
                             className="flex-1 sm:flex-none min-w-[150px]"
                         >
                             {isLoading ? "Adding Item..." : "Add Item"}
                         </Button>
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="lg" 
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="lg"
                             onClick={() => router.back()}
                         >
                             Cancel
