@@ -19,6 +19,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long farmerId;
 
     private String vegetableName;
@@ -26,7 +27,7 @@ public class Product {
     private double quantity;
 
     @Enumerated(EnumType.STRING)
-    private PriceType pricingType; // FIXED or BIDDING
+    private PriceType pricingType;
 
     private Double fixedPrice;
     private Double biddingPrice;
@@ -36,11 +37,16 @@ public class Product {
     @Column(length = 1000)
     private String description;
 
-    // --- NEW DELIVERY FIELDS ---
-    private Boolean deliveryAvailable; // True if seller delivers
-    private Double deliveryFeeFirst3Km; // Price for first 3 km
-    private Double deliveryFeePerKm;    // Price per extra km
+    private Boolean deliveryAvailable;
+    private Double deliveryFeeFirst3Km;
+    private Double deliveryFeePerKm;
 
-    @ElementCollection
-    private List<String> images;
+    private String pickupAddress;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+
+    // --- UPDATED IMAGE MAPPING ---
+    // Cascade ALL means if you save Product, it automatically saves the Images
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductImage> images;
 }

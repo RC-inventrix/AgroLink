@@ -38,8 +38,8 @@ export default function VegetableForm() {
             const token = sessionStorage.getItem("token");
             if (myId) {
                 try {
-                    // Fetching from the new endpoint we created in orderpaymentservice
-                    const res = await fetch(`http://localhost:8080/api/users/${myId}/address`, {
+                    // Fetching from the new endpoint we created in productservice
+                    const res = await fetch(`http://localhost:8080/api/usersProducts/${myId}/address`, {
                         headers: {
                             "Authorization": `Bearer ${token}`
                         }
