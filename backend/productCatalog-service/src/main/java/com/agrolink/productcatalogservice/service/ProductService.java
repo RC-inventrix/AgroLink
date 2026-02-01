@@ -7,9 +7,7 @@ import com.agrolink.productcatalogservice.model.ProductImage;
 import com.agrolink.productcatalogservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +17,10 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final S3Service s3Service;
 
-    public Product createProduct(ProductRequestDTO request) throws IOException {
+    public Product createProduct(ProductRequestDTO request) {
 
-        // 1. Create the Product object FIRST (without images initially)
+        // 1. Create the Product object
         Product product = Product.builder()
                 .farmerId(request.getFarmerId())
                 .vegetableName(request.getVegetableName())
@@ -49,16 +46,15 @@ public class ProductService {
             product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
 
         // 3. Process Images
+        // The frontend now sends Pre-signed URLs or S3 paths as Strings.
         List<ProductImage> productImages = new ArrayList<>();
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
-            for (MultipartFile file : request.getImages()) {
-                String url = s3Service.uploadFile(file);
 
-                // Create the Image Entity with FarmerID
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            for (String url : request.getImageUrls()) {
                 ProductImage img = ProductImage.builder()
                         .imageUrl(url)
-                        .farmerId(request.getFarmerId()) // Saving Farmer ID as requested
-                        .product(product) // Link to parent
+                        .farmerId(request.getFarmerId())
+                        .product(product)
                         .build();
 
                 productImages.add(img);
@@ -85,9 +81,7 @@ public class ProductService {
         return productRepository.findByFarmerId(farmerId);
     }
 
-    // Note: Update method would need similar logic adjustments for images if you implement image editing.
     public Product updateProduct(Long id, Product updated) {
-        // ... implementation for update ...
         return productRepository.save(updated);
     }
 }
