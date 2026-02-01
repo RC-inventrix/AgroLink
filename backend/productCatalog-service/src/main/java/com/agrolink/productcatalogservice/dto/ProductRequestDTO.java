@@ -20,10 +20,15 @@ public class ProductRequestDTO {
 
     private String description;
 
-    // --- NEW DELIVERY FIELDS ---
+    // --- DELIVERY FIELDS ---
     private Boolean deliveryAvailable;
     private Double deliveryFeeFirst3Km;
     private Double deliveryFeePerKm;
+
+    // --- NEW: PICKUP LOCATION FIELDS ---
+    private String pickupAddress;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
 
     private List<MultipartFile> images;
 }
