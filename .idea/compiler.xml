@@ -12,7 +12,17 @@
         </processorPath>
         <module name="agro-chat" />
       </profile>
-      <profile name="Annotation profile for productCatalog-service" enabled="true">
+      <profile name="Annotation profile for identityAndUser-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+        </processorPath>
+        <module name="identityAndUser-service" />
+      </profile>
+      <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -23,13 +33,13 @@
         <module name="orderPayment-service" />
         <module name="config-server" />
         <module name="productCatalog-service" />
-        <module name="identityAndUser-service" />
         <module name="service-discovery" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="auth-service" target="25" />
       <module name="indentityAndUser-service" target="21" />
+      <module name="notification-service" target="21" />
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>
   </component>
