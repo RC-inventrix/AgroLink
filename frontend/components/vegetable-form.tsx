@@ -13,9 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import LocationPicker from "@/components/LocationPicker"
 
 // --- UTILITY: Image Compression ---
-// Resizes images to max 1920px and compresses quality to 0.7
 const compressImage = async (file: File): Promise<File> => {
-    // If file is already small (e.g. < 1MB), return as is
     if (file.size <= 1024 * 1024) return file;
 
     return new Promise((resolve, reject) => {
@@ -29,8 +27,6 @@ const compressImage = async (file: File): Promise<File> => {
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
-
-                // Max dimensions
                 const MAX_WIDTH = 1920;
                 const MAX_HEIGHT = 1920;
 
@@ -56,7 +52,6 @@ const compressImage = async (file: File): Promise<File> => {
                         reject(new Error("Compression failed"));
                         return;
                     }
-                    // Create new file as JPEG with 0.7 quality
                     const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
                         type: 'image/jpeg',
                         lastModified: Date.now(),
@@ -83,20 +78,24 @@ const getCleanS3Url = (presignedUrl: string) => {
 export default function VegetableForm() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
-    const [isCompressing, setIsCompressing] = useState(false) // New state for compression
-    const [defaultAddress, setDefaultAddress] = useState<string | null>(null)
+    const [isCompressing, setIsCompressing] = useState(false)
+
+    // Updated: Store full location object (Address + Coords)
+    const [defaultLocation, setDefaultLocation] = useState<{
+        address: string;
+        latitude: number | null;
+        longitude: number | null;
+    } | null>(null)
+
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    // --- Custom Notification State ---
     const [notification, setNotification] = useState<{
         message: string;
         type: 'success' | 'error' | 'info';
     } | null>(null);
 
-    // --- Validation Error State ---
     const [uploadError, setUploadError] = useState<string | null>(null);
 
-    // Auto-hide notification
     useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => setNotification(null), 4000);
@@ -104,20 +103,27 @@ export default function VegetableForm() {
         }
     }, [notification]);
 
-    // --- Fetch User Address ---
+    // --- Fetch User Default Address & Coordinates ---
     useEffect(() => {
         const fetchUserAddress = async () => {
             const myId = sessionStorage.getItem("id");
             const token = sessionStorage.getItem("token");
             if (myId) {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/users/${myId}/address`, {
+                    const res = await fetch(`http://localhost:8080/api/usersProducts/${myId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (res.ok) {
                         const userData = await res.json();
+                        // Construct address string
                         const parts = [userData.address, userData.city, userData.district].filter(Boolean);
-                        setDefaultAddress(parts.join(", "));
+
+                        // Store address AND coordinates
+                        setDefaultLocation({
+                            address: parts.join(", "),
+                            latitude: userData.latitude || null,
+                            longitude: userData.longitude || null
+                        });
                     }
                 } catch (error) { console.error(error); }
             }
@@ -125,7 +131,6 @@ export default function VegetableForm() {
         fetchUserAddress();
     }, []);
 
-    // --- Form State ---
     const [formData, setFormData] = useState({
         vegetableName: "",
         category: "",
@@ -175,31 +180,27 @@ export default function VegetableForm() {
         setFormData((prev) => ({ ...prev, useCustomPickupLocation: value === "custom" }))
     }
 
-    // --- UPDATED IMAGE HANDLER ---
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
 
-        setUploadError(null); // Clear previous errors
+        setUploadError(null);
         const files = Array.from(e.target.files);
         const validImages: File[] = [];
         const validPreviews: string[] = [];
 
-        setIsCompressing(true); // Show UI feedback
+        setIsCompressing(true);
 
         try {
             for (const file of files) {
-                // 1. Check Format
                 const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
                 if (!validTypes.includes(file.type)) {
                     setUploadError(`File "${file.name}" is not a supported image. Please use JPG, PNG, or WEBP.`);
                     continue;
                 }
 
-                // 2. Compress Logic
                 try {
                     const compressedFile = await compressImage(file);
 
-                    // 3. Final Size Check (Hard Limit 5MB even after compression)
                     if (compressedFile.size > 5 * 1024 * 1024) {
                         setUploadError(`Image "${file.name}" is too large even after compression. Please try a smaller image.`);
                         continue;
@@ -282,7 +283,26 @@ export default function VegetableForm() {
 
             const uploadedUrls = await Promise.all(uploadPromises);
 
-            // STEP 2: SUBMIT PRODUCT DATA
+            // --- STEP 2: DETERMINE THE CORRECT ADDRESS & COORDINATES ---
+            let finalAddress = null;
+            let finalLat = null;
+            let finalLng = null;
+
+            if (formData.useCustomPickupLocation) {
+                // OPTION A: Custom Location Picker
+                if(formData.pickupLocation.streetAddress) {
+                    finalAddress = `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`;
+                }
+                finalLat = formData.pickupLocation.latitude;
+                finalLng = formData.pickupLocation.longitude;
+            } else if (defaultLocation) {
+                // OPTION B: Default User Location (Now includes coordinates)
+                finalAddress = defaultLocation.address;
+                finalLat = defaultLocation.latitude;
+                finalLng = defaultLocation.longitude;
+            }
+
+            // STEP 3: SUBMIT PRODUCT DATA
             const payload = {
                 farmerId: myId,
                 vegetableName: formData.vegetableName,
@@ -300,11 +320,10 @@ export default function VegetableForm() {
                 deliveryFeeFirst3Km: formData.baseCharge ? parseFloat(formData.baseCharge) : null,
                 deliveryFeePerKm: formData.extraRatePerKm ? parseFloat(formData.extraRatePerKm) : null,
 
-                pickupAddress: formData.useCustomPickupLocation && formData.pickupLocation.streetAddress
-                    ? `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`
-                    : null,
-                pickupLatitude: formData.useCustomPickupLocation ? formData.pickupLocation.latitude : null,
-                pickupLongitude: formData.useCustomPickupLocation ? formData.pickupLocation.longitude : null,
+                // --- FIXED ADDRESS LOGIC ---
+                pickupAddress: finalAddress,
+                pickupLatitude: finalLat,   // Sending correct coords
+                pickupLongitude: finalLng,  // Sending correct coords
 
                 imageUrls: uploadedUrls
             };
@@ -341,7 +360,7 @@ export default function VegetableForm() {
 
     return (
         <main className="min-h-screen bg-background relative overflow-x-hidden">
-            {/* ... Loading & Notification Components (Same as before) ... */}
+            {/* Loading & Notification Components */}
             {isLoading && (
                 <div className="fixed inset-0 z-[150] bg-background/80 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
                     <div className="bg-card border border-border p-8 rounded-xl shadow-2xl max-w-sm w-full text-center space-y-6">
@@ -377,7 +396,7 @@ export default function VegetableForm() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-card rounded-lg p-8 border border-border shadow-sm">
-                    {/* ... (Standard Fields: Name, Category, etc. - UNCHANGED) ... */}
+                    {/* Vegetable Name */}
                     <div className="mb-8">
                         <Label htmlFor="vegetableName" className="text-base font-semibold mb-2 block">Vegetable Name</Label>
                         <Input required id="vegetableName" name="vegetableName" placeholder="e.g. Carrots" value={formData.vegetableName} onChange={handleInputChange} className="w-full" />
@@ -457,7 +476,7 @@ export default function VegetableForm() {
                                         <Label htmlFor="loc-default" className="cursor-pointer font-medium">Use My Registered Address</Label>
                                         <div className={`mt-2 p-3 rounded-md border text-sm flex items-start gap-3 transition-colors ${!formData.useCustomPickupLocation ? "bg-primary/5 border-primary text-foreground" : "bg-muted/40 border-transparent text-muted-foreground"}`}>
                                             <Home className="w-4 h-4 mt-0.5 shrink-0" />
-                                            {defaultAddress ? <span>{defaultAddress}</span> : <span className="italic opacity-70">Loading...</span>}
+                                            {defaultLocation ? <span>{defaultLocation.address}</span> : <span className="italic opacity-70">Loading...</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -504,7 +523,7 @@ export default function VegetableForm() {
                         </div>
                     )}
 
-                    {/* --- UPDATED IMAGE UPLOAD SECTION --- */}
+                    {/* Image Upload */}
                     <div className="mb-8">
                         <Label className="text-base font-semibold mb-4 block">Product Photos</Label>
 
