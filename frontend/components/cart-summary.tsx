@@ -10,15 +10,18 @@ interface Vegetable {
     selected: boolean
     pricePerKg: number
     quantity: number
+    deliveryFee?: number
 }
 
 interface CartSummaryProps {
     selectedItems: Vegetable[]
     totalPrice: number
+    subtotal: number
+    totalDeliveryFees: number
     onCheckout: () => void
 }
 
-export default function CartSummary({ selectedItems, totalPrice, onCheckout }: CartSummaryProps) {
+export default function CartSummary({ selectedItems, totalPrice, subtotal, totalDeliveryFees, onCheckout }: CartSummaryProps) {
     return (
         <div className="rounded-lg border border-gray-200 bg-white p-6 h-fit">
             <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-gray-900">
@@ -40,18 +43,18 @@ export default function CartSummary({ selectedItems, totalPrice, onCheckout }: C
                     <div className="mb-6 space-y-2">
                         <div className="flex justify-between text-gray-600">
                             <span>Subtotal</span>
-                            <span>Rs. {totalPrice.toFixed(2)}</span>
+                            <span>Rs. {subtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
-                            <span>Delivery Fee</span>
-                            <span>Rs. 30.00</span>
+                            <span>Delivery Fees</span>
+                            <span>Rs. {totalDeliveryFees.toFixed(2)}</span>
                         </div>
                     </div>
 
                     <div className="mb-6 border-t border-gray-200 pt-4">
                         <div className="flex justify-between text-lg font-bold text-gray-900">
                             <span>Total</span>
-                            <span>Rs. {(totalPrice + 30).toFixed(2)}</span>
+                            <span>Rs. {totalPrice.toFixed(2)}</span>
                         </div>
                     </div>
 

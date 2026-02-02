@@ -1,3 +1,4 @@
+/* fileName: indentityanduserservice/services/AuthService.java */
 package com.agrolink.indentityanduserservice.services;
 
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
@@ -21,13 +22,9 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    /**
-     * Finds a single user by their ID.
-     * This is required by the AuthController /auth/user/{id} endpoint.
-     */
     public User findById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id)); //
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
     public Long getUserIdByEmail(@NotBlank(message = "Username/Email is required") String identifier) {
@@ -58,6 +55,12 @@ public class AuthService {
         user.setDistrict(request.getDistrict());
         user.setZipcode(request.getZipcode());
         user.setNic(request.getBusinessRegOrNic());
+
+        // --- Set New Location Fields ---
+        user.setProvince(request.getProvince());
+        user.setCity(request.getCity());
+        user.setLatitude(request.getLatitude());
+        user.setLongitude(request.getLongitude());
 
         userRepository.save(user);
         return "User registered successfully";

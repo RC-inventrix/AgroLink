@@ -40,11 +40,51 @@ interface OrderItem {
     image: string
     sellerName: string
     orderDate: Date
-    status: "completed" | "pending"
+    status: "completed" | "pending" | "cancelled"
     totalPrice: number
     otp?: string
     orderReview?: any 
     sellerId?: string
+}
+
+// --- NEW COMPONENT: FETCHES REASON SEPARATELY ---
+function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
+    const [reason, setReason] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReason = async () => {
+            try {
+                const token = sessionStorage.getItem("token");
+                const res = await fetch(`http://localhost:8080/api/buyer/orders/cancellation-detail/${orderId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setReason(data.reason);
+                }
+            } catch (err) {
+                console.error("Failed to fetch cancellation reason", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReason();
+    }, [orderId]);
+
+    if (loading) return <div className="mt-4 h-10 w-full animate-pulse bg-red-50 rounded-xl" />;
+    if (!reason) return null;
+
+    return (
+        <div className="mt-4 p-4 bg-red-50/50 border border-red-100 rounded-xl animate-in fade-in zoom-in-95 duration-300">
+            <p className="flex items-center gap-2 text-[10px] font-black uppercase text-red-600 mb-1">
+                <AlertCircle size={12} /> Reason for Cancellation
+            </p>
+            <p className="text-sm text-gray-700 italic font-medium">
+                "{reason}"
+            </p>
+        </div>
+    );
 }
 
 export function OrderHistoryClient() {
@@ -85,7 +125,8 @@ export function OrderHistoryClient() {
                         rawItemsList.push({
                             orderId: order.id,
                             itemData: item,
-                            status: order.status === "COMPLETED" ? "completed" : "pending",
+                            status: order.status === "COMPLETED" ? "completed" : 
+                                    order.status === "CANCELLED" ? "cancelled" : "pending",
                             createdAt: order.createdAt,
                             amount: order.amount,
                             sellerId: sId,

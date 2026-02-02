@@ -19,6 +19,10 @@ interface CartItemData {
     sellerName: string
     sellerId: number
     selected: boolean
+    // New fields
+    deliveryFee: number
+    deliveryAddress: string
+    distance: number
 }
 
 export default function Cart() {
@@ -54,7 +58,11 @@ export default function Cart() {
                         pricePerKg: item.pricePerKg,
                         quantity: item.quantity,
                         sellerName: item.sellerName,
-                        selected: false
+                        selected: false,
+                        // New fields
+                        deliveryFee: item.deliveryFee || 0,
+                        deliveryAddress: item.deliveryAddress || "",
+                        distance: item.distance || 0,
                     }))
                     setItems(mappedItems)
                 }
@@ -95,7 +103,9 @@ export default function Cart() {
     }
 
     const selectedItems = items.filter((item) => item.selected)
-    const totalPrice = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
+    const subtotal = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
+    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + item.deliveryFee, 0)
+    const totalPrice = subtotal + totalDeliveryFees
 
     const handleSelectAll = (checked: boolean) => {
         setItems(items.map((item) => ({ ...item, selected: checked })))
@@ -201,9 +211,12 @@ export default function Cart() {
                             pricePerKg: item.pricePerKg,
                             quantity: item.quantity,
                             seller: item.sellerName,
-                            selected: item.selected
+                            selected: item.selected,
+                            deliveryFee: item.deliveryFee
                         }))}
                         totalPrice={totalPrice}
+                        subtotal={subtotal}
+                        totalDeliveryFees={totalDeliveryFees}
                         onCheckout={handleCheckout}
                     />
                 </div>

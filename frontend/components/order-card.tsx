@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare, Clock } from "lucide-react"
+import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare, Clock, XCircle} from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -83,6 +83,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         if (order.userId) fetchBuyerName();
     }, [order.userId]);
 
+    // --- OTP Verification Logic ---
     const handleVerifyOtp = async () => {
         setError(null);
         if (otpInput.length !== 6) {
@@ -109,7 +110,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 toast.success("Order Verified and Completed!");
                 setIsOtpModalOpen(false);
                 setOtpInput("");
-                if (onStatusUpdate) onStatusUpdate();
+                if (onStatusUpdate) onStatusUpdate("REFRESH");
             } else {
                 const data = await res.json();
                 setError(data.message || "Invalid OTP. Please try again.");
@@ -157,11 +158,12 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     try {
         const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
         if (items && items.length > 0) {
+            const item = items[0];
             itemDetails = {
-                name: items[0].productName || items[0].name,
-                image: items[0].imageUrl || items[0].image,
-                quantity: items[0].quantity,
-                pricePerKg: items[0].pricePerKg
+                name: item.productName || item.name,
+                image: item.imageUrl || item.image,
+                quantity: item.quantity,
+                pricePerKg: item.pricePerKg
             };
         }
     } catch (e) { console.error("Error parsing itemsJson", e); }
@@ -196,8 +198,13 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                     </p>
                                 </div>
                             </div>
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isCompleted ? "bg-[#F0FDF4] border-[#DCFCE7] text-[#166534]" : "bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E]"}`}>
-                                <CheckCircle2 className="w-4 h-4" />
+                            
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+                                isCompleted ? "bg-[#F0FDF4] border-[#DCFCE7] text-[#166534]" : 
+                                isCancelled ? "bg-red-50 border-red-100 text-red-600" :
+                                "bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E]"
+                            }`}>
+                                {isCancelled ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                 <span className="text-[13px] font-bold capitalize">{order.status?.toLowerCase()}</span>
                             </div>
                         </div>
@@ -280,8 +287,20 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                     </div>
                 )}
 
-                {!isCompleted && (
-                    <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end">
+                {/* --- FOOTER ACTIONS --- */}
+                {!isCompleted && !isCancelled && (
+                    <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end gap-6">
+                        <button
+                            onClick={() => {
+                                setError(null);
+                                setCancelReason("");
+                                setIsCancelModalOpen(true);
+                            }}
+                            className="text-[12px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors"
+                        >
+                            Cancel Order
+                        </button>
+                        
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -310,7 +329,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
             }}>
                 <DialogContent className="sm:max-w-[425px] rounded-[30px] p-8">
                     <DialogHeader className="flex flex-col items-center text-center space-y-4">
-                        <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center mb-2">
+                        <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center">
                             <KeyRound className="w-8 h-8 text-[#166534]" />
                         </div>
                         <DialogTitle className="text-2xl font-black text-[#03230F] uppercase tracking-tight">Verify Delivery</DialogTitle>
@@ -318,9 +337,39 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                     <div className="py-6 space-y-4">
                         <Input
                             type="text"
-                            placeholder="0 0 0 0 0 0"
+                            placeholder="000000"
                             maxLength={6}
                             value={otpInput}
+                            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                            className="text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl"
+                        />
+                        {error && <div className="flex items-center justify-center gap-2 text-red-600 text-xs font-bold uppercase"><AlertCircle className="w-4 h-4" />{error}</div>}
+                    </div>
+
+                    <DialogFooter>
+                        <Button onClick={handleVerifyOtp} disabled={isVerifying || otpInput.length !== 6} className="w-full h-14 rounded-2xl bg-[#03230F] text-[#EEC044] font-black uppercase">
+                            {isVerifying ? "Verifying..." : "Confirm Delivery"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* --- CANCELLATION MODAL --- */}
+            <Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
+                <DialogContent className="sm:max-w-[425px] rounded-[30px] p-8">
+                    <DialogHeader className="flex flex-col items-center text-center space-y-4">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
+                            <XCircle className="w-8 h-8 text-red-600" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-[#03230F] uppercase">Cancel Order</DialogTitle>
+                        <p className="text-sm text-gray-500">Please state the reason for cancellation.</p>
+                    </DialogHeader>
+                    
+                    <div className="py-6">
+                        <textarea
+                            placeholder="e.g. Out of stock, pricing error..."
+                            className="w-full h-32 p-4 rounded-2xl border-2 border-gray-100 focus:border-red-500 outline-none text-sm resize-none"
+                            value={cancelReason}
                             onChange={(e) => {
                                 setError(null);
                                 setOtpInput(e.target.value.replace(/\D/g, ""));
@@ -341,7 +390,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             disabled={isVerifying || otpInput.length !== 6}
                             className="w-full h-14 rounded-2xl bg-[#03230F] hover:bg-black text-[#EEC044] font-black uppercase tracking-widest"
                         >
-                            {isVerifying ? "Verifying..." : "Confirm Delivery"}
+                            {isCancelling ? "Processing..." : "Confirm Cancellation"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

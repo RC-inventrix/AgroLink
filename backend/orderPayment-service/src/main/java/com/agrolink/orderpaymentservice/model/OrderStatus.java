@@ -5,5 +5,6 @@ public enum OrderStatus {
     PAID,           // Paid online
     COD_CONFIRMED,  // Cash on Delivery confirmed
     PROCESSING,     // Seller accepted the order
-    COMPLETED       // Seller fulfilled the order
+    COMPLETED,       // Seller fulfilled the order
+    CANCELLED       // Order has been cancelled
 }
