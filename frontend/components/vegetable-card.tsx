@@ -5,6 +5,7 @@ import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoi
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 // --- UPDATED INTERFACE ---
 // matches the data coming from VegetableListings
@@ -112,7 +113,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                 <div className="mb-4">
                     <p className="text-sm text-muted-foreground">
                         <span className="font-semibold text-foreground">Seller: </span>
-                        {vegetable.seller}
+                        <span className="hover:underline hover:text-green-950"><Link href={`/user/${vegetable.sellerId}?role=SELLER`}>{vegetable.seller}</Link></span>
                     </p>
                 </div>
 
