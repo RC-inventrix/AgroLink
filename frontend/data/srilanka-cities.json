@@ -1,0 +1,328 @@
+{
+  "provinces": [
+    {
+      "name": "Western Province",
+      "districts": [
+        {
+          "name": "Colombo",
+          "cities": [
+            { "name": "Colombo", "lat": 6.9271, "lng": 79.8612 },
+            { "name": "Dehiwala", "lat": 6.8509, "lng": 79.8653 },
+            { "name": "Moratuwa", "lat": 6.7730, "lng": 79.8816 },
+            { "name": "Sri Jayawardenepura Kotte", "lat": 6.9022, "lng": 79.9070 },
+            { "name": "Maharagama", "lat": 6.8482, "lng": 79.9267 },
+            { "name": "Kolonnawa", "lat": 6.9329, "lng": 79.8848 },
+            { "name": "Keselwatta", "lat": 6.9597, "lng": 79.9201 },
+            { "name": "Homagama", "lat": 6.8441, "lng": 80.0025 },
+            { "name": "Kaduwela", "lat": 6.9330, "lng": 79.9842 },
+            { "name": "Nugegoda", "lat": 6.8649, "lng": 79.8997 }
+          ]
+        },
+        {
+          "name": "Gampaha",
+          "cities": [
+            { "name": "Gampaha", "lat": 7.0907, "lng": 79.9987 },
+            { "name": "Negombo", "lat": 7.2083, "lng": 79.8358 },
+            { "name": "Katunayake", "lat": 7.1697, "lng": 79.8841 },
+            { "name": "Wattala", "lat": 6.9889, "lng": 79.8914 },
+            { "name": "Kelaniya", "lat": 6.9553, "lng": 79.9217 },
+            { "name": "Ja-Ela", "lat": 7.0747, "lng": 79.8919 },
+            { "name": "Minuwangoda", "lat": 7.1700, "lng": 79.9533 },
+            { "name": "Welisara", "lat": 7.0289, "lng": 79.9019 },
+            { "name": "Ragama", "lat": 7.0272, "lng": 79.9197 },
+            { "name": "Kandana", "lat": 7.0500, "lng": 79.8933 }
+          ]
+        },
+        {
+          "name": "Kalutara",
+          "cities": [
+            { "name": "Kalutara", "lat": 6.5854, "lng": 79.9607 },
+            { "name": "Panadura", "lat": 6.7133, "lng": 79.9025 },
+            { "name": "Beruwala", "lat": 6.4789, "lng": 79.9828 },
+            { "name": "Horana", "lat": 6.7156, "lng": 80.0631 },
+            { "name": "Aluthgama", "lat": 6.4289, "lng": 80.0011 },
+            { "name": "Matugama", "lat": 6.5217, "lng": 80.1531 },
+            { "name": "Wadduwa", "lat": 6.6656, "lng": 79.9300 },
+            { "name": "Bandaragama", "lat": 6.7181, "lng": 79.9864 },
+            { "name": "Ingiriya", "lat": 6.7019, "lng": 80.1336 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Central Province",
+      "districts": [
+        {
+          "name": "Kandy",
+          "cities": [
+            { "name": "Kandy", "lat": 7.2906, "lng": 80.6337 },
+            { "name": "Peradeniya", "lat": 7.2653, "lng": 80.5975 },
+            { "name": "Gampola", "lat": 7.1644, "lng": 80.5772 },
+            { "name": "Nawalapitiya", "lat": 7.0544, "lng": 80.5344 },
+            { "name": "Katugastota", "lat": 7.3228, "lng": 80.6353 },
+            { "name": "Akurana", "lat": 7.3667, "lng": 80.6167 },
+            { "name": "Kadugannawa", "lat": 7.2544, "lng": 80.5231 },
+            { "name": "Wattegama", "lat": 7.3039, "lng": 80.7697 },
+            { "name": "Teldeniya", "lat": 7.3014, "lng": 80.8194 }
+          ]
+        },
+        {
+          "name": "Matale",
+          "cities": [
+            { "name": "Matale", "lat": 7.4675, "lng": 80.6234 },
+            { "name": "Dambulla", "lat": 7.8731, "lng": 80.6511 },
+            { "name": "Sigiriya", "lat": 7.9569, "lng": 80.7603 },
+            { "name": "Galewela", "lat": 7.7508, "lng": 80.5694 },
+            { "name": "Ukuwela", "lat": 7.4375, "lng": 80.6778 },
+            { "name": "Rattota", "lat": 7.5167, "lng": 80.7167 }
+          ]
+        },
+        {
+          "name": "Nuwara Eliya",
+          "cities": [
+            { "name": "Nuwara Eliya", "lat": 6.9497, "lng": 80.7891 },
+            { "name": "Hatton", "lat": 6.8922, "lng": 80.5958 },
+            { "name": "Bandarawela", "lat": 6.8314, "lng": 80.9847 },
+            { "name": "Haputale", "lat": 6.7678, "lng": 80.9564 },
+            { "name": "Talawakelle", "lat": 6.9403, "lng": 80.6556 },
+            { "name": "Ginigathena", "lat": 7.0292, "lng": 80.5531 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Southern Province",
+      "districts": [
+        {
+          "name": "Galle",
+          "cities": [
+            { "name": "Galle", "lat": 6.0535, "lng": 80.2210 },
+            { "name": "Hikkaduwa", "lat": 6.1408, "lng": 80.1033 },
+            { "name": "Ambalangoda", "lat": 6.2358, "lng": 80.0542 },
+            { "name": "Elpitiya", "lat": 6.2917, "lng": 80.1653 },
+            { "name": "Baddegama", "lat": 6.1847, "lng": 80.2006 },
+            { "name": "Bentota", "lat": 6.4258, "lng": 79.9953 }
+          ]
+        },
+        {
+          "name": "Matara",
+          "cities": [
+            { "name": "Matara", "lat": 5.9549, "lng": 80.5550 },
+            { "name": "Weligama", "lat": 5.9731, "lng": 80.4294 },
+            { "name": "Akuressa", "lat": 6.0983, "lng": 80.4842 },
+            { "name": "Hakmana", "lat": 6.0833, "lng": 80.5833 },
+            { "name": "Deniyaya", "lat": 6.3500, "lng": 80.5500 },
+            { "name": "Kamburugamuwa", "lat": 5.9728, "lng": 80.4853 }
+          ]
+        },
+        {
+          "name": "Hambantota",
+          "cities": [
+            { "name": "Hambantota", "lat": 6.1244, "lng": 81.1185 },
+            { "name": "Tangalle", "lat": 6.0239, "lng": 80.7978 },
+            { "name": "Tissamaharama", "lat": 6.2744, "lng": 81.2872 },
+            { "name": "Beliatta", "lat": 6.0500, "lng": 80.7333 },
+            { "name": "Weeraketiya", "lat": 6.1333, "lng": 80.9000 },
+            { "name": "Ambalantota", "lat": 6.1236, "lng": 81.0236 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Northern Province",
+      "districts": [
+        {
+          "name": "Jaffna",
+          "cities": [
+            { "name": "Jaffna", "lat": 9.6615, "lng": 80.0255 },
+            { "name": "Nallur", "lat": 9.6725, "lng": 80.0272 },
+            { "name": "Chavakachcheri", "lat": 9.6667, "lng": 80.1667 },
+            { "name": "Point Pedro", "lat": 9.8167, "lng": 80.2333 },
+            { "name": "Karainagar", "lat": 9.7833, "lng": 79.9500 },
+            { "name": "Valvettithurai", "lat": 9.8167, "lng": 80.1667 }
+          ]
+        },
+        {
+          "name": "Kilinochchi",
+          "cities": [
+            { "name": "Kilinochchi", "lat": 9.3961, "lng": 80.3986 },
+            { "name": "Pallai", "lat": 9.4000, "lng": 80.3500 },
+            { "name": "Kandavalai", "lat": 9.4167, "lng": 80.4667 }
+          ]
+        },
+        {
+          "name": "Mannar",
+          "cities": [
+            { "name": "Mannar", "lat": 8.9811, "lng": 79.9044 },
+            { "name": "Nanattan", "lat": 9.0500, "lng": 80.0500 },
+            { "name": "Madhu", "lat": 8.8000, "lng": 80.0667 }
+          ]
+        },
+        {
+          "name": "Vavuniya",
+          "cities": [
+            { "name": "Vavuniya", "lat": 8.7514, "lng": 80.4971 },
+            { "name": "Nedunkeni", "lat": 8.6833, "lng": 80.4167 },
+            { "name": "Cheddikulam", "lat": 8.9667, "lng": 80.5667 }
+          ]
+        },
+        {
+          "name": "Mullaitivu",
+          "cities": [
+            { "name": "Mullaitivu", "lat": 9.2672, "lng": 80.8142 },
+            { "name": "Oddusuddan", "lat": 9.1000, "lng": 80.6167 },
+            { "name": "Puthukkudiyiruppu", "lat": 9.2500, "lng": 80.8000 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Eastern Province",
+      "districts": [
+        {
+          "name": "Trincomalee",
+          "cities": [
+            { "name": "Trincomalee", "lat": 8.5874, "lng": 81.2152 },
+            { "name": "Kinniya", "lat": 8.5000, "lng": 81.1833 },
+            { "name": "Kuchchaveli", "lat": 8.8333, "lng": 81.0500 },
+            { "name": "Nilaveli", "lat": 8.7000, "lng": 81.1833 },
+            { "name": "Seruwila", "lat": 8.4000, "lng": 81.3500 }
+          ]
+        },
+        {
+          "name": "Batticaloa",
+          "cities": [
+            { "name": "Batticaloa", "lat": 7.7310, "lng": 81.6747 },
+            { "name": "Kattankudy", "lat": 7.6833, "lng": 81.7333 },
+            { "name": "Eravur", "lat": 7.7833, "lng": 81.6000 },
+            { "name": "Valaichchenai", "lat": 7.9167, "lng": 81.5833 },
+            { "name": "Kaluwanchikudy", "lat": 7.5833, "lng": 81.7167 }
+          ]
+        },
+        {
+          "name": "Ampara",
+          "cities": [
+            { "name": "Ampara", "lat": 7.2975, "lng": 81.6681 },
+            { "name": "Kalmunai", "lat": 7.4167, "lng": 81.8333 },
+            { "name": "Sammanthurai", "lat": 7.3667, "lng": 81.8333 },
+            { "name": "Akkaraipattu", "lat": 7.2167, "lng": 81.8500 },
+            { "name": "Pottuvil", "lat": 6.8667, "lng": 81.8333 },
+            { "name": "Uhana", "lat": 7.3833, "lng": 81.6000 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "North Western Province",
+      "districts": [
+        {
+          "name": "Kurunegala",
+          "cities": [
+            { "name": "Kurunegala", "lat": 7.4863, "lng": 80.3623 },
+            { "name": "Kuliyapitiya", "lat": 7.4700, "lng": 80.0400 },
+            { "name": "Narammala", "lat": 7.4333, "lng": 80.2000 },
+            { "name": "Wariyapola", "lat": 7.5167, "lng": 80.2000 },
+            { "name": "Alawwa", "lat": 7.2917, "lng": 80.2417 },
+            { "name": "Pannala", "lat": 7.3333, "lng": 80.0167 },
+            { "name": "Polgahawela", "lat": 7.3333, "lng": 80.2833 },
+            { "name": "Mawathagama", "lat": 7.5167, "lng": 80.4333 }
+          ]
+        },
+        {
+          "name": "Puttalam",
+          "cities": [
+            { "name": "Puttalam", "lat": 8.0362, "lng": 79.8283 },
+            { "name": "Chilaw", "lat": 7.5756, "lng": 79.7950 },
+            { "name": "Wennappuwa", "lat": 7.3500, "lng": 79.8500 },
+            { "name": "Dankotuwa", "lat": 7.3167, "lng": 79.8833 },
+            { "name": "Nattandiya", "lat": 7.4167, "lng": 79.8333 },
+            { "name": "Marawila", "lat": 7.3667, "lng": 79.8167 },
+            { "name": "Anamaduwa", "lat": 8.3167, "lng": 79.9000 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "North Central Province",
+      "districts": [
+        {
+          "name": "Anuradhapura",
+          "cities": [
+            { "name": "Anuradhapura", "lat": 8.3114, "lng": 80.4037 },
+            { "name": "Kekirawa", "lat": 8.0333, "lng": 80.5833 },
+            { "name": "Tambuttegama", "lat": 8.0833, "lng": 80.4833 },
+            { "name": "Eppawala", "lat": 8.1333, "lng": 80.4667 },
+            { "name": "Medawachchiya", "lat": 9.0333, "lng": 80.4833 },
+            { "name": "Galenbindunuwewa", "lat": 8.0500, "lng": 80.6000 }
+          ]
+        },
+        {
+          "name": "Polonnaruwa",
+          "cities": [
+            { "name": "Polonnaruwa", "lat": 7.9403, "lng": 81.0188 },
+            { "name": "Kaduruwela", "lat": 7.9667, "lng": 81.0167 },
+            { "name": "Medirigiriya", "lat": 8.0333, "lng": 80.9500 },
+            { "name": "Hingurakgoda", "lat": 8.0333, "lng": 80.9667 },
+            { "name": "Dimbulagala", "lat": 7.8833, "lng": 81.0167 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Uva Province",
+      "districts": [
+        {
+          "name": "Badulla",
+          "cities": [
+            { "name": "Badulla", "lat": 6.9934, "lng": 81.0550 },
+            { "name": "Ella", "lat": 6.8667, "lng": 81.0500 },
+            { "name": "Mahiyanganaya", "lat": 7.3333, "lng": 81.0000 },
+            { "name": "Welimada", "lat": 6.9000, "lng": 80.9167 },
+            { "name": "Hali Ela", "lat": 6.9500, "lng": 81.0833 },
+            { "name": "Passara", "lat": 6.8833, "lng": 81.2000 }
+          ]
+        },
+        {
+          "name": "Monaragala",
+          "cities": [
+            { "name": "Monaragala", "lat": 6.8728, "lng": 81.3506 },
+            { "name": "Wellawaya", "lat": 6.7333, "lng": 81.1000 },
+            { "name": "Buttala", "lat": 6.7500, "lng": 81.2333 },
+            { "name": "Kataragama", "lat": 6.4133, "lng": 81.3342 },
+            { "name": "Bibile", "lat": 6.9667, "lng": 81.1167 },
+            { "name": "Siyambalanduwa", "lat": 6.8667, "lng": 81.5167 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sabaragamuwa Province",
+      "districts": [
+        {
+          "name": "Ratnapura",
+          "cities": [
+            { "name": "Ratnapura", "lat": 6.6828, "lng": 80.4003 },
+            { "name": "Embilipitiya", "lat": 6.3436, "lng": 80.8508 },
+            { "name": "Balangoda", "lat": 6.6500, "lng": 80.6833 },
+            { "name": "Eheliyagoda", "lat": 6.8500, "lng": 80.2667 },
+            { "name": "Kuruwita", "lat": 6.6833, "lng": 80.3667 },
+            { "name": "Pelmadulla", "lat": 6.5333, "lng": 80.5333 },
+            { "name": "Kahawatta", "lat": 6.6667, "lng": 80.5667 }
+          ]
+        },
+        {
+          "name": "Kegalle",
+          "cities": [
+            { "name": "Kegalle", "lat": 7.2528, "lng": 80.3436 },
+            { "name": "Mawanella", "lat": 7.2500, "lng": 80.4500 },
+            { "name": "Warakapola", "lat": 7.2333, "lng": 80.2000 },
+            { "name": "Rambukkana", "lat": 7.3167, "lng": 80.3833 },
+            { "name": "Galigamuwa", "lat": 7.1833, "lng": 80.5167 },
+            { "name": "Ruwanwella", "lat": 7.0667, "lng": 80.2667 },
+            { "name": "Yatiyantota", "lat": 6.9833, "lng": 80.3333 }
+          ]
+        }
+      ]
+    }
+  ]
+}
