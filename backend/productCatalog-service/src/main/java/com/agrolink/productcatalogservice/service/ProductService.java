@@ -19,52 +19,7 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     public Product createProduct(ProductRequestDTO request) {
-
-        // 1. Create the Product object
-        Product product = Product.builder()
-                .farmerId(request.getFarmerId())
-                .vegetableName(request.getVegetableName())
-                .category(request.getCategory())
-                .quantity(request.getQuantity())
-                .pricingType(PriceType.valueOf(request.getPricingType().toUpperCase()))
-                .fixedPrice(request.getFixedPrice())
-                .biddingPrice(request.getBiddingPrice())
-                .description(request.getDescription())
-                .deliveryAvailable(request.getDeliveryAvailable())
-                .deliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km())
-                .deliveryFeePerKm(request.getDeliveryFeePerKm())
-                .pickupAddress(request.getPickupAddress())
-                .pickupLatitude(request.getPickupLatitude())
-                .pickupLongitude(request.getPickupLongitude())
-                .build();
-
-        // 2. Handle Dates
-        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty())
-            product.setBiddingStartDate(LocalDateTime.parse(request.getBiddingStartDate()));
-
-        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
-            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
-
-        // 3. Process Images
-        // The frontend now sends Pre-signed URLs or S3 paths as Strings.
-        List<ProductImage> productImages = new ArrayList<>();
-
-        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            for (String url : request.getImageUrls()) {
-                ProductImage img = ProductImage.builder()
-                        .imageUrl(url)
-                        .farmerId(request.getFarmerId())
-                        .product(product)
-                        .build();
-
-                productImages.add(img);
-            }
-        }
-
-        // 4. Attach images to product
-        product.setImages(productImages);
-
-        // 5. Save (Cascading will save the images automatically)
+        Product product = mapDtoToProduct(request, new Product());
         return productRepository.save(product);
     }
 
@@ -81,7 +36,62 @@ public class ProductService {
         return productRepository.findByFarmerId(farmerId);
     }
 
-    public Product updateProduct(Long id, Product updated) {
-        return productRepository.save(updated);
+    public Product updateProduct(Long id, ProductRequestDTO request) {
+        Product existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        // Update fields
+        Product updatedProduct = mapDtoToProduct(request, existingProduct);
+        return productRepository.save(updatedProduct);
+    }
+
+    // Helper to map DTO to Entity (Used for Create and Update)
+    private Product mapDtoToProduct(ProductRequestDTO request, Product product) {
+        if (request.getFarmerId() != null) product.setFarmerId(request.getFarmerId());
+        if (request.getVegetableName() != null) product.setVegetableName(request.getVegetableName());
+        if (request.getCategory() != null) product.setCategory(request.getCategory());
+        if (request.getQuantity() > 0) product.setQuantity(request.getQuantity());
+
+        if (request.getPricingType() != null) {
+            product.setPricingType(PriceType.valueOf(request.getPricingType().toUpperCase()));
+        }
+
+        // Pricing fields (Nullable checks allow clearing if needed, but simple update here)
+        if (request.getFixedPrice() != null) product.setFixedPrice(request.getFixedPrice());
+        if (request.getBiddingPrice() != null) product.setBiddingPrice(request.getBiddingPrice());
+
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+
+        if (request.getDeliveryAvailable() != null) product.setDeliveryAvailable(request.getDeliveryAvailable());
+        if (request.getDeliveryFeeFirst3Km() != null) product.setDeliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km());
+        if (request.getDeliveryFeePerKm() != null) product.setDeliveryFeePerKm(request.getDeliveryFeePerKm());
+
+        // Address
+        if (request.getPickupAddress() != null) product.setPickupAddress(request.getPickupAddress());
+        if (request.getPickupLatitude() != null) product.setPickupLatitude(request.getPickupLatitude());
+        if (request.getPickupLongitude() != null) product.setPickupLongitude(request.getPickupLongitude());
+
+        // Dates
+        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty())
+            product.setBiddingStartDate(LocalDateTime.parse(request.getBiddingStartDate()));
+        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
+            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
+
+        // Images - Only update if provided
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            // Clear existing if necessary or just replace
+            List<ProductImage> productImages = new ArrayList<>();
+            for (String url : request.getImageUrls()) {
+                ProductImage img = ProductImage.builder()
+                        .imageUrl(url)
+                        .farmerId(product.getFarmerId()) // Ensure farmer ID matches
+                        .product(product)
+                        .build();
+                productImages.add(img);
+            }
+            product.setImages(productImages);
+        }
+
+        return product;
     }
 }
