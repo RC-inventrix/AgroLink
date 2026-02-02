@@ -97,7 +97,7 @@ export default function DashboardHeader() {
                             alt="AgroLink Logo"
                             width={150}
                             height={50}
-                            className="object-contain cursor-pointer"
+                            className="object-contain cursor-pointer w-full h-auto "
                             priority
                         />
                     </Link>

@@ -22,10 +22,8 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
         setSellerId(id)
     }, [])
 
-    // Helper to get time for sorting
     const getTime = (dateStr: string) => new Date(dateStr).getTime();
 
-    // --- CALCULATE TAB COUNTS ---
     const counts = useMemo(() => {
         if (!sellerId) return { pending: 0, processing: 0, completed: 0 };
 
@@ -42,7 +40,6 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
         };
     }, [initialOrders, sellerId]);
 
-    // --- FILTERED AND SORTED ORDERS FOR DISPLAY ---
     const filteredOrders = useMemo(() => {
         if (!sellerId) return [];
 
@@ -63,12 +60,20 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             return false
         });
 
-        // --- SORTING LOGIC: Descending Order (Newest First) ---
         return filtered.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
 
     }, [initialOrders, sellerId, activeTab]);
 
-    const handleUpdateStatus = async (orderId: number, currentStatus: string) => {
+    /**
+     * UPDATED: handleUpdateStatus now accepts a forcedStatus.
+     * Use "REFRESH" to just reload data without making a PUT request.
+     */
+    const handleUpdateStatus = async (orderId: number, currentStatus: string, forcedStatus?: string) => {
+        if (forcedStatus === "REFRESH") {
+            onOrderUpdated();
+            return;
+        }
+
         setIsUpdating(true)
         const token = sessionStorage.getItem("token");
 
@@ -100,7 +105,6 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
 
     return (
         <div className="space-y-6">
-            {/* Tab Navigation */}
             <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto">
                 {(["pending", "processing", "completed"] as const).map((tab) => (
                     <Button
@@ -118,7 +122,6 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
                 ))}
             </div>
 
-            {/* Orders Display (Now Sorted) */}
             <div className="grid grid-cols-1 gap-4">
                 {filteredOrders.length > 0 ? (
                     filteredOrders.map((order) => (
