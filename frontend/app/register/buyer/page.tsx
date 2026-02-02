@@ -59,17 +59,24 @@ export default function BuyerRegistration() {
         try {
             const step1Data = JSON.parse(sessionStorage.getItem("registerDataStep1") || "{}")
 
+            // --- PAYLOAD UPDATE ---
+            // We now send city, province, lat, long as separate fields
+            // to match the updated Backend DTO.
             const payload = {
                 ...step1Data,
                 role: "Buyer",
                 businessName: formData.businessName,
-                streetAddress: `${formData.location.streetAddress}, ${formData.location.city}`,
+                // Send specific street address (don't concatenate city here)
+                streetAddress: formData.location.streetAddress,
+                // Send location details explicitly
+                city: formData.location.city,
                 district: formData.location.district,
                 province: formData.location.province,
                 latitude: formData.location.latitude,
                 longitude: formData.location.longitude,
                 zipcode: formData.zipCode,
-                businessRegOrNic: "" 
+                // Buyers don't have a Business Reg/NIC field in this form, so we send empty
+                businessRegOrNic: ""
             }
 
             const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -83,7 +90,7 @@ export default function BuyerRegistration() {
             if (response.ok) {
                 setNotification({ message: "Account Created Successfully!", type: 'success' });
                 sessionStorage.removeItem("registerDataStep1")
-                
+
                 // Delay redirect to allow user to see success message
                 setTimeout(() => {
                     router.push("/login")
@@ -95,9 +102,9 @@ export default function BuyerRegistration() {
         } catch (error: any) {
             console.error("Full Registration Error:", error);
             if (error.message === "Failed to fetch") {
-                setNotification({ 
-                    message: "Connection Error: Backend server is unreachable.", 
-                    type: 'error' 
+                setNotification({
+                    message: "Connection Error: Backend server is unreachable.",
+                    type: 'error'
                 });
             } else {
                 setNotification({ message: "Error: " + error.message, type: 'error' });
@@ -110,13 +117,13 @@ export default function BuyerRegistration() {
     return (
         <ProtectedRoute>
             <main className="min-h-screen bg-white relative overflow-hidden">
-                
+
                 {/* --- CUSTOM NOTIFICATION UI --- */}
                 {notification && (
                     <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
-                        notification.type === 'success' 
-                        ? "bg-[#03230F] border-green-500 text-white" 
-                        : "bg-red-950 border-red-500 text-white"
+                        notification.type === 'success'
+                            ? "bg-[#03230F] border-green-500 text-white"
+                            : "bg-red-950 border-red-500 text-white"
                     }`}>
                         <div className="flex items-center gap-3">
                             {notification.type === 'success' ? (
@@ -126,8 +133,8 @@ export default function BuyerRegistration() {
                             )}
                             <p className="font-medium pr-4">{notification.message}</p>
                         </div>
-                        <button 
-                            onClick={() => setNotification(null)} 
+                        <button
+                            onClick={() => setNotification(null)}
                             className="ml-auto hover:bg-white/10 p-1 rounded transition-colors"
                         >
                             <X className="w-4 h-4 opacity-70" />
@@ -137,7 +144,8 @@ export default function BuyerRegistration() {
 
                 <div className="h-screen flex">
                     <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                        <div className="relative z-10 flex flex-col px-8 pt-2 md:px-12 md:pt-3 max-w-md mx-auto w-full h-full justify-center">
+                        {/* Scrollbar and Layout Container */}
+                        <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                             <div className="mb-6">
                                 <h1 className="text-4xl font-bold text-white mb-2">Buyer Registration</h1>
                                 <p className="text-[#EEC044] text-sm font-medium">Step 2: Finish Profile</p>
@@ -146,11 +154,11 @@ export default function BuyerRegistration() {
                             <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">
                                 <div className="space-y-1">
                                     <label className="text-white text-xs font-semibold ml-1">Business Name</label>
-                                    <input 
-                                        name="businessName" 
-                                        placeholder="Company Name (Optional)" 
-                                        onChange={handleInputChange} 
-                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all" 
+                                    <input
+                                        name="businessName"
+                                        placeholder="Company Name (Optional)"
+                                        onChange={handleInputChange}
+                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
                                     />
                                 </div>
 
@@ -166,18 +174,18 @@ export default function BuyerRegistration() {
 
                                 <div className="space-y-1">
                                     <label className="text-white text-xs font-semibold ml-1">Zip Code</label>
-                                    <input 
-                                        name="zipCode" 
-                                        placeholder="12345" 
-                                        onChange={handleInputChange} 
-                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all" 
-                                        required 
+                                    <input
+                                        name="zipCode"
+                                        placeholder="12345"
+                                        onChange={handleInputChange}
+                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
+                                        required
                                     />
                                 </div>
 
-                                <button 
-                                    type="submit" 
-                                    disabled={isLoading} 
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
                                     className="w-full py-3 px-6 mt-6 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? (
@@ -190,7 +198,7 @@ export default function BuyerRegistration() {
                             </form>
                         </div>
                     </div>
-                    
+
                     {/* Background Image */}
                     <div className="hidden lg:flex w-1/2 relative">
                         <img src="/farmer-background.png" alt="Background" className="w-full h-full object-cover" />
