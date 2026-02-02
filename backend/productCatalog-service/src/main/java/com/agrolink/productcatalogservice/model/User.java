@@ -12,12 +12,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Address fields used to display the default location
+    // Address fields
     private String address;
     private String city;
     private String district;
     private String province;
 
-    // You can include other fields from your user table if needed,
-    // but these are the ones required for the location feature.
+    // --- NEW: Coordinates ---
+    // These match the columns in your database table
+    private Double latitude;
+    private Double longitude;
 }
