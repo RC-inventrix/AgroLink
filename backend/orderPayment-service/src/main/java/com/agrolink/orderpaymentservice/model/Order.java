@@ -57,4 +57,7 @@ public class Order {
 
     @Column(name = "otp")
     private String otp;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
+    private OrderReview orderReview;
 }

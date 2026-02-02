@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Bell, User, LogOut, Settings, Check, MessageSquare, ShoppingBag } from "lucide-react"
+import { Bell, User, LogOut, Settings, Check, MessageSquare, ShoppingBag, CheckCircle } from "lucide-react"
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import logo from "../../public/images/Group-6.png"
@@ -14,7 +14,9 @@ export default function SellerHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
-    const [orderUnread, setOrderUnread] = useState(0) // Order notification state
+    const [orderUnread, setOrderUnread] = useState(0)
+    // --- NEW: STATE FOR OFFER NOTIFICATIONS ---
+    const [offerNotifications, setOfferNotifications] = useState<any[]>([])
 
     const dropdownRef = useRef<HTMLDivElement>(null)
     const notifRef = useRef<HTMLDivElement>(null)
@@ -29,22 +31,32 @@ export default function SellerHeader() {
 
         if (!token || !myId) return;
 
-        // --- FETCH ORDER NOTIFICATIONS ---
+        // --- NEW: FETCH OFFER ACCEPTANCE NOTIFICATIONS ---
+        const fetchOfferNotifications = async () => {
+            try {
+                const res = await fetch(`${orderBaseUrl}/api/offers/notifications/seller/${myId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Filter for unread ones specifically if you want the badge to be accurate
+                    setOfferNotifications(data.filter((n: any) => !n.isRead));
+                }
+            } catch (err) {
+                console.error("Offer notification fetch failed:", err);
+            }
+        };
+
         const fetchOrderCount = async () => {
             try {
-                // Use the specific seller path you created in the backend
                 const res = await fetch(`${orderBaseUrl}/api/seller/orders/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
-
                 if (res.ok) {
                     const orders = await res.json();
-
-                    // Filter only the orders that are "New" or "Pending" for this seller
                     const pendingOrders = orders.filter((o: any) =>
                         o.status === "PAID" || o.status === "COD_CONFIRMED" || o.status === "CREATED"
                     );
-
                     setOrderUnread(pendingOrders.length);
                 }
             } catch (err) {
@@ -70,10 +82,15 @@ export default function SellerHeader() {
             } catch (err) { console.error("Chat sync failed:", err); }
         };
 
+        // Initial calls
         fetchOrderCount();
         syncUnreadChatCount();
+        fetchOfferNotifications();
 
-        const interval = setInterval(fetchOrderCount, 30000); // Poll every 30s
+        const interval = setInterval(() => {
+            fetchOrderCount();
+            fetchOfferNotifications();
+        }, 30000); 
 
         const socket = new SockJS(`${chatBaseUrl}/ws`);
         const client = new Client({
@@ -92,15 +109,8 @@ export default function SellerHeader() {
         };
     }, []);
 
-    // Close dropdowns on outside click
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsMenuOpen(false);
-            if (notifRef.current && !notifRef.current.contains(event.target as Node)) setIsNotifOpen(false);
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    // --- UPDATED: TOTAL COUNT INCLUDES OFFERS ---
+    const totalNotifications = unreadChatCount + orderUnread + offerNotifications.length;
 
     const handleLogout = () => {
         sessionStorage.clear();
@@ -108,10 +118,9 @@ export default function SellerHeader() {
         setTimeout(() => router.push("/login"), 1500);
     };
 
-    const totalNotifications = unreadChatCount + orderUnread;
-
     return (
         <header className="w-full bg-[#03230F] text-white shadow-md sticky top-0 z-[100]">
+            {/* Notification Toast */}
             {notification && (
                 <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900">
                     <Check className="w-5 h-5 mr-3 text-green-500" />
@@ -138,8 +147,23 @@ export default function SellerHeader() {
                         </button>
 
                         {isNotifOpen && (
-                            <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100">
+                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 max-h-[400px] overflow-y-auto">
                                 <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">Notifications</div>
+
+                                {/* --- NEW: OFFER ACCEPTED SECTION --- */}
+                                {offerNotifications.map((notif) => (
+                                    <button 
+                                        key={notif.id}
+                                        onClick={() => { setIsNotifOpen(false); router.push("/seller/orders"); }} 
+                                        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50"
+                                    >
+                                        <div className="p-2 rounded-full bg-blue-100 text-blue-600"><CheckCircle className="w-4 h-4" /></div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold">Offer Accepted!</p>
+                                            <p className="text-xs text-gray-500">{notif.message}</p>
+                                        </div>
+                                    </button>
+                                ))}
 
                                 {orderUnread > 0 && (
                                     <button onClick={() => { setIsNotifOpen(false); router.push("/seller/orders"); }} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50">
