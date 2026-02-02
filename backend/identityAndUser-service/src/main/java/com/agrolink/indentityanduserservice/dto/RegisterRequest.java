@@ -1,8 +1,8 @@
+/* fileName: indentityanduserservice/dto/RegisterRequest.java */
 package com.agrolink.indentityanduserservice.dto;
 
 import lombok.Data;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -28,17 +28,20 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    // Note: "Repeat Password" is handled purely on the Frontend for validation.
-    // The backend only needs the final confirmed password.
-
     @NotBlank(message = "Role is required")
     private String role; // "Farmer" or "Buyer"
 
-    // --- STEP 2: Farmer Specific Fields (Optional in DTO, Validated in Logic) ---
+    // --- STEP 2: Farmer Specific Fields ---
     private String businessName;
     private String streetAddress; // Mapped to 'address' in DB
     private String district;
     private String zipcode;
+
+    // New Location Fields
+    private String province;
+    private String city;
+    private Double latitude;
+    private Double longitude;
 
     // This handles the "Business Registration OR NIC" input
     private String businessRegOrNic;

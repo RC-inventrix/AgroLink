@@ -1,3 +1,4 @@
+/* fileName: indentityanduserservice/model/User.java */
 package com.agrolink.indentityanduserservice.model;
 
 
@@ -25,7 +26,7 @@ public class User {
 
     private String phone;
     private String password;
-    private String address;
+    private String address; // Stores Street Address
     @Enumerated(EnumType.STRING)
     private Role role;
     private String businessName;
@@ -34,8 +35,12 @@ public class User {
     private String nic;
     private String AvatarUrl;
 
+    // --- NEW FIELDS FOR LOCATION MAPPING ---
+    private String province;
+    private String city;
+    private Double latitude;
+    private Double longitude;
+
     @OneToOne(mappedBy = "user")
     private ForgotPassword forgotPassword;
-
-
 }
