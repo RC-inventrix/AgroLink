@@ -30,23 +30,16 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductsByFarmerId(farmerId));
     }
 
-    // --- NEW: Presigned URL Endpoint ---
-    // Frontend calls this to get a secure link to upload the file directly to AWS
     @GetMapping("/presigned-url")
     public ResponseEntity<Map<String, String>> getPresignedUrl(
             @RequestParam String fileName,
             @RequestParam String contentType) {
-
         String uploadUrl = s3Service.generatePresignedUrl(fileName, contentType);
         return ResponseEntity.ok(Map.of("uploadUrl", uploadUrl));
     }
 
-    // --- UPDATED: Add Product ---
-    // Now accepts JSON body (since images are already uploaded by Frontend)
-    // Removed "consumes = MediaType.MULTIPART_FORM_DATA_VALUE"
     @PostMapping
     public ResponseEntity<Product> addProduct(@RequestBody ProductRequestDTO request) {
-        // No IOException needed here anymore as we don't handle file streams
         Product newProduct = productService.createProduct(request);
         return ResponseEntity.ok(newProduct);
     }
@@ -57,8 +50,9 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    // --- UPDATED: PUT uses DTO now for safer updates ---
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        return ResponseEntity.ok(productService.updateProduct(id, product));
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 }
