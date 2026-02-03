@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare, Clock, XCircle} from "lucide-react"
+import { CheckCircle2, User, Hash, KeyRound, AlertCircle, Star, MessageSquare, Clock, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -37,30 +37,36 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
 
 interface OrderCardProps {
     order: any
-    onStatusUpdate?: () => void
+    onStatusUpdate?: (forcedStatus?: string) => void
     onOfferAction?: (offerId: number, newStatus: string) => Promise<void>
 }
 
 export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardProps) {
     const [buyerName, setBuyerName] = useState<string>("Loading...")
+    
+    // Modals & Inputs
     const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
     const [otpInput, setOtpInput] = useState("")
     const [isVerifying, setIsVerifying] = useState(false)
+    
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+    const [cancelReason, setCancelReason] = useState("")
+    const [isCancelling, setIsCancelling] = useState(false)
+    
     const [error, setError] = useState<string | null>(null)
 
-    // --- REVIEW STATES ---
+    // Review states
     const [reviewRating, setReviewRating] = useState(0)
     const [reviewComment, setReviewComment] = useState("")
     const [isSubmittingReview, setIsSubmittingReview] = useState(false)
 
     const status = order.status?.toUpperCase();
     const isCompleted = status === "COMPLETED"
+    const isCancelled = status === "CANCELLED"
     const isProcessing = status === "PROCESSING"
     const isOfferOrder = order.isOfferOrder
 
     const token = typeof window !== 'undefined' ? sessionStorage.getItem("token") : null;
-
-    // Logic to check database reviews
     const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
     const buyerHasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
 
@@ -75,22 +81,18 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                     setBuyerName(`Buyer #${order.userId}`);
                 }
             } catch (error) {
-                console.error("Failed to fetch user name:", error);
                 setBuyerName("Unknown Buyer");
             }
         };
-
         if (order.userId) fetchBuyerName();
     }, [order.userId]);
 
-    // --- OTP Verification Logic ---
     const handleVerifyOtp = async () => {
         setError(null);
         if (otpInput.length !== 6) {
             setError("Please enter a 6-digit code.");
             return;
         }
-
         setIsVerifying(true);
         try {
             const endpoint = isOfferOrder
@@ -99,10 +101,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
             const res = await fetch(endpoint, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ otp: otpInput })
             });
 
@@ -110,54 +109,61 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 toast.success("Order Verified and Completed!");
                 setIsOtpModalOpen(false);
                 setOtpInput("");
-                if (onStatusUpdate) onStatusUpdate("REFRESH");
+                // FORCED: Explicitly tell the list this is now COMPLETED
+                if (onStatusUpdate) onStatusUpdate("COMPLETED");
             } else {
                 const data = await res.json();
-                setError(data.message || "Invalid OTP. Please try again.");
+                setError(data.message || "Invalid OTP.");
             }
-        } catch (err) {
-            setError("Connection error.");
-        } finally {
-            setIsVerifying(false);
+        } catch (err) { setError("Connection error."); }
+        finally { setIsVerifying(false); }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!cancelReason.trim()) {
+            setError("Please provide a reason.");
+            return;
         }
+        setIsCancelling(true);
+        try {
+            const res = await fetch(`http://localhost:8080/api/seller/orders/${order.id}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ reason: cancelReason })
+            });
+            if (res.ok) {
+                toast.success("Order Cancelled.");
+                setIsCancelModalOpen(false);
+                // FIX: Pass "CANCELLED" to onStatusUpdate so the OrdersList moves it to the correct tab
+                if (onStatusUpdate) onStatusUpdate("CANCELLED");
+            } else { toast.error("Failed to cancel."); }
+        } catch (err) { toast.error("Server error."); }
+        finally { setIsCancelling(false); }
     };
 
     const handleSubmitReview = async () => {
-        if (reviewRating === 0) {
-            toast.error("Please select a rating.");
-            return;
-        }
-
+        if (reviewRating === 0) return toast.error("Select a rating.");
         setIsSubmittingReview(true);
-        const userId = sessionStorage.getItem("id");
-
         try {
+            const userId = sessionStorage.getItem("id");
             const res = await fetch(`http://localhost:8080/api/reviews/${order.id}?userId=${userId}`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ rating: reviewRating, comment: reviewComment })
             });
-
             if (res.ok) {
                 toast.success("Review submitted!");
-                if (onStatusUpdate) onStatusUpdate();
-            } else {
-                toast.error("Failed to submit review.");
+                if (onStatusUpdate) onStatusUpdate("REFRESH");
             }
-        } catch (err) {
-            toast.error("Server error.");
-        } finally {
-            setIsSubmittingReview(false);
-        }
+        } catch (err) { toast.error("Server error."); }
+        finally { setIsSubmittingReview(false); }
     };
 
-    let itemDetails = { name: "Fresh Vegetables", image: "/placeholder.svg", quantity: 0, pricePerKg: 0 };
+    // Item Parser
+    let itemDetails = { name: "Product", image: "/placeholder.svg", quantity: 0, pricePerKg: 0 };
     try {
         const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
-        if (items && items.length > 0) {
+        if (items?.[0]) {
             const item = items[0];
             itemDetails = {
                 name: item.productName || item.name,
@@ -166,18 +172,19 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                 pricePerKg: item.pricePerKg
             };
         }
-    } catch (e) { console.error("Error parsing itemsJson", e); }
+    } catch (e) {}
+
+    const orderDate = new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 
     return (
         <>
-            <Card className="p-0 border border-gray-100 bg-white rounded-[20px] shadow-sm overflow-hidden transition-all hover:shadow-md mb-4">
-                {/* ... Main Card Info Part (Image, Name, Qty, Total) - Keep your existing styling here ... */}
+            <Card className={`p-0 border border-gray-100 bg-white rounded-[20px] shadow-sm overflow-hidden mb-4 transition-all hover:shadow-md ${isCancelled ? 'opacity-70 grayscale-[0.5]' : ''}`}>
                 <div className="flex p-8 gap-8 relative flex-col sm:flex-row items-center sm:items-start">
-                    <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden flex-shrink-0 bg-[#F1F1F1] border border-gray-50 flex items-center justify-center">
-                        <img src={itemDetails.image || "/placeholder.svg"} alt={itemDetails.name} className="w-full h-full object-cover" />
+                    <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-[#F1F1F1] border border-gray-50 flex items-center justify-center">
+                        <img src={itemDetails.image} alt={itemDetails.name} className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex-1 flex flex-col w-full">
-                        <div className="flex justify-between items-start w-full">
+                    <div className="flex-1 w-full">
+                        <div className="flex justify-between items-start">
                             <div className="space-y-1">
                                 <div className="flex items-center gap-1 text-[#A3ACBA] mb-1">
                                     <Hash className="w-3 h-3" />
@@ -186,24 +193,10 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                 <h3 className="text-[22px] font-[800] text-[#0A2540] tracking-tight leading-none mb-1">{itemDetails.name}</h3>
                                 <div className="flex items-center gap-1.5 text-[#697386]">
                                     <User className="w-4 h-4" />
-                                    <p className="text-[15px] font-medium">
-                                        Buyer:{" "}
-                                        {/* WRAP THE NAME IN A LINK */}
-                                        <Link
-                                            href={`/user/${order.userId}`}
-                                            className="text-[#0A2540] font-bold hover:text-[#166534] hover:underline transition-all cursor-pointer"
-                                        >
-                                            {buyerName}
-                                        </Link>
-                                    </p>
+                                    <p className="text-[15px] font-medium">Buyer: <Link href={`/user/${order.userId}`} className="text-[#0A2540] font-bold hover:text-[#166534] hover:underline transition-all cursor-pointer">{buyerName}</Link></p>
                                 </div>
                             </div>
-                            
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
-                                isCompleted ? "bg-[#F0FDF4] border-[#DCFCE7] text-[#166534]" : 
-                                isCancelled ? "bg-red-50 border-red-100 text-red-600" :
-                                "bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E]"
-                            }`}>
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isCompleted ? "bg-[#F0FDF4] text-[#166534] border-[#DCFCE7]" : isCancelled ? "bg-red-50 text-red-600 border-red-100" : "bg-[#FFFBEB] text-[#92400E] border-[#FEF3C7]"}`}>
                                 {isCancelled ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                 <span className="text-[13px] font-bold capitalize">{order.status?.toLowerCase()}</span>
                             </div>
@@ -213,186 +206,91 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Price</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {itemDetails.pricePerKg}</p></div>
                             <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Total</p><p className="text-[18px] font-[700] text-[#1A1F25]">Rs. {(order.amount / 100).toLocaleString()}</p></div>
                         </div>
+                        <p className="mt-6 text-[13px] text-[#A3ACBA] font-medium">Ordered on <span className="text-[#697386] font-semibold">{orderDate}</span></p>
                     </div>
                 </div>
 
-                {/* --- TWO COLUMN REVIEW SECTION FOR COMPLETED ORDERS --- */}
+                {/* Review Section */}
                 {isCompleted && (
-                    <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                            {/* COLUMN 1: BUYER'S FEEDBACK (What they said about the product/seller) */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <User className="w-4 h-4 text-[#03230F]" />
-                                    <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Buyer's Feedback</h4>
+                    <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100 grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">Buyer's Feedback</h4>
+                            {buyerHasReviewed ? (
+                                <div className="space-y-3">
+                                    <StarRating rating={order.orderReview.buyerRating} />
+                                    <p className="text-sm italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm text-[#4A5568]">"{order.orderReview.buyerComment}"</p>
                                 </div>
-
-                                {buyerHasReviewed ? (
-                                    <div className="space-y-3">
-                                        <StarRating rating={order.orderReview.buyerRating} />
-                                        <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
-                                            "{order.orderReview.buyerComment}"
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-6 text-center bg-white/50 rounded-xl border border-dashed border-gray-200">
-                                        <Clock className="w-6 h-6 text-gray-300 mb-1" />
-                                        <p className="text-[11px] text-gray-400 font-medium">Buyer hasn't reviewed yet.</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* COLUMN 2: SELLER'S FEEDBACK (Form or Submitted Review) */}
-                            <div className="space-y-4 border-l-0 md:border-l md:pl-8 border-gray-200">
-                                {sellerHasReviewed ? (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                            <span className="text-[11px] font-black uppercase text-green-600 tracking-widest">Your Review to Buyer</span>
-                                        </div>
-                                        <StarRating rating={order.orderReview.sellerRating} />
-                                        <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
-                                            "{order.orderReview.sellerComment}"
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <MessageSquare className="w-4 h-4 text-[#03230F]" />
-                                            <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate the Buyer</h4>
-                                        </div>
-                                        <div className="flex flex-col gap-3">
-                                            <StarRating rating={reviewRating} setRating={setReviewRating} interactive={true} />
-                                            <textarea
-                                                placeholder="How was the transaction? (e.g. Prompt pickup, polite...)"
-                                                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#03230F] outline-none transition-all bg-white"
-                                                rows={2}
-                                                value={reviewComment}
-                                                onChange={(e) => setReviewComment(e.target.value)}
-                                            />
-                                            <Button
-                                                onClick={handleSubmitReview}
-                                                disabled={isSubmittingReview || reviewRating === 0}
-                                                className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-xs font-bold px-6 py-2 rounded-lg uppercase tracking-widest"
-                                            >
-                                                {isSubmittingReview ? "Submitting..." : "Submit Review"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
+                            ) : <p className="text-xs text-gray-400 font-medium italic">No review yet.</p>}
+                        </div>
+                        <div className="md:border-l md:pl-8 border-gray-200">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">Rate the Buyer</h4>
+                            {sellerHasReviewed ? (
+                                <div className="space-y-3">
+                                    <StarRating rating={order.orderReview.sellerRating} />
+                                    <p className="text-sm italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm text-[#4A5568]">"{order.orderReview.sellerComment}"</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-3">
+                                    <StarRating rating={reviewRating} setRating={setReviewRating} interactive />
+                                    <textarea placeholder="How was the transaction?" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#03230F] outline-none transition-all" rows={2} value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} />
+                                    <Button onClick={handleSubmitReview} disabled={isSubmittingReview || reviewRating === 0} className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-[10px] h-9 px-6 font-bold rounded-lg uppercase tracking-widest transition-all">Submit Review</Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
-                {/* --- FOOTER ACTIONS --- */}
                 {!isCompleted && !isCancelled && (
                     <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end gap-6">
-                        <button
-                            onClick={() => {
+                        <button onClick={() => { setError(null); setIsCancelModalOpen(true); }} className="text-[12px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors">Cancel Order</button>
+                        <button onClick={(e) => {
+                            e.stopPropagation();
+                            if (isProcessing || isOfferOrder) {
                                 setError(null);
-                                setCancelReason("");
-                                setIsCancelModalOpen(true);
-                            }}
-                            className="text-[12px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors"
-                        >
-                            Cancel Order
-                        </button>
-                        
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (isProcessing || isOfferOrder) {
-                                    setError(null);
-                                    setIsOtpModalOpen(true);
-                                } else if (onStatusUpdate) {
-                                    onStatusUpdate();
-                                }
-                            }}
-                            className="text-[13px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700"
-                        >
+                                setIsOtpModalOpen(true);
+                            } else if (onStatusUpdate) {
+                                // Default flow (usually Pending -> Processing)
+                                onStatusUpdate();
+                            }
+                        }} className="text-[12px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700 transition-colors">
                             {isProcessing || isOfferOrder ? "Verify & Complete" : "Accept This Order"}
                         </button>
                     </div>
                 )}
             </Card>
 
-            {/* OTP Modal Dialog... */}
-            <Dialog open={isOtpModalOpen} onOpenChange={(open) => {
-                setIsOtpModalOpen(open);
-                if (!open) {
-                    setError(null);
-                    setOtpInput("");
-                }
-            }}>
-                <DialogContent className="sm:max-w-[425px] rounded-[30px] p-8">
-                    <DialogHeader className="flex flex-col items-center text-center space-y-4">
+            {/* OTP Modal */}
+            <Dialog open={isOtpModalOpen} onOpenChange={setIsOtpModalOpen}>
+                <DialogContent className="rounded-[30px] p-8 max-w-[425px]">
+                    <DialogHeader className="items-center flex flex-col space-y-4">
                         <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center">
                             <KeyRound className="w-8 h-8 text-[#166534]" />
                         </div>
-                        <DialogTitle className="text-2xl font-black text-[#03230F] uppercase tracking-tight">Verify Delivery</DialogTitle>
+                        <DialogTitle className="uppercase font-black text-2xl text-[#03230F] tracking-tight">Verify Delivery</DialogTitle>
                     </DialogHeader>
                     <div className="py-6 space-y-4">
-                        <Input
-                            type="text"
-                            placeholder="000000"
-                            maxLength={6}
-                            value={otpInput}
-                            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                            className="text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl"
-                        />
-                        {error && <div className="flex items-center justify-center gap-2 text-red-600 text-xs font-bold uppercase"><AlertCircle className="w-4 h-4" />{error}</div>}
+                        <Input type="text" maxLength={6} placeholder="000000" value={otpInput} onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))} className="text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl border-2 focus-visible:ring-[#03230F]" />
+                        {error && <div className="text-red-600 text-center text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
                     </div>
-
-                    <DialogFooter>
-                        <Button onClick={handleVerifyOtp} disabled={isVerifying || otpInput.length !== 6} className="w-full h-14 rounded-2xl bg-[#03230F] text-[#EEC044] font-black uppercase">
-                            {isVerifying ? "Verifying..." : "Confirm Delivery"}
-                        </Button>
-                    </DialogFooter>
+                    <DialogFooter><Button onClick={handleVerifyOtp} disabled={isVerifying || otpInput.length !== 6} className="w-full h-14 bg-[#03230F] hover:bg-black text-[#EEC044] font-black uppercase rounded-2xl tracking-widest transition-all">{isVerifying ? "Verifying..." : "Confirm Delivery"}</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* --- CANCELLATION MODAL --- */}
+            {/* Cancel Modal */}
             <Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
-                <DialogContent className="sm:max-w-[425px] rounded-[30px] p-8">
-                    <DialogHeader className="flex flex-col items-center text-center space-y-4">
+                <DialogContent className="rounded-[30px] p-8 max-w-[425px]">
+                    <DialogHeader className="items-center flex flex-col space-y-4">
                         <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
                             <XCircle className="w-8 h-8 text-red-600" />
                         </div>
-                        <DialogTitle className="text-2xl font-black text-[#03230F] uppercase">Cancel Order</DialogTitle>
-                        <p className="text-sm text-gray-500">Please state the reason for cancellation.</p>
+                        <DialogTitle className="uppercase font-black text-2xl text-[#03230F]">Cancel Order</DialogTitle>
+                        <p className="text-sm text-gray-500 font-medium">Please state the reason for cancellation.</p>
                     </DialogHeader>
-                    
-                    <div className="py-6">
-                        <textarea
-                            placeholder="e.g. Out of stock, pricing error..."
-                            className="w-full h-32 p-4 rounded-2xl border-2 border-gray-100 focus:border-red-500 outline-none text-sm resize-none"
-                            value={cancelReason}
-                            onChange={(e) => {
-                                setError(null);
-                                setOtpInput(e.target.value.replace(/\D/g, ""));
-                            }}
-                            className={`text-center text-3xl font-black tracking-[0.5em] h-16 rounded-2xl border-2 transition-all duration-300 ${error ? "border-red-500 bg-red-50 focus-visible:ring-red-500" : "border-gray-100 focus-visible:ring-[#03230F]"
-                                }`}
-                        />
-                        {error && (
-                            <div className="flex items-center justify-center gap-2 text-red-600">
-                                <AlertCircle className="w-4 h-4" />
-                                <span className="text-xs font-bold uppercase tracking-wider">{error}</span>
-                            </div>
-                        )}
+                    <div className="py-6 space-y-4">
+                        <textarea placeholder="e.g. Out of stock, pricing error..." className="w-full h-32 p-4 rounded-2xl border-2 border-gray-100 focus:border-red-500 outline-none text-sm resize-none transition-all" value={cancelReason} onChange={(e) => { setError(null); setCancelReason(e.target.value); }} />
+                        {error && <div className="text-red-500 text-xs font-bold uppercase text-center flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
                     </div>
-                    <DialogFooter className="sm:justify-center">
-                        <Button
-                            onClick={handleVerifyOtp}
-                            disabled={isVerifying || otpInput.length !== 6}
-                            className="w-full h-14 rounded-2xl bg-[#03230F] hover:bg-black text-[#EEC044] font-black uppercase tracking-widest"
-                        >
-                            {isCancelling ? "Processing..." : "Confirm Cancellation"}
-                        </Button>
-                    </DialogFooter>
+                    <DialogFooter><Button onClick={handleCancelOrder} disabled={isCancelling || !cancelReason.trim()} className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-black uppercase rounded-2xl tracking-widest transition-all">{isCancelling ? "Processing..." : "Confirm Cancellation"}</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
         </>

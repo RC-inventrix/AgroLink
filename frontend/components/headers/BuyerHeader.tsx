@@ -142,7 +142,7 @@ export default function DashboardHeader() {
             )}
 
             <div className="container px-4 h-20 flex items-center justify-between">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <Link href="/buyer/dashboard">
                         <Image src="/images/Group-6.png" alt="AgroLink Logo" width={150} height={50} className="object-contain cursor-pointer" priority />
                     </Link>
