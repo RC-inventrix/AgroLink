@@ -13,7 +13,7 @@ interface OrdersListProps {
 }
 
 export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: OrdersListProps) {
-    const [activeTab, setActiveTab] = useState<"pending" | "processing" | "completed">("pending")
+    const [activeTab, setActiveTab] = useState<"pending" | "processing" | "completed" | "cancelled">("pending")
     const [isUpdating, setIsUpdating] = useState(false)
     const [sellerId, setSellerId] = useState<string | null>(null)
 
@@ -24,8 +24,9 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
 
     const getTime = (dateStr: string) => new Date(dateStr).getTime();
 
+    // 1. Updated Counts to include Cancelled
     const counts = useMemo(() => {
-        if (!sellerId) return { pending: 0, processing: 0, completed: 0 };
+        if (!sellerId) return { pending: 0, processing: 0, completed: 0, cancelled: 0 };
 
         const myOrders = initialOrders.filter(
             (order) => order.sellerId?.toString() === sellerId?.toString()
@@ -37,9 +38,11 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             ).length,
             processing: myOrders.filter((o) => o.status?.toUpperCase() === "PROCESSING").length,
             completed: myOrders.filter((o) => o.status?.toUpperCase() === "COMPLETED").length,
+            cancelled: myOrders.filter((o) => o.status?.toUpperCase() === "CANCELLED").length,
         };
     }, [initialOrders, sellerId]);
 
+    // 2. Updated Filtered logic
     const filteredOrders = useMemo(() => {
         if (!sellerId) return [];
 
@@ -51,12 +54,9 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             if (activeTab === "pending") {
                 return ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(status)
             }
-            if (activeTab === "processing") {
-                return status === "PROCESSING"
-            }
-            if (activeTab === "completed") {
-                return status === "COMPLETED"
-            }
+            if (activeTab === "processing") return status === "PROCESSING"
+            if (activeTab === "completed") return status === "COMPLETED"
+            if (activeTab === "cancelled") return status === "CANCELLED"
             return false
         });
 
@@ -65,8 +65,8 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
     }, [initialOrders, sellerId, activeTab]);
 
     /**
-     * UPDATED: handleUpdateStatus now accepts a forcedStatus.
-     * Use "REFRESH" to just reload data without making a PUT request.
+     * FIX: Accepts forcedStatus as the priority. 
+     * If forcedStatus is "CANCELLED", it will actually send "CANCELLED" to your API.
      */
     const handleUpdateStatus = async (orderId: number, currentStatus: string, forcedStatus?: string) => {
         if (forcedStatus === "REFRESH") {
@@ -77,8 +77,13 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
         setIsUpdating(true)
         const token = sessionStorage.getItem("token");
 
-        let nextStatus = "PROCESSING"
-        if (currentStatus === "PROCESSING") nextStatus = "COMPLETED"
+        // Logic to determine what the next status is if one isn't forced
+        let nextStatus = forcedStatus; 
+        
+        if (!nextStatus) {
+            if (currentStatus === "PROCESSING") nextStatus = "COMPLETED"
+            else nextStatus = "PROCESSING" // Default flow: Pending -> Processing
+        }
 
         try {
             const response = await fetch(`http://localhost:8080/api/seller/orders/${orderId}/status?status=${nextStatus}`, {
@@ -106,13 +111,13 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
     return (
         <div className="space-y-6">
             <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto">
-                {(["pending", "processing", "completed"] as const).map((tab) => (
+                {(["pending", "processing", "completed", "cancelled"] as const).map((tab) => (
                     <Button
                         key={tab}
                         variant={activeTab === tab ? "default" : "outline"}
                         onClick={() => setActiveTab(tab)}
                         disabled={isUpdating}
-                        className="flex items-center gap-2 capitalize"
+                        className={`flex items-center gap-2 capitalize ${tab === 'cancelled' && activeTab === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''}`}
                     >
                         {tab}
                         <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === tab ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
@@ -128,10 +133,9 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
                         <OrderCard
                             key={order.id}
                             order={order}
-                            // Only pass the status update logic if the order is NOT completed
-                            onStatusUpdate={order.status?.toUpperCase() === "COMPLETED"
-                                ? onOrderUpdated  // Just refresh the data
-                                : () => handleUpdateStatus(order.id, order.status) // Change status
+                            // Pass forcedStatus correctly to the card
+                            onStatusUpdate={(forcedStatus?: string) => 
+                                handleUpdateStatus(order.id, order.status, forcedStatus)
                             }
                             onOfferAction={order.isOfferOrder ? onOfferAction : undefined}
                         />
