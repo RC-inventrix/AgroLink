@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight } from "lucide-react";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
-import './SellerDashboard.css';
+import "./SellerDashboard.css";
 import Footer from "@/components/footer/Footer";
 
 export default function SellerDashboard() {
