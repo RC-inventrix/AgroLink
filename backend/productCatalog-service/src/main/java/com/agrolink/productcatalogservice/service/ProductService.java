@@ -7,6 +7,7 @@ import com.agrolink.productcatalogservice.model.ProductImage;
 import com.agrolink.productcatalogservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class ProductService {
         return productRepository.findByFarmerId(farmerId);
     }
 
+    @Transactional
     public Product updateProduct(Long id, ProductRequestDTO request) {
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -45,24 +47,31 @@ public class ProductService {
         return productRepository.save(updatedProduct);
     }
 
-    // Helper to map DTO to Entity (Used for Create and Update)
     private Product mapDtoToProduct(ProductRequestDTO request, Product product) {
+        // Basic Fields
         if (request.getFarmerId() != null) product.setFarmerId(request.getFarmerId());
         if (request.getVegetableName() != null) product.setVegetableName(request.getVegetableName());
         if (request.getCategory() != null) product.setCategory(request.getCategory());
         if (request.getQuantity() > 0) product.setQuantity(request.getQuantity());
 
         if (request.getPricingType() != null) {
-            product.setPricingType(PriceType.valueOf(request.getPricingType().toUpperCase()));
+            try {
+                product.setPricingType(PriceType.valueOf(request.getPricingType().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Default or handle error
+                product.setPricingType(PriceType.FIXED);
+            }
         }
 
-        // Pricing fields (Nullable checks allow clearing if needed, but simple update here)
+        // Pricing
         if (request.getFixedPrice() != null) product.setFixedPrice(request.getFixedPrice());
         if (request.getBiddingPrice() != null) product.setBiddingPrice(request.getBiddingPrice());
-
         if (request.getDescription() != null) product.setDescription(request.getDescription());
 
+        // Delivery
         if (request.getDeliveryAvailable() != null) product.setDeliveryAvailable(request.getDeliveryAvailable());
+
+        // Corrected mapping: Use the correct Setter for First3Km
         if (request.getDeliveryFeeFirst3Km() != null) product.setDeliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km());
         if (request.getDeliveryFeePerKm() != null) product.setDeliveryFeePerKm(request.getDeliveryFeePerKm());
 
@@ -77,19 +86,25 @@ public class ProductService {
         if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
             product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
 
-        // Images - Only update if provided
+        // --- FIXED: Image Handling ---
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            // Clear existing if necessary or just replace
             List<ProductImage> productImages = new ArrayList<>();
             for (String url : request.getImageUrls()) {
                 ProductImage img = ProductImage.builder()
                         .imageUrl(url)
-                        .farmerId(product.getFarmerId()) // Ensure farmer ID matches
+                        .farmerId(product.getFarmerId())
                         .product(product)
                         .build();
                 productImages.add(img);
             }
-            product.setImages(productImages);
+
+            // FIX: Initialize list if null to prevent NullPointerException
+            if (product.getImages() == null) {
+                product.setImages(new ArrayList<>());
+            }
+
+            product.getImages().clear();
+            product.getImages().addAll(productImages);
         }
 
         return product;

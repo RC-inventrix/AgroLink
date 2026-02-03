@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import LocationPicker from "@/components/LocationPicker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// --- UTILITY: Image Compression (Same as Vegetable Form) ---
+// --- UTILITY: Image Compression ---
 const compressImage = async (file: File): Promise<File> => {
     if (file.size <= 1024 * 1024) return file;
     return new Promise((resolve, reject) => {
@@ -91,12 +91,10 @@ export default function ProductList() {
         if (!farmerId) return setLoading(false);
 
         try {
-            // A. Fetch Products
             const prodRes = await fetch(`http://localhost:8080/products/farmer/${farmerId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
 
-            // B. Fetch User Address
             const userRes = await fetch(`http://localhost:8080/api/usersProducts/${farmerId}/address`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
@@ -141,14 +139,13 @@ export default function ProductList() {
         setImagePreview(product.image)
         setUploadError(null)
 
-        // Determine if custom location is used
         const isCustom = product.pickupAddress !== userDefaultAddress;
         setUseCustomLocation(isCustom)
 
         setEditForm({
             ...product,
             pickupLocation: {
-                streetAddress: "", // Will be filled if they pick new
+                streetAddress: "",
                 city: "",
                 district: "",
                 latitude: product.pickupLatitude,
@@ -181,7 +178,6 @@ export default function ProductList() {
         try {
             let finalImageUrl = editForm.image;
 
-            // A. Upload Image if Changed
             if (newImage) {
                 const presignRes = await fetch(
                     `http://localhost:8080/products/presigned-url?fileName=${encodeURIComponent(newImage.name)}&contentType=${encodeURIComponent(newImage.type)}`,
@@ -192,26 +188,22 @@ export default function ProductList() {
                 finalImageUrl = getCleanS3Url(uploadUrl);
             }
 
-            // B. Resolve Address
             let finalAddr = userDefaultAddress;
             let finalLat = defaultCoords.lat;
             let finalLng = defaultCoords.lng;
 
             if (useCustomLocation) {
-                // If they picked a new location using picker
                 if (editForm.pickupLocation.streetAddress) {
                     finalAddr = `${editForm.pickupLocation.streetAddress}, ${editForm.pickupLocation.city}, ${editForm.pickupLocation.district}`;
                     finalLat = editForm.pickupLocation.latitude;
                     finalLng = editForm.pickupLocation.longitude;
                 } else {
-                    // Kept existing custom location
                     finalAddr = editForm.pickupAddress;
                     finalLat = editForm.pickupLatitude;
                     finalLng = editForm.pickupLongitude;
                 }
             }
 
-            // C. Build DTO
             const payload = {
                 farmerId: sessionStorage.getItem("id"),
                 vegetableName: editForm.name,
@@ -221,15 +213,12 @@ export default function ProductList() {
                 fixedPrice: editForm.pricingType === "FIXED" ? editForm.pricePerKg : null,
                 biddingPrice: editForm.pricingType === "BIDDING" ? editForm.biddingPrice : null,
                 description: editForm.description,
-
                 deliveryAvailable: editForm.deliveryAvailable,
                 deliveryFeeFirst3Km: editForm.deliveryAvailable ? editForm.baseCharge : null,
                 deliveryFeePerKm: editForm.deliveryAvailable ? editForm.extraRatePerKm : null,
-
                 pickupAddress: finalAddr,
                 pickupLatitude: finalLat,
                 pickupLongitude: finalLng,
-
                 imageUrls: [finalImageUrl]
             }
 
@@ -242,7 +231,7 @@ export default function ProductList() {
             if (res.ok) {
                 setEditingProduct(null);
                 setShowSaveConfirm(false);
-                fetchData(); // Refresh list
+                fetchData();
             } else {
                 alert("Failed to update product");
             }
@@ -250,7 +239,6 @@ export default function ProductList() {
         finally { setIsSaving(false); }
     }
 
-    // --- 4. Delete Logic ---
     const executeDelete = async () => {
         if (!showDeleteConfirm) return;
         const token = sessionStorage.getItem("token")
@@ -279,7 +267,8 @@ export default function ProductList() {
                     <p className="text-muted-foreground">No products found. Start by adding one!</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                // UPDATED: Changed from lg:grid-cols-4 to lg:grid-cols-3
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {products.map((product) => (
                         <ProductCard
                             key={product.id}
@@ -292,7 +281,7 @@ export default function ProductList() {
                 </div>
             )}
 
-            {/* --- DELETE CONFIRMATION --- */}
+            {/* --- DELETE MODAL --- */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full border border-border animate-in fade-in zoom-in-95">
@@ -306,7 +295,7 @@ export default function ProductList() {
                 </div>
             )}
 
-            {/* --- EDIT MODAL --- */}
+            {/* --- EDIT MODAL (Unchanged Logic, Same Layout) --- */}
             {editingProduct && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-card p-8 rounded-xl shadow-2xl max-w-2xl w-full border border-border max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
@@ -316,7 +305,6 @@ export default function ProductList() {
                         </div>
 
                         <div className="space-y-6">
-                            {/* Image Section */}
                             <div className="flex gap-6 items-start">
                                 <img src={imagePreview || ""} className="w-24 h-24 object-cover rounded-lg border" alt="Preview"/>
                                 <div className="flex-1">
@@ -327,10 +315,7 @@ export default function ProductList() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Name</Label>
-                                    <Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} />
-                                </div>
+                                <div><Label>Name</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
                                 <div>
                                     <Label>Category</Label>
                                     <Select value={editForm.category} onValueChange={v => setEditForm({...editForm, category: v})}>
@@ -345,12 +330,8 @@ export default function ProductList() {
                                 </div>
                             </div>
 
-                            <div>
-                                <Label>Description</Label>
-                                <Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} />
-                            </div>
+                            <div><Label>Description</Label><Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} /></div>
 
-                            {/* Price Section */}
                             <div className="bg-muted/30 p-4 rounded-lg">
                                 <Label className="mb-2 block">Pricing</Label>
                                 <RadioGroup value={editForm.pricingType} onValueChange={v => setEditForm({...editForm, pricingType: v})} className="flex gap-4 mb-3">
@@ -364,44 +345,25 @@ export default function ProductList() {
                                 )}
                             </div>
 
-                            {/* Location Section */}
                             <div className="bg-muted/30 p-4 rounded-lg">
                                 <Label className="mb-3 block font-semibold">Pickup Location</Label>
                                 <RadioGroup value={useCustomLocation ? "custom" : "default"} onValueChange={v => setUseCustomLocation(v === "custom")} className="grid gap-4">
                                     <div className="flex items-start gap-3 p-3 border rounded bg-background">
                                         <RadioGroupItem value="default" id="e-loc-def" className="mt-1"/>
-                                        <div>
-                                            <Label htmlFor="e-loc-def">Registered Address</Label>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                                <Home className="w-3 h-3"/> {userDefaultAddress || "Loading..."}
-                                            </div>
-                                        </div>
+                                        <div><Label htmlFor="e-loc-def">Registered Address</Label><div className="flex items-center gap-2 text-sm text-muted-foreground mt-1"><Home className="w-3 h-3"/> {userDefaultAddress || "Loading..."}</div></div>
                                     </div>
-
                                     <div className="border rounded bg-background overflow-hidden">
-                                        <div className="flex items-center gap-3 p-3 border-b">
-                                            <RadioGroupItem value="custom" id="e-loc-cus"/>
-                                            <Label htmlFor="e-loc-cus">Custom Location</Label>
-                                        </div>
+                                        <div className="flex items-center gap-3 p-3 border-b"><RadioGroupItem value="custom" id="e-loc-cus"/><Label htmlFor="e-loc-cus">Custom Location</Label></div>
                                         {useCustomLocation && (
                                             <div className="p-3 bg-muted/10">
-                                                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                                                    <MapPin className="w-3 h-3"/> Current: {editForm.pickupAddress || "Same as default"}
-                                                </p>
-                                                <LocationPicker
-                                                    value={editForm.pickupLocation}
-                                                    onChange={loc => setEditForm({...editForm, pickupLocation: loc})}
-                                                    variant="light"
-                                                    showStreetAddress
-                                                    label="Select New Location"
-                                                />
+                                                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><MapPin className="w-3 h-3"/> Current: {editForm.pickupAddress || "Same as default"}</p>
+                                                <LocationPicker value={editForm.pickupLocation} onChange={loc => setEditForm({...editForm, pickupLocation: loc})} variant="light" showStreetAddress label="Select New Location"/>
                                             </div>
                                         )}
                                     </div>
                                 </RadioGroup>
                             </div>
 
-                            {/* Delivery Section */}
                             <div className="flex items-center gap-2 mb-2">
                                 <input type="checkbox" id="e-del" checked={editForm.deliveryAvailable} onChange={e => setEditForm({...editForm, deliveryAvailable: e.target.checked})} className="w-4 h-4"/>
                                 <Label htmlFor="e-del">Delivery Available?</Label>
@@ -422,7 +384,7 @@ export default function ProductList() {
                 </div>
             )}
 
-            {/* --- SAVE CONFIRMATION --- */}
+            {/* --- SAVE MODAL --- */}
             {showSaveConfirm && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full border border-border animate-in fade-in zoom-in-95">
