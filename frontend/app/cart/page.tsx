@@ -137,7 +137,7 @@ export default function Cart() {
 
     return (
         <div className="min-h-screen bg-gray-50 relative">
-            <Header />
+            <BuyerHeader/>
 
             {notification && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
