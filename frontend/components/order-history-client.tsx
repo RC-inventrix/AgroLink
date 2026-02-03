@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User } from "lucide-react"
+import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, XCircle } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
@@ -31,23 +31,7 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
     );
 }
 
-interface OrderItem {
-    id: string
-    displayOrderId: string | number
-    name: string
-    quantity: number
-    pricePerKg: number
-    image: string
-    sellerName: string
-    orderDate: Date
-    status: "completed" | "pending" | "cancelled"
-    totalPrice: number
-    otp?: string
-    orderReview?: any 
-    sellerId?: string
-}
-
-// --- NEW COMPONENT: FETCHES REASON SEPARATELY ---
+// --- FETCHES CANCELLATION REASON ---
 function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
     const [reason, setReason] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -85,6 +69,22 @@ function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
             </p>
         </div>
     );
+}
+
+interface OrderItem {
+    id: string
+    displayOrderId: string | number
+    name: string
+    quantity: number
+    pricePerKg: number
+    image: string
+    sellerName: string
+    orderDate: Date
+    status: "completed" | "pending" | "cancelled"
+    totalPrice: number
+    otp?: string
+    orderReview?: any 
+    sellerId?: string
 }
 
 export function OrderHistoryClient() {
@@ -130,7 +130,7 @@ export function OrderHistoryClient() {
                             createdAt: order.createdAt,
                             amount: order.amount,
                             sellerId: sId,
-                            otp: order.otp, // PRESERVING OTP FROM BACKEND
+                            otp: order.otp, 
                             orderReview: order.orderReview 
                         })
                     })
@@ -145,52 +145,58 @@ export function OrderHistoryClient() {
                     if (nameRes.ok) sellerNameMap = await nameRes.json()
                 }
 
-                // Inside fetchOrders function...
+                const finalOrders: OrderItem[] = rawItemsList
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((entry, index) => ({
+                        id: `${entry.orderId}-${index}`,
+                        displayOrderId: entry.orderId,
+                        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
+                        quantity: entry.itemData.quantity || 1,
+                        pricePerKg: entry.itemData.pricePerKg || 0,
+                        image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
+                        sellerId: entry.sellerId, 
+                        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
+                        orderDate: new Date(entry.createdAt),
+                        status: entry.status,
+                        totalPrice: (entry.amount / 100),
+                        otp: entry.otp,
+                        orderReview: entry.orderReview
+                    }))
 
-const finalOrders: OrderItem[] = rawItemsList
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .map((entry, index) => ({
-        id: `${entry.orderId}-${index}`,
-        displayOrderId: entry.orderId,
-        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
-        quantity: entry.itemData.quantity || 1,
-        pricePerKg: entry.itemData.pricePerKg || 0,
-        image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
-        
-        // --- FIX: Add this line ---
-        sellerId: entry.sellerId, 
-        // --------------------------
-
-        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
-        orderDate: new Date(entry.createdAt),
-        status: entry.status,
-        totalPrice: (entry.amount / 100),
-        otp: entry.otp,
-        orderReview: entry.orderReview
-    }))
-
-setOrders(finalOrders)
+                setOrders(finalOrders)
             }
         } catch (error) { console.error("Order fetch failed", error) } 
         finally { setLoading(false) }
     }
 
     return (
-        <div>
+        <div className="min-h-screen bg-gray-50/30">
             <Toaster position="top-center" richColors />
             <BuyerHeader />
-            <div className="p-8 w-full">
+            <div className="max-w-6xl mx-auto p-8">
                 <h1 className="text-3xl font-bold tracking-tight mb-6 text-[#03230F]">Order History</h1>
                 <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="bg-secondary">
+                    <TabsList className="bg-white border shadow-sm">
                         <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
                         <TabsTrigger value="completed">Completed ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
                         <TabsTrigger value="pending">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+                        <TabsTrigger value="cancelled">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
                     </TabsList>
+                    
                     <div className="mt-6">
-                        <TabsContent value="all"><OrderList orders={orders} loading={loading} onRefresh={fetchOrders}/></TabsContent>
-                        <TabsContent value="completed"><OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders}/></TabsContent>
-                        <TabsContent value="pending"><OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders}/></TabsContent>
+                        <TabsContent value="all">
+                            <OrderList orders={orders} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        <TabsContent value="completed">
+                            <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        <TabsContent value="pending">
+                            <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        {/* THIS WAS MISSING: The content for the cancelled tab */}
+                        <TabsContent value="cancelled">
+                            <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
                     </div>
                 </Tabs>
             </div>
@@ -199,7 +205,14 @@ setOrders(finalOrders)
 }
 
 function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loading: boolean, onRefresh: () => void }) {
-    if (loading) return <div className="text-center py-10 animate-pulse text-gray-400">Loading AgroLink Orders...</div>
+    if (loading) return <div className="text-center py-20 text-gray-400 font-medium">Loading your AgroLink history...</div>
+    if (orders.length === 0) return (
+        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
+            <Package className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+            <p className="text-gray-400">No orders found.</p>
+        </div>
+    )
+    
     return (
         <div className="space-y-4">
             {orders.map((order) => (
@@ -214,7 +227,6 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
 
-    // CHECK DATABASE: If buyerRating exists in orderReview record from DB
     const hasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
     const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
 
@@ -240,26 +252,31 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
     };
 
     return (
-        <Card className="p-0 border-l-4 border-l-[#EEC044] overflow-hidden bg-white">
+        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md ${order.status === 'cancelled' ? 'border-l-red-500 opacity-90' : 'border-l-[#EEC044]'}`}>
             <div className="p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-secondary border flex-shrink-0">
+                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-50 border flex-shrink-0">
                         <img src={order.image} className="object-cover w-full h-full" alt={order.name} />
                     </div>
                     <div className="flex-1 w-full">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
-                                <h3 className="font-bold text-lg text-[#03230F]">{order.name}</h3>
-                                <p className="text-sm font-semibold text-[#2d5016]">Sold by <Link href={`/user/${order.sellerId}?role=SELLER`}>{order.sellerName}</Link></p>
+                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
+                                <h3 className="font-bold text-xl text-[#03230F]">{order.name}</h3>
+                                <p className="text-sm font-semibold text-[#2d5016]">
+                                    Sold by <Link href={`/user/${order.sellerId}?role=SELLER`} className="hover:underline">{order.sellerName}</Link>
+                                </p>
                             </div>
-                            <Badge variant={order.status === "completed" ? "default" : "secondary"}>{order.status}</Badge>
+                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold ${order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-100' : ''}`}>
+                                {order.status}
+                            </Badge>
                         </div>
+                        
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
-                            <div><p className="text-xs text-muted-foreground">Qty</p><p className="font-bold">{order.quantity} kg</p></div>
-                            <div><p className="text-xs text-muted-foreground">Rate</p><p className="font-bold">Rs. {order.pricePerKg}</p></div>
-                            <div><p className="text-xs text-muted-foreground">Date</p><p className="font-bold">{format(order.orderDate, "MMM d, yyyy")}</p></div>
-                            <div><p className="text-xs text-muted-foreground">Total</p><p className="font-bold text-[#2d5016]">Rs. {order.totalPrice.toFixed(2)}</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Qty</p><p className="font-bold text-gray-800">{order.quantity} kg</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Rate</p><p className="font-bold text-gray-800">Rs. {order.pricePerKg}</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Date</p><p className="font-bold text-gray-800">{format(order.orderDate, "MMM d, yyyy")}</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Total</p><p className="font-bold text-[#2d5016]">Rs. {order.totalPrice.toFixed(2)}</p></div>
                         </div>
 
                         {order.status === "pending" && order.otp && (
@@ -275,16 +292,17 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                 </div>
                             </div>
                         )}
+
+                        {order.status === "cancelled" && (
+                            <CancelledReasonBlock orderId={order.displayOrderId} />
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* --- TWO COLUMN REVIEW SECTION --- */}
             {order.status === "completed" && (
                 <div className="bg-[#F8FAFC] border-t border-gray-100 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
-                        {/* COLUMN 1: BUYER REVIEW (Form or Text) */}
                         <div className="space-y-4">
                             {hasReviewed ? (
                                 <div className="space-y-3">
@@ -324,33 +342,27 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             )}
                         </div>
 
-                        {/* COLUMN 2: SELLER REVIEW (Feedback about the Buyer) */}
                         <div className="space-y-4 border-l-0 md:border-l md:pl-8 border-gray-200">
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-[#03230F]" />
                                 <h4 className="text-sm font-black uppercase tracking-widest text-[#03230F]">Seller's Feedback for You</h4>
                             </div>
-                            
                             {sellerHasReviewed ? (
                                 <div className="space-y-3">
                                     <StarRating rating={order.orderReview.sellerRating} />
                                     <p className="text-sm text-[#4A5568] leading-relaxed bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
                                         "{order.orderReview.sellerComment}"
                                     </p>
-                                    <p className="text-[10px] text-gray-400 font-medium italic">
-                                        Submitted on {format(new Date(order.orderReview.sellerReviewedAt), "MMM d, yyyy")}
-                                    </p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white/50 rounded-xl border border-dashed border-gray-200">
                                     <Clock className="w-8 h-8 text-gray-300 mb-2" />
                                     <p className="text-xs text-gray-400 font-medium px-4">
-                                        The seller hasn't left a review for this transaction yet.
+                                        The seller hasn't left a review yet.
                                     </p>
                                 </div>
                             )}
                         </div>
-
                     </div>
                 </div>
             )}
