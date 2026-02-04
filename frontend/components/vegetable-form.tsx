@@ -80,7 +80,6 @@ export default function VegetableForm() {
     const [isLoading, setIsLoading] = useState(false)
     const [isCompressing, setIsCompressing] = useState(false)
 
-    // Updated: Store full location object (Address + Coords)
     const [defaultLocation, setDefaultLocation] = useState<{
         address: string;
         latitude: number | null;
@@ -115,10 +114,7 @@ export default function VegetableForm() {
                     });
                     if (res.ok) {
                         const userData = await res.json();
-                        // Construct address string
                         const parts = [userData.address, userData.city, userData.district].filter(Boolean);
-
-                        // Store address AND coordinates
                         setDefaultLocation({
                             address: parts.join(", "),
                             latitude: userData.latitude || null,
@@ -158,7 +154,6 @@ export default function VegetableForm() {
     const [images, setImages] = useState<File[]>([])
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
 
-    // --- Handlers ---
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData((prev) => ({ ...prev, [name]: value }))
@@ -180,9 +175,14 @@ export default function VegetableForm() {
         setFormData((prev) => ({ ...prev, useCustomPickupLocation: value === "custom" }))
     }
 
+    // --- FIX: Prevent Mouse Wheel from changing numbers ---
+    const preventScrollChange = (e: React.WheelEvent<HTMLInputElement>) => {
+        // Blurring the input removes focus, so scrolling moves the page instead of the number
+        (e.target as HTMLInputElement).blur();
+    }
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
-
         setUploadError(null);
         const files = Array.from(e.target.files);
         const validImages: File[] = [];
@@ -214,10 +214,8 @@ export default function VegetableForm() {
                     setUploadError(`Failed to process "${file.name}". Try another image.`);
                 }
             }
-
             setImages((prev) => [...prev, ...validImages]);
             setImagePreviews((prev) => [...prev, ...validPreviews]);
-
         } finally {
             setIsCompressing(false);
         }
@@ -260,7 +258,6 @@ export default function VegetableForm() {
         const signal = abortControllerRef.current.signal;
 
         try {
-            // STEP 1: UPLOAD IMAGES TO S3
             const uploadPromises = images.map(async (file) => {
                 const presignRes = await fetch(
                     `http://localhost:8080/products/presigned-url?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`,
@@ -283,26 +280,22 @@ export default function VegetableForm() {
 
             const uploadedUrls = await Promise.all(uploadPromises);
 
-            // --- STEP 2: DETERMINE THE CORRECT ADDRESS & COORDINATES ---
             let finalAddress = null;
             let finalLat = null;
             let finalLng = null;
 
             if (formData.useCustomPickupLocation) {
-                // OPTION A: Custom Location Picker
                 if(formData.pickupLocation.streetAddress) {
                     finalAddress = `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`;
                 }
                 finalLat = formData.pickupLocation.latitude;
                 finalLng = formData.pickupLocation.longitude;
             } else if (defaultLocation) {
-                // OPTION B: Default User Location (Now includes coordinates)
                 finalAddress = defaultLocation.address;
                 finalLat = defaultLocation.latitude;
                 finalLng = defaultLocation.longitude;
             }
 
-            // STEP 3: SUBMIT PRODUCT DATA
             const payload = {
                 farmerId: myId,
                 vegetableName: formData.vegetableName,
@@ -310,21 +303,16 @@ export default function VegetableForm() {
                 quantity: parseFloat(formData.quantity),
                 pricingType: formData.pricingType.toUpperCase(),
                 description: formData.description,
-
                 fixedPrice: formData.fixedPrice ? parseFloat(formData.fixedPrice) : null,
                 biddingPrice: formData.biddingPrice ? parseFloat(formData.biddingPrice) : null,
                 biddingStartDate: formData.biddingStartDate || null,
                 biddingEndDate: formData.biddingEndDate || null,
-
                 deliveryAvailable: formData.willDeliver === "yes",
                 deliveryFeeFirst3Km: formData.baseCharge ? parseFloat(formData.baseCharge) : null,
                 deliveryFeePerKm: formData.extraRatePerKm ? parseFloat(formData.extraRatePerKm) : null,
-
-                // --- FIXED ADDRESS LOGIC ---
                 pickupAddress: finalAddress,
-                pickupLatitude: finalLat,   // Sending correct coords
-                pickupLongitude: finalLng,  // Sending correct coords
-
+                pickupLatitude: finalLat,
+                pickupLongitude: finalLng,
                 imageUrls: uploadedUrls
             };
 
@@ -360,7 +348,6 @@ export default function VegetableForm() {
 
     return (
         <main className="min-h-screen bg-background relative overflow-x-hidden">
-            {/* Loading & Notification Components */}
             {isLoading && (
                 <div className="fixed inset-0 z-[150] bg-background/80 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
                     <div className="bg-card border border-border p-8 rounded-xl shadow-2xl max-w-sm w-full text-center space-y-6">
@@ -417,7 +404,17 @@ export default function VegetableForm() {
 
                     <div className="mb-8">
                         <Label htmlFor="quantity" className="text-base font-semibold mb-2 block">Quantity (kg)</Label>
-                        <Input required id="quantity" name="quantity" type="number" placeholder="e.g. 50" value={formData.quantity} onChange={handleInputChange} className="w-full" />
+                        <Input
+                            required
+                            id="quantity"
+                            name="quantity"
+                            type="number"
+                            placeholder="e.g. 50"
+                            value={formData.quantity}
+                            onChange={handleInputChange}
+                            onWheel={preventScrollChange} // <--- Added Fix
+                            className="w-full"
+                        />
                     </div>
 
                     {/* Pricing Type */}
@@ -439,13 +436,31 @@ export default function VegetableForm() {
                     {formData.pricingType === "fixed" ? (
                         <div className="mb-8 animate-in fade-in duration-300">
                             <Label htmlFor="fixedPrice" className="text-base font-semibold mb-2 block">Fixed Price (LKR)</Label>
-                            <Input required id="fixedPrice" name="fixedPrice" type="number" placeholder="Enter price per kg" value={formData.fixedPrice} onChange={handleInputChange} className="w-full" />
+                            <Input
+                                required
+                                id="fixedPrice"
+                                name="fixedPrice"
+                                type="number"
+                                placeholder="Enter price per kg"
+                                value={formData.fixedPrice}
+                                onChange={handleInputChange}
+                                onWheel={preventScrollChange} // <--- Added Fix
+                                className="w-full"
+                            />
                         </div>
                     ) : (
                         <div className="mb-8 space-y-4 bg-muted/30 p-4 rounded-lg animate-in slide-in-from-left-2 duration-300">
                             <div>
                                 <Label htmlFor="biddingPrice" className="text-base font-semibold mb-2 block">Starting Bid (LKR)</Label>
-                                <Input required id="biddingPrice" name="biddingPrice" type="number" value={formData.biddingPrice} onChange={handleInputChange} />
+                                <Input
+                                    required
+                                    id="biddingPrice"
+                                    name="biddingPrice"
+                                    type="number"
+                                    value={formData.biddingPrice}
+                                    onChange={handleInputChange}
+                                    onWheel={preventScrollChange} // <--- Added Fix
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -514,11 +529,29 @@ export default function VegetableForm() {
                             <h3 className="text-base font-semibold mb-6 text-foreground">Delivery Charges</h3>
                             <div className="mb-6">
                                 <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 5 km (LKR)</Label>
-                                <Input required id="baseCharge" name="baseCharge" type="number" value={formData.baseCharge} onChange={handleInputChange} placeholder="e.g. 200" />
+                                <Input
+                                    required
+                                    id="baseCharge"
+                                    name="baseCharge"
+                                    type="number"
+                                    value={formData.baseCharge}
+                                    onChange={handleInputChange}
+                                    onWheel={preventScrollChange} // <--- Added Fix
+                                    placeholder="e.g. 200"
+                                />
                             </div>
                             <div>
                                 <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km - After 5 km (LKR)</Label>
-                                <Input required id="extraRatePerKm" name="extraRatePerKm" type="number" value={formData.extraRatePerKm} onChange={handleInputChange} placeholder="e.g. 50" />
+                                <Input
+                                    required
+                                    id="extraRatePerKm"
+                                    name="extraRatePerKm"
+                                    type="number"
+                                    value={formData.extraRatePerKm}
+                                    onChange={handleInputChange}
+                                    onWheel={preventScrollChange} // <--- Added Fix
+                                    placeholder="e.g. 50"
+                                />
                             </div>
                         </div>
                     )}

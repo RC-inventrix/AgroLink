@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import VegetablePurchaseForm from "@/components/vegetable-purchase-form"
 import { Loader2 } from "lucide-react"
 
-// Define the interface again so TypeScript knows what to expect
 interface Vegetable {
     id: string
     name: string
@@ -15,7 +14,13 @@ interface Vegetable {
     seller: string
     description: string
     rating: number
-    sellerId: number
+    sellerId: string // Changed to string to match backend consistency
+    deliveryAvailable: boolean
+    baseCharge?: number
+    extraRatePerKm?: number
+    pickupLatitude?: number
+    pickupLongitude?: number
+    pickupAddress?: string // Farmer's address
 }
 
 export default function Page() {
@@ -24,18 +29,13 @@ export default function Page() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // 1. Try to get the data from Session Storage
         const storedData = sessionStorage.getItem("selectedVegetable")
-
         if (storedData) {
-            // 2. If found, parse it back into an object and save to state
             setSelectedVegetable(JSON.parse(storedData))
         } else {
-            // 3. If NOT found (user typed URL directly), redirect back to list
             console.error("No vegetable selected")
             router.push("/VegetableList")
         }
-
         setLoading(false)
     }, [router])
 
@@ -48,12 +48,11 @@ export default function Page() {
     }
 
     if (!selectedVegetable) {
-        return null // Should have redirected already
+        return null
     }
 
     return (
-        <main className="min-h-screen bg-white flex items-center justify-center p-4">
-            {/* Pass the dynamic data instead of the sample */}
+        <main className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
             <VegetablePurchaseForm vegetable={selectedVegetable} />
         </main>
     )

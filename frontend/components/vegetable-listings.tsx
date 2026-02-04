@@ -6,8 +6,7 @@ import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-// 1. Define the Interface
-// This must match the props expected by VegetableCard
+// 1. Updated Interface to include all required fields
 interface Vegetable {
     id: string
     name: string
@@ -15,11 +14,20 @@ interface Vegetable {
     price100g: number
     price1kg: number
     seller: string
-    sellerId: string  // Ensure this is string
+    sellerId: string
     description: string
     category: string
     rating: number
     pricingType: string
+    // New fields
+    quantity: number
+    deliveryAvailable: boolean
+    baseCharge?: number
+    extraRatePerKm?: number
+    // --- ADDED LOCATION FIELDS ---
+    pickupAddress?: string
+    pickupLatitude?: number
+    pickupLongitude?: number
 }
 
 export default function VegetableListings() {
@@ -27,7 +35,6 @@ export default function VegetableListings() {
     const [selectedCategory, setSelectedCategory] = useState("All")
     const [priceRange, setPriceRange] = useState([0, 5000])
 
-    // 2. New State for Real Data
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
@@ -45,25 +52,43 @@ export default function VegetableListings() {
                 const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
 
                 // 3. Fetch Full Names
-                const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
-                    method: "GET",
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-                const fullNameMap = nameRes.ok ? await nameRes.json() : {};
+                let fullNameMap: Record<string, string> = {};
+                if (uniqueFarmerIds.length > 0) {
+                    try {
+                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
+                            method: "GET",
+                            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+                        });
+                        fullNameMap = nameRes.ok ? await nameRes.json() : {};
+                    } catch (e) {
+                        console.warn("Could not fetch farmer names", e);
+                    }
+                }
 
                 // 4. Map Backend Data
                 const mappedData = data.map((item: any) => ({
                     id: item.id?.toString() || "unique-id",
                     name: item.vegetableName,
-                    image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
+                    image: item.images && item.images.length > 0 ? item.images[0].imageUrl : "/placeholder.svg",
                     price1kg: item.fixedPrice || item.biddingPrice || 0,
                     price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
                     pricingType: item.pricingType,
                     description: item.description,
                     category: item.category,
-                    sellerId: item.farmerId?.toString() || "", // This converts it to string
-                    seller: fullNameMap[item.farmerId] || "Unknown Farmer",
-                    rating: 4.5
+                    sellerId: item.farmerId?.toString() || "",
+                    seller: fullNameMap[item.farmerId] || `Farmer #${item.farmerId}`,
+                    rating: 4.5,
+
+                    // Mapping required fields
+                    quantity: item.quantity || 0,
+                    deliveryAvailable: item.deliveryAvailable || false,
+                    baseCharge: item.deliveryFeeFirst3Km,
+                    extraRatePerKm: item.deliveryFeePerKm,
+
+                    // --- FIX: Map the Location Fields explicitly ---
+                    pickupAddress: item.pickupAddress,
+                    pickupLatitude: item.pickupLatitude,
+                    pickupLongitude: item.pickupLongitude
                 }));
 
                 setVegetables(mappedData);
