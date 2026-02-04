@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-// Matches the data coming from VegetableListings
+// Updated Interface to include location fields
 interface Vegetable {
     id: string
     name: string
@@ -20,11 +20,14 @@ interface Vegetable {
     rating: number
     category?: string
     pricingType?: string
-    // New fields
     quantity: number
     deliveryAvailable: boolean
     baseCharge?: number
     extraRatePerKm?: number
+    // --- ADDED LOCATION FIELDS ---
+    pickupAddress?: string
+    pickupLatitude?: number
+    pickupLongitude?: number
 }
 
 export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
@@ -33,6 +36,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     const handleRedirect = () => {
+        // The vegetable object now contains the address due to the fix in vegetable-listings.tsx
         sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
         router.push("/VegetableList/quantity")
     }
@@ -73,7 +77,6 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
             </div>
 
             <CardContent className="p-5 flex-1 flex flex-col">
-                {/* Header: Name, Rating, Contact */}
                 <div className="mb-2 flex justify-between items-start">
                     <div>
                         <CardTitle className="text-xl mb-1">{vegetable.name}</CardTitle>
@@ -93,7 +96,6 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     </div>
                 </div>
 
-                {/* Seller */}
                 <div className="mb-3">
                     <p className="text-sm text-muted-foreground">
                         <span className="font-semibold text-foreground">Farmer: </span>
@@ -103,10 +105,8 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     </p>
                 </div>
 
-                {/* Description */}
                 <CardDescription className="mb-4 line-clamp-2 text-xs">{vegetable.description}</CardDescription>
 
-                {/* Info Block: Delivery & Quantity */}
                 <div className="mb-4 space-y-2 text-sm bg-muted/40 p-2 rounded-lg border border-border/50">
                     <div className="flex items-start gap-2">
                         {vegetable.deliveryAvailable ? (
@@ -135,7 +135,6 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     </div>
                 </div>
 
-                {/* Prices */}
                 <div className="bg-muted p-3 rounded-lg mb-4 mt-auto">
                     <div className="grid grid-cols-2 gap-3 text-center">
                         <div>
@@ -149,7 +148,6 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                     </div>
                 </div>
 
-                {/* Actions */}
                 <div className="space-y-2">
                     <Button
                         onClick={handleRedirect}
