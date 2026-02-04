@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Trash2, MapPin, Home } from "lucide-react"
+import { Pencil, Trash2, MapPin, Home, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface Product {
@@ -10,7 +10,7 @@ interface Product {
     description: string
     image: string
     pricePerKg: number
-    quantity: number // <--- ADDED THIS LINE TO FIX THE ERROR
+    quantity: number
     // Bidding
     biddingPrice?: number
     pricingType: "FIXED" | "BIDDING"
@@ -38,7 +38,6 @@ export default function ProductCard({
                                         onDelete,
                                     }: ProductCardProps) {
 
-    // Logic to determine icon: If product address matches user default address, show Home icon
     const isDefaultAddress = userDefaultAddress && product.pickupAddress
         ? product.pickupAddress.trim().toLowerCase() === userDefaultAddress.trim().toLowerCase()
         : false;
@@ -46,7 +45,7 @@ export default function ProductCard({
     return (
         <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
             {/* Product Image */}
-            <div className="relative h-48 bg-muted overflow-hidden">
+            <div className="relative h-56 bg-muted overflow-hidden">
                 <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
@@ -68,42 +67,56 @@ export default function ProductCard({
                         <Trash2 size={16} />
                     </button>
                 </div>
-
-                {/* Category Badge */}
-                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                    {product.category}
-                </div>
             </div>
 
-            {/* Product Details */}
-            <div className="p-5 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-foreground line-clamp-1">{product.name}</h3>
-                    <div className="text-right">
-                        <div className="font-bold text-accent whitespace-nowrap">
-                            {product.pricingType === "FIXED"
-                                ? `LKR ${product.pricePerKg}`
-                                : `Bid: LKR ${product.biddingPrice}`}
-                            <span className="text-xs text-muted-foreground font-normal ml-1">/kg</span>
-                        </div>
-                        {/* Display Quantity */}
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                            Qty: {product.quantity}kg
-                        </div>
+            {/* Product Details - LINE BY LINE LAYOUT */}
+            <div className="p-5 flex-1 flex flex-col space-y-3">
+
+                {/* 1. Name */}
+                <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-xl text-foreground line-clamp-1">{product.name}</h3>
+                    {/* Category Badge */}
+                    <span className="text-[10px] uppercase font-semibold tracking-wider bg-primary/10 text-primary px-2 py-1 rounded-full">
+                {product.category}
+            </span>
+                </div>
+
+                {/* 2. Description */}
+                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5em]">
+                    {product.description || "No description provided."}
+                </p>
+
+                {/* 3. Price & Quantity Block */}
+                <div className="bg-muted/20 p-3 rounded-md border border-border/50">
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-muted-foreground">Price</span>
+                        <span className="font-bold text-lg text-primary">
+                    {product.pricingType === "FIXED"
+                        ? `LKR ${product.pricePerKg}`
+                        : `Bid: LKR ${product.biddingPrice}`}
+                            <span className="text-xs font-normal text-muted-foreground">/kg</span>
+                </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground flex items-center gap-1">
+                    <Package className="w-3 h-3"/> Available Stock
+                </span>
+                        <span className="font-semibold text-foreground">{product.quantity} kg</span>
                     </div>
                 </div>
 
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">{product.description}</p>
+                {/* Spacer to push delivery/address to bottom if content is short */}
+                <div className="flex-1"></div>
 
-                <div className="space-y-3 mt-auto">
-                    {/* Delivery Info */}
-                    <div className="text-xs flex items-start gap-2 text-muted-foreground bg-muted/30 p-2 rounded">
-                        <span className="text-base">🚚</span>
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                    {/* 4. Delivery Info */}
+                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground">
+                        <span className="text-base leading-none mt-0.5">🚚</span>
                         <div>
                             {product.deliveryAvailable ? (
                                 <>
-                                    <span className="font-medium text-foreground">Delivery Available</span>
-                                    <div className="opacity-80 mt-0.5">Base: LKR {product.baseCharge} (+{product.extraRatePerKm}/km)</div>
+                                    <span className="font-medium text-foreground block">Delivery Available</span>
+                                    <span className="opacity-80">Base: LKR {product.baseCharge} (+{product.extraRatePerKm}/km)</span>
                                 </>
                             ) : (
                                 <span className="font-medium text-foreground">Pickup Only</span>
@@ -111,18 +124,20 @@ export default function ProductCard({
                         </div>
                     </div>
 
-                    {/* Address Info */}
-                    <div className="text-xs flex items-start gap-2 text-muted-foreground bg-muted/30 p-2 rounded">
+                    {/* 5. Address Info */}
+                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground">
                         {isDefaultAddress ? (
-                            <Home className="w-4 h-4 text-primary shrink-0" />
+                            <Home className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         ) : (
-                            <MapPin className="w-4 h-4 text-orange-500 shrink-0" />
+                            <MapPin className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                         )}
-                        <div>
-                   <span className="font-medium text-foreground">
+                        <div className="overflow-hidden">
+                   <span className="font-medium text-foreground block">
                       {isDefaultAddress ? "Home Location" : "Custom Location"}
                    </span>
-                            <div className="opacity-80 mt-0.5 line-clamp-1">{product.pickupAddress || "No address set"}</div>
+                            <span className="opacity-80 truncate block w-full" title={product.pickupAddress}>
+                       {product.pickupAddress || "No address set"}
+                   </span>
                         </div>
                     </div>
                 </div>

@@ -18,6 +18,8 @@ public class CartItem {
     private Long id;
 
     private Long userId;
+    private String buyerName; // Added buyer name
+
     private Long productId;
 
     // Snapshot of product details
@@ -27,4 +29,12 @@ public class CartItem {
     private String imageUrl;
     private String sellerName;
     private Long sellerId;
+
+    // --- NEW FIELDS FOR DELIVERY & PRICING ---
+    private String farmerAddress;
+    private String buyerAddress;
+
+    private Double deliveryFee;   // Calculated delivery charge
+    private Double productPrice;  // Quantity * PricePerKg
+    private Double totalPrice;    // ProductPrice + DeliveryFee
 }
