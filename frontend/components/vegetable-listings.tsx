@@ -24,6 +24,10 @@ interface Vegetable {
     deliveryAvailable: boolean
     baseCharge?: number
     extraRatePerKm?: number
+    // --- ADDED LOCATION FIELDS ---
+    pickupAddress?: string
+    pickupLatitude?: number
+    pickupLongitude?: number
 }
 
 export default function VegetableListings() {
@@ -47,8 +51,7 @@ export default function VegetableListings() {
                 // 2. Extract unique farmerIds
                 const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
 
-                // 3. Fetch Full Names (Assuming this endpoint exists based on previous context)
-                // If this endpoint is missing in your setup, you might need to adjust or remove this part.
+                // 3. Fetch Full Names
                 let fullNameMap: Record<string, string> = {};
                 if (uniqueFarmerIds.length > 0) {
                     try {
@@ -74,13 +77,18 @@ export default function VegetableListings() {
                     category: item.category,
                     sellerId: item.farmerId?.toString() || "",
                     seller: fullNameMap[item.farmerId] || `Farmer #${item.farmerId}`,
-                    rating: 4.5, // Mock rating as it is not in the product table
+                    rating: 4.5,
 
-                    // Mapping new required fields
+                    // Mapping required fields
                     quantity: item.quantity || 0,
                     deliveryAvailable: item.deliveryAvailable || false,
                     baseCharge: item.deliveryFeeFirst3Km,
-                    extraRatePerKm: item.deliveryFeePerKm
+                    extraRatePerKm: item.deliveryFeePerKm,
+
+                    // --- FIX: Map the Location Fields explicitly ---
+                    pickupAddress: item.pickupAddress,
+                    pickupLatitude: item.pickupLatitude,
+                    pickupLongitude: item.pickupLongitude
                 }));
 
                 setVegetables(mappedData);
