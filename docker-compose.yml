@@ -200,7 +200,32 @@ services:
     networks:
       - agro-net
 
-
+  # 10. Auction Service
+  auction-service:
+    build: ./backend/auction-service
+    container_name: agro_auctions
+    ports:
+      - "8084:8084"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      ORDER_SERVICE_HOST: order-payment-service
+      ORDER_SERVICE_PORT: 8075
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+      order-payment-service:
+        condition: service_started
+    networks:
+      - agro-net
 
 # --- VOLUMES & NETWORKS ---
 volumes:
