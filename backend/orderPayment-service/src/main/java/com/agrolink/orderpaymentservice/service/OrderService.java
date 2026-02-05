@@ -60,17 +60,17 @@ public class OrderService {
                 }}
             });
         } catch (JsonProcessingException e) {
-            log.error("Failed to serialize auction order items", e);
+            log.error("Failed to serialize auction order items for auction ID: {}", request.getAuctionId(), e);
             itemsJson = "[]";
         }
 
-        // Generate a unique stripe ID placeholder for auction orders
-        String auctionStripeId = "AUCTION-" + request.getAuctionId() + "-" + UUID.randomUUID().toString().substring(0, 8);
+        // Generate a unique order identifier for auction orders (not a Stripe ID, but used for reference)
+        String auctionOrderId = "AUCTION-" + request.getAuctionId() + "-" + UUID.randomUUID().toString().substring(0, 8);
 
         // Create the order
         Order order = Order.builder()
                 .userId(request.getWinnerId())
-                .stripeId(auctionStripeId)
+                .stripeId(auctionOrderId) // Using stripeId field for auction order reference
                 .amount(request.getTotalAmount().longValue() * 100) // Convert to cents
                 .currency("LKR")
                 .customerEmail(request.getWinnerEmail())
