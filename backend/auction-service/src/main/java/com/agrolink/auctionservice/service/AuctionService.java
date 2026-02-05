@@ -325,7 +325,8 @@ public class AuctionService {
             orderIntegrationService.createAuctionOrder(auction, winningBid);
         } catch (Exception e) {
             log.error("Failed to create order for auction {}: {}", auction.getId(), e.getMessage());
-            // Note: In production, you might want to implement retry logic or a dead letter queue
+            // TODO: Implement retry logic with exponential backoff or use a message queue (e.g., Kafka/RabbitMQ)
+            // for reliable order creation. Consider storing failed orders in a dead letter table for manual retry.
         }
     }
 

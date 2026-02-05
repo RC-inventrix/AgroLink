@@ -47,6 +47,11 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
     /**
      * Delete the lowest bids for an auction, keeping only the top N.
      * This helps implement the retention policy of keeping only top 5 bids.
+     * 
+     * Note: This is an alternative, single-query approach to bid pruning.
+     * Currently, the service uses findBidsToDelete + manual deletion for better
+     * portability across different database vendors. This method is retained
+     * as an optimized alternative for PostgreSQL-specific deployments.
      */
     @Modifying
     @Query(value = "DELETE FROM bids WHERE auction_id = :auctionId AND id NOT IN " +
