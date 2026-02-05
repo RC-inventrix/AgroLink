@@ -15,6 +15,7 @@
         <option value="$PROJECT_DIR$/backend/orderPayment-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/agro-chat/pom.xml" />
         <option value="$PROJECT_DIR$/backend/chat-service/pom.xml" />
+        <option value="$PROJECT_DIR$/auction-servie/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
