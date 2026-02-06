@@ -29,6 +29,21 @@ public class AuctionService {
 
     private static final int MAX_BIDS_PER_AUCTION = 5;
 
+    @Transactional
+    public void activateScheduledAuctions() {
+        List<Auction> readyAuctions = auctionRepository.findByStatusAndStartTimeBefore(
+                AuctionStatus.DRAFT, LocalDateTime.now());
+
+        for (Auction auction : readyAuctions) {
+            auction.setStatus(AuctionStatus.ACTIVE);
+            auctionRepository.save(auction);
+            log.info("Activated scheduled auction: ID {}, Product: {}", auction.getId(), auction.getProductName());
+        }
+
+        if (!readyAuctions.isEmpty()) {
+            log.info("Activated {} scheduled auctions.", readyAuctions.size());
+        }
+    }
     /**
      * Create a new auction.
      */
