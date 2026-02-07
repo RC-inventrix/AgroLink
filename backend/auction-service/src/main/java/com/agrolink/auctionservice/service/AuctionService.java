@@ -441,6 +441,8 @@ public class AuctionService {
                 .currentHighestBidAmount(auction.getCurrentHighestBidAmount())
                 .bidCount(bidCount)
                 .isDeliveryAvailable(auction.getIsDeliveryAvailable())
+                .reservePrice(auction.getReservePrice())
+                .pickupAddress(auction.getPickupAddress())
                 .build();
     }
 

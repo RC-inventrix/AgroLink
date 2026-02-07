@@ -37,4 +37,6 @@ public class AuctionListItem {
     private int bidCount;
 
     private Boolean isDeliveryAvailable;
+    private BigDecimal reservePrice;
+    private String pickupAddress;
 }
