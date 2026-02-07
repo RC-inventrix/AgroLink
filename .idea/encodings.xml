@@ -6,9 +6,11 @@
     <file url="file://$PROJECT_DIR$/backend/chat-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/config-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/identityAndUser-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/moderation-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/orderPayment-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/product-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/productCatalog-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/service-discovery/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/moderation-service/src/main/java" charset="UTF-8" />
   </component>
 </project>
