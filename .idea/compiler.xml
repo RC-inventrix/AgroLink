@@ -3,24 +3,20 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Annotation profile for agro-chat" enabled="true">
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+      </profile>
+      <profile name="Annotation profile for moderation-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
+        <module name="moderation-service" />
         <module name="agro-chat" />
-      </profile>
-      <profile name="Annotation profile for identityAndUser-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="identityAndUser-service" />
       </profile>
       <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -33,6 +29,7 @@
         <module name="orderPayment-service" />
         <module name="config-server" />
         <module name="productCatalog-service" />
+        <module name="identityAndUser-service" />
         <module name="service-discovery" />
       </profile>
     </annotationProcessing>
@@ -50,6 +47,7 @@
       <module name="auth-service" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="identityAndUser-service" options="-parameters" />
+      <module name="moderation-service" options="-parameters" />
       <module name="orderPayment-service" options="-parameters" />
       <module name="product-service" options="-parameters" />
       <module name="productCatalog-service" options="-parameters" />

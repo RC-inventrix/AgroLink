@@ -27,6 +27,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
     }
 
+
+
     // 2. Handle Locked/Disabled Accounts
     @ExceptionHandler(AccountStatusException.class)
     public ResponseEntity<ProblemDetail> handleAccountStatus(AccountStatusException ex) {
