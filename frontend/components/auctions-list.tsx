@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
-import { AuctionCard } from "./auction-card"
+import { AuctionCard } from "@/components/auction-card"
 import { AuctionDetailsModal } from "./auction-details-modal"
 import { CalendarClock } from "lucide-react" // Import new icon
 

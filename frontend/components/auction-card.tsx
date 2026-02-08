@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, Truck, MapPin, Clock } from "lucide-react"
-import { toast } from "sonner"
+import { Truck, MapPin, Clock } from "lucide-react"
 
 interface AuctionCardProps {
     auction: any
@@ -15,7 +14,6 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
     const [timeLeft, setTimeLeft] = useState("")
 
     useEffect(() => {
-        // If no end time, don't run countdown
         if (!auction.endTime) return;
 
         const updateCountdown = () => {
@@ -43,98 +41,75 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
 
         updateCountdown()
         const interval = setInterval(updateCountdown, 60000)
-
         return () => clearInterval(interval)
     }, [auction.endTime])
 
-    const statusColors = {
-        ACTIVE: "bg-blue-100 text-blue-700 border-blue-200",
-        COMPLETED: "bg-green-100 text-green-700 border-green-200",
-        CANCELLED: "bg-red-100 text-red-700 border-red-200",
-        EXPIRED: "bg-orange-100 text-orange-700 border-orange-200",
-        DRAFT: "bg-gray-100 text-gray-700 border-gray-200", // Added Draft style
-    }
+    // Status Logic
+    const status = auction.status?.toUpperCase()
+    const isActive = status === "ACTIVE"
+    const isDraft = status === "DRAFT"
+    const isCompleted = status === "COMPLETED"
+    const isCancelled = status === "CANCELLED" || status === "EXPIRED"
 
-    // Safe checks for active/draft status
-    const isActive = auction?.status?.toUpperCase() === "ACTIVE"
-    const isDraft = auction?.status?.toUpperCase() === "DRAFT"
-
-    // --- FIX: Logic to handle sold banners safely ---
-    const isSold = auction?.status?.toUpperCase() === "COMPLETED"
+    // Sold Logic
     const soldPrice = auction.currentHighestBidAmount ?? 0
     const reserve = auction.reservePrice ?? 0
-    const soldAtReserve = isSold && soldPrice >= reserve
+    const soldAtReserve = isCompleted && soldPrice >= reserve
+
+    const getBadgeStyle = () => {
+        if (isCompleted) return "bg-green-100 text-green-700 border-green-300"
+        if (isCancelled) return "bg-red-100 text-red-700 border-red-300"
+        if (isDraft) return "bg-gray-100 text-gray-700 border-gray-300"
+        return "bg-blue-100 text-blue-700 border-blue-300"
+    }
+
+    const getStatusLabel = () => {
+        if (isCompleted) return soldAtReserve ? "Sold (Met Reserve)" : "Sold (Below Reserve)"
+        return status?.toLowerCase()
+    }
 
     return (
         <Card
             onClick={() => onOpen(auction)}
-            className="group relative overflow-hidden transition-all hover:shadow-lg border-border/60 cursor-pointer bg-white"
+            className={`p-0 border border-gray-100 bg-white rounded-[20px] shadow-sm overflow-hidden cursor-pointer transition-all hover:shadow-md ${
+                isCancelled ? "opacity-70 grayscale-[0.5]" : ""
+            }`}
         >
-            <div className="flex flex-col sm:flex-row p-4 gap-6">
-                {/* Left: Image */}
-                <div className="relative w-full sm:w-40 h-40 shrink-0 rounded-xl overflow-hidden bg-gray-100">
+            <div className="flex p-8 gap-8 relative flex-col sm:flex-row items-center sm:items-start">
+                {/* Image Section */}
+                <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-[#F1F1F1] border border-gray-50 flex items-center justify-center flex-shrink-0">
                     <img
-                        src={auction.productImageUrl || "/placeholder.png"}
+                        src={auction.productImageUrl || "/placeholder.svg"}
                         alt={auction.productName}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        className="w-full h-full object-cover"
                     />
-                    <Badge
-                        variant="secondary"
-                        className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[#03230F] font-bold shadow-sm"
-                    >
-                        {auction.productQuantity}kg
-                    </Badge>
                 </div>
 
-                {/* Right: Content */}
-                <div className="flex-1 flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Badge
-                                    variant="outline"
-                                    className={`font-bold tracking-wide border ${
-                                        statusColors[auction.status as keyof typeof statusColors] ||
-                                        "bg-gray-100 text-gray-700"
-                                    }`}
-                                >
-                                    {auction.status}
-                                </Badge>
-                                <span className="text-[12px] text-muted-foreground font-medium">
-                  #{auction.id}
-                </span>
-                            </div>
-                            <h3 className="text-xl font-black text-[#03230F] group-hover:text-[#D4A017] transition-colors">
+                {/* Content Section */}
+                <div className="flex-1 w-full">
+                    <div className="flex justify-between items-start gap-4">
+                        <div className="space-y-1 flex-1">
+                            <h3 className="text-[22px] font-[800] text-[#03230F] tracking-tight leading-none mb-2">
                                 {auction.productName}
                             </h3>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="bg-gray-50">
+                                    {auction.productQuantity} kg
+                                </Badge>
+                            </div>
                         </div>
-
-                        {/* Status Banners for Sold/Cancelled */}
-                        {isSold && (
-                            <Badge
-                                className={`${
-                                    soldAtReserve ? "bg-green-600" : "bg-yellow-500"
-                                } text-white border-0 px-3 py-1`}
-                            >
-                                {soldAtReserve ? "Sold at Reserve" : "Sold Below Reserve"}
-                            </Badge>
-                        )}
-                        {auction.status === "CANCELLED" && (
-                            <Badge variant="destructive">Cancelled</Badge>
-                        )}
-                        {auction.status === "EXPIRED" && (
-                            <Badge variant="destructive">Expired</Badge>
-                        )}
+                        <Badge className={`text-[11px] font-bold uppercase tracking-widest border ${getBadgeStyle()}`}>
+                            {getStatusLabel()}
+                        </Badge>
                     </div>
 
-                    {/* Details Grid */}
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8">
+                    {/* Info Grid */}
+                    <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-6 max-w-2xl">
                         <div className="space-y-1">
                             <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">
-                                {isActive ? "Current Bid" : isSold ? "Sold Price" : "Starting Price"}
+                                {isActive ? "Current Bid" : isCompleted ? "Sold Price" : "Starting Price"}
                             </p>
-                            <p className="text-[18px] font-[700] text-[#1A1F25]">
-                                {/* --- FIX: Use nullish coalescing (??) to prevent undefined errors --- */}
+                            <p className="text-[18px] font-[700] text-[#D4A017]">
                                 Rs. {(auction.currentHighestBidAmount ?? auction.startingPrice ?? 0).toLocaleString()}
                             </p>
                         </div>
@@ -143,7 +118,6 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                                 Reserve Price
                             </p>
                             <p className="text-[18px] font-[700] text-[#1A1F25]">
-                                {/* --- FIX: Handle null reserve price safely --- */}
                                 {auction.reservePrice
                                     ? `Rs. ${auction.reservePrice.toLocaleString()}`
                                     : <span className="text-gray-400 text-sm font-normal">Not Set</span>
@@ -151,7 +125,7 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                             </p>
                         </div>
 
-                        {/* Time Display */}
+                        {/* Time Left / Starts In */}
                         {(isActive || isDraft) && (
                             <div className="space-y-1">
                                 <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">
@@ -159,7 +133,6 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                                 </p>
                                 <div className={`flex items-center gap-1.5 text-[18px] font-[700] ${isDraft ? "text-orange-600" : "text-[#03230F]"}`}>
                                     <Clock className="w-5 h-5" />
-                                    {/* For drafts, you might want to calculate time until start, but using same logic for now is fine if it shows future date */}
                                     {timeLeft}
                                 </div>
                             </div>
