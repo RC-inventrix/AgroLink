@@ -223,14 +223,62 @@ public class AuctionService {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found with id: " + auctionId));
 
-        if (auction.getStatus() != AuctionStatus.ACTIVE) {
-            throw new RuntimeException("Reserve price can only be updated for active auctions");
+        if (auction.getStatus() != AuctionStatus.ACTIVE && auction.getStatus() != AuctionStatus.DRAFT) {
+            throw new RuntimeException("Reserve price can only be updated for active or draft auctions");
         }
 
         auction.setReservePrice(request.getReservePrice());
         return auctionRepository.save(auction);
     }
+    /**
+     * Start a draft auction immediately.
+     */
+    @Transactional
+    public Auction startAuctionNow(Long auctionId) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new RuntimeException("Auction not found"));
 
+        if (auction.getStatus() != AuctionStatus.DRAFT) {
+            throw new RuntimeException("Only draft auctions can be started immediately.");
+        }
+
+        auction.setStartTime(LocalDateTime.now());
+        auction.setStatus(AuctionStatus.ACTIVE);
+        return auctionRepository.save(auction);
+    }
+
+    /**
+     * Update auction start/end times.
+     */
+    @Transactional
+    public Auction updateAuctionTime(Long auctionId, LocalDateTime newStart, LocalDateTime newEnd) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new RuntimeException("Auction not found"));
+
+        if (auction.getStatus() == AuctionStatus.DRAFT) {
+            if (newStart != null) auction.setStartTime(newStart);
+            if (newEnd != null) auction.setEndTime(newEnd);
+        } else if (auction.getStatus() == AuctionStatus.ACTIVE) {
+            if (newStart != null) {
+                throw new RuntimeException("Cannot change start time of an active auction.");
+            }
+            if (newEnd != null) {
+                if (newEnd.isBefore(LocalDateTime.now())) {
+                    throw new RuntimeException("New end time cannot be in the past.");
+                }
+                auction.setEndTime(newEnd);
+            }
+        } else {
+            throw new RuntimeException("Cannot update time for completed or cancelled auctions.");
+        }
+
+        // Basic validation
+        if (auction.getEndTime().isBefore(auction.getStartTime())) {
+            throw new RuntimeException("End time must be after start time.");
+        }
+
+        return auctionRepository.save(auction);
+    }
     /**
      * Cancel an auction.
      */
