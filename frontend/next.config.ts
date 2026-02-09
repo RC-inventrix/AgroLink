@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
             },
         ],
     },
-
+    reactStrictMode: false,
     // 2. Your existing API redirects
     async rewrites() {
         return [

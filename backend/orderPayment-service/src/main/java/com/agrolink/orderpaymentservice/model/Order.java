@@ -51,4 +51,13 @@ public class Order {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "sellerId")
+    private Long sellerId;
+
+    @Column(name = "otp")
+    private String otp;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
+    private OrderReview orderReview;
 }

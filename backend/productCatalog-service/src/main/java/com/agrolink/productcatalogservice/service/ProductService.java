@@ -2,16 +2,13 @@ package com.agrolink.productcatalogservice.service;
 
 import com.agrolink.productcatalogservice.dto.ProductRequestDTO;
 import com.agrolink.productcatalogservice.model.PriceType;
-
 import com.agrolink.productcatalogservice.model.Product;
+import com.agrolink.productcatalogservice.model.ProductImage;
 import com.agrolink.productcatalogservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,46 +18,14 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final S3Service s3Service; // <--- Inject S3Service
 
-    public Product createProduct(ProductRequestDTO request) throws IOException {
-        List<String> imageUrls = new ArrayList<>();
-
-        // 1. Upload Images to S3
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
-            for (MultipartFile file : request.getImages()) {
-                String url = s3Service.uploadFile(file); // <--- Call S3
-                imageUrls.add(url);
-            }
-        }
-
-        // 2. Create Product
-        Product product = Product.builder()
-                .farmerId(request.getFarmerId())
-                .vegetableName(request.getVegetableName())
-                .category(request.getCategory())
-                .quantity(request.getQuantity())
-                .pricingType(PriceType.valueOf(request.getPricingType().toUpperCase()))
-                .fixedPrice(request.getFixedPrice())
-                .biddingPrice(request.getBiddingPrice())
-                .description(request.getDescription())
-                .deliveryAvailable(request.getDeliveryAvailable())
-                .deliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km())
-                .deliveryFeePerKm(request.getDeliveryFeePerKm())
-                .images(imageUrls) // Save S3 URLs
-                .build();
-
-        // 3. Handle Dates
-        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty())
-            product.setBiddingStartDate(LocalDateTime.parse(request.getBiddingStartDate()));
-
-        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
-            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
-
+    public Product createProduct(ProductRequestDTO request) {
+        Product product = mapDtoToProduct(request, new Product());
         return productRepository.save(product);
     }
 
     public List<Product> getAllProducts() { return productRepository.findAll(); }
+
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new RuntimeException("Product not found with id: " + id);
@@ -68,27 +33,80 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public Product updateProduct(Long id, Product updated) {
-        Product product = productRepository.findById(id)
+    public List<Product> getProductsByFarmerId(Long farmerId) {
+        return productRepository.findByFarmerId(farmerId);
+    }
+
+    @Transactional
+    public Product updateProduct(Long id, ProductRequestDTO request) {
+        Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        product.setVegetableName(updated.getVegetableName());
-        product.setCategory(updated.getCategory());
-        product.setQuantity(updated.getQuantity());
-        product.setPricingType(updated.getPricingType());
-        product.setFixedPrice(updated.getFixedPrice());
-        product.setBiddingPrice(updated.getBiddingPrice());
-        product.setBiddingStartDate(updated.getBiddingStartDate());
-        product.setBiddingEndDate(updated.getBiddingEndDate());
-        product.setDescription(updated.getDescription());
-        product.setDeliveryFeeFirst3Km(updated.getDeliveryFeeFirst3Km());
-        product.setDeliveryFeePerKm(updated.getDeliveryFeePerKm());
+        // Update fields
+        Product updatedProduct = mapDtoToProduct(request, existingProduct);
+        return productRepository.save(updatedProduct);
+    }
 
-        // Only update images if the new list is not null (optional logic)
-        if (updated.getImages() != null) {
-            product.setImages(updated.getImages());
+    private Product mapDtoToProduct(ProductRequestDTO request, Product product) {
+        // Basic Fields
+        if (request.getFarmerId() != null) product.setFarmerId(request.getFarmerId());
+        if (request.getVegetableName() != null) product.setVegetableName(request.getVegetableName());
+        if (request.getCategory() != null) product.setCategory(request.getCategory());
+        if (request.getQuantity() > 0) product.setQuantity(request.getQuantity());
+
+        if (request.getPricingType() != null) {
+            try {
+                product.setPricingType(PriceType.valueOf(request.getPricingType().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Default or handle error
+                product.setPricingType(PriceType.FIXED);
+            }
         }
 
-        return productRepository.save(product);
+        // Pricing
+        if (request.getFixedPrice() != null) product.setFixedPrice(request.getFixedPrice());
+        if (request.getBiddingPrice() != null) product.setBiddingPrice(request.getBiddingPrice());
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+
+        // Delivery
+        if (request.getDeliveryAvailable() != null) product.setDeliveryAvailable(request.getDeliveryAvailable());
+
+        // Corrected mapping: Use the correct Setter for First3Km
+        if (request.getDeliveryFeeFirst3Km() != null) product.setDeliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km());
+        if (request.getDeliveryFeePerKm() != null) product.setDeliveryFeePerKm(request.getDeliveryFeePerKm());
+
+        // Address
+        if (request.getPickupAddress() != null) product.setPickupAddress(request.getPickupAddress());
+        if (request.getPickupLatitude() != null) product.setPickupLatitude(request.getPickupLatitude());
+        if (request.getPickupLongitude() != null) product.setPickupLongitude(request.getPickupLongitude());
+
+        // Dates
+        if (request.getBiddingStartDate() != null && !request.getBiddingStartDate().isEmpty())
+            product.setBiddingStartDate(LocalDateTime.parse(request.getBiddingStartDate()));
+        if (request.getBiddingEndDate() != null && !request.getBiddingEndDate().isEmpty())
+            product.setBiddingEndDate(LocalDateTime.parse(request.getBiddingEndDate()));
+
+        // --- FIXED: Image Handling ---
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            List<ProductImage> productImages = new ArrayList<>();
+            for (String url : request.getImageUrls()) {
+                ProductImage img = ProductImage.builder()
+                        .imageUrl(url)
+                        .farmerId(product.getFarmerId())
+                        .product(product)
+                        .build();
+                productImages.add(img);
+            }
+
+            // FIX: Initialize list if null to prevent NullPointerException
+            if (product.getImages() == null) {
+                product.setImages(new ArrayList<>());
+            }
+
+            product.getImages().clear();
+            product.getImages().addAll(productImages);
+        }
+
+        return product;
     }
 }
