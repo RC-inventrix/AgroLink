@@ -22,6 +22,20 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // AuthService class එක ඇතුළට මේක දාන්න
+
+    public long getActiveFarmerCount() {
+        return userRepository.countByRole(Role.Farmer);
+    }
+
+    public long getActiveBuyerCount() {
+        return userRepository.countByRole(Role.Buyer);
+    }
+
+    /**
+     * Finds a single user by their ID.
+     * This is required by the AuthController /auth/user/{id} endpoint.
+     */
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -93,5 +107,9 @@ public class AuthService {
 
     public boolean checkEmailExists(String email) {
         return userRepository.findByEmail(email).isPresent();
+    }
+
+    public long getTotalUserCount() {
+        return userRepository.count(); // JpaRepository provides this method automatically
     }
 }

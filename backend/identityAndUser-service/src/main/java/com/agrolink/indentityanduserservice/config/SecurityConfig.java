@@ -1,60 +1,62 @@
 package com.agrolink.indentityanduserservice.config;
 
-import com.agrolink.indentityanduserservice.services.CustomUserDetailsService;
-import lombok.RequiredArgsConstructor;
+import com.agrolink.indentityanduserservice.services.AdminService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
-
-    private final CustomUserDetailsService customUserDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // FIX: The .cors() line is REMOVED completely because the API Gateway handles it now.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**","/forgotPassword/**").permitAll()
+
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate",
+                                "/auth/count/farmers", "/auth/count/buyers").permitAll()
+                        // 1. Admin Controller එකට අදාළ endpoints
+                        .requestMatchers("/api/admin/register", "/api/admin/login").permitAll()
+
+                        // 2. Auth Controller එකට අදාළ endpoints (මෙතන තමයි /auth/count තියෙන්නේ)
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate").permitAll()
+
+                        // 3. H2 Console එකට අවසර දීම
+                        .requestMatchers("/h2-console/**").permitAll()
+
+                        // අනිත් හැම request එකකටම login වෙන්න ඕන
                         .anyRequest().authenticated()
                 )
-
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // H2 Console එක හරියට වැඩ කරන්න නම් මේ කෑල්ල ඕන (Frames allow කරන්න)
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder);
-        return authProvider;
+    public AuthenticationProvider authenticationProvider(AdminService adminService) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(adminService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
