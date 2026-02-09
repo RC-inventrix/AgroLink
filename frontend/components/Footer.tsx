@@ -11,7 +11,7 @@ export default function Footer() {
                         alt="AgroLink Logo"
                         width={150}
                         height={50}
-                        className="object-contain"
+                        className="object-contain w-full h-auto"
                         style={{ width: "150px" }}
                     />
 

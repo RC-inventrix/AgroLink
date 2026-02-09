@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react" // Added icons
+import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react"
 import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
+import BuyerHeader from "@/components/headers/BuyerHeader"
 
 interface CartItemData {
     id: number
@@ -16,15 +17,20 @@ interface CartItemData {
     pricePerKg: number
     quantity: number
     sellerName: string
+    sellerId: number
     selected: boolean
+    // New fields
+    deliveryFee: number
+    deliveryAddress: string
+    distance: number
 }
 
 export default function Cart() {
     const [items, setItems] = useState<CartItemData[]>([])
     const [loading, setLoading] = useState(true)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     const router = useRouter()
 
-    // --- Custom Notification State (Bottom Style) ---
     const [notification, setNotification] = useState<{
         message: string;
         type: 'success' | 'error' | 'info';
@@ -37,7 +43,6 @@ export default function Cart() {
         }
     }, [notification]);
 
-    // 1. Fetch Cart
     useEffect(() => {
         const fetchCart = async () => {
             const userId = sessionStorage.getItem("id") || "1"
@@ -53,7 +58,11 @@ export default function Cart() {
                         pricePerKg: item.pricePerKg,
                         quantity: item.quantity,
                         sellerName: item.sellerName,
-                        selected: false
+                        selected: false,
+                        // New fields
+                        deliveryFee: item.deliveryFee || 0,
+                        deliveryAddress: item.deliveryAddress || "",
+                        distance: item.distance || 0,
                     }))
                     setItems(mappedItems)
                 }
@@ -73,14 +82,35 @@ export default function Cart() {
         ))
     }
 
+    const handleDeleteItem = async (id: string) => {
+        setDeletingId(id);
+        try {
+            const res = await fetch(`http://localhost:8080/cart/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setItems(prevItems => prevItems.filter(item => item.id.toString() !== id));
+                setNotification({ message: "Item removed from cart successfully.", type: 'success' });
+            } else {
+                setNotification({ message: "Failed to remove item. Please try again.", type: 'error' });
+            }
+        } catch (error) {
+            setNotification({ message: "Network error. Could not remove item.", type: 'error' });
+        } finally {
+            setDeletingId(null);
+        }
+    }
+
     const selectedItems = items.filter((item) => item.selected)
-    const totalPrice = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
+    const subtotal = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
+    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + item.deliveryFee, 0)
+    const totalPrice = subtotal + totalDeliveryFees
 
     const handleSelectAll = (checked: boolean) => {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
 
-    // --- UPDATED CHECKOUT HANDLER WITH NOTIFICATION ---
     const handleCheckout = () => {
         if (selectedItems.length === 0) {
             setNotification({ message: "Select items in your cart to proceed to checkout.", type: 'info' });
@@ -90,7 +120,6 @@ export default function Cart() {
         try {
             sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems));
             setNotification({ message: "Redirecting to checkout...", type: 'success' });
-            
             setTimeout(() => {
                 router.push("/buyer/checkout");
             }, 800);
@@ -108,22 +137,19 @@ export default function Cart() {
 
     return (
         <div className="min-h-screen bg-gray-50 relative">
-            <Header />
+            <BuyerHeader/>
 
-            {/* --- CUSTOM BOTTOM NOTIFICATION UI --- */}
             {notification && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
                     <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
                         notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
-                        notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
-                        "bg-[#03230F] border-gray-700 text-white"
+                            notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
+                                "bg-[#03230F] border-gray-700 text-white"
                     }`}>
                         {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                         {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
                         {notification.type === 'info' && <ShoppingBag className="w-5 h-5 text-[#EEC044]" />}
-                        
                         <p className="text-sm font-semibold flex-1">{notification.message}</p>
-                        
                         <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100 transition-opacity">
                             <X className="w-4 h-4" />
                         </button>
@@ -134,7 +160,7 @@ export default function Cart() {
             <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
                 <h1 className="mb-2 text-3xl font-bold text-gray-900">Your Cart</h1>
                 <p className="text-gray-500 mb-8">Manage your selected agricultural products</p>
-                
+
                 <div className="grid gap-8 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -148,7 +174,7 @@ export default function Cart() {
                                     Select All Items ({items.length})
                                 </label>
                             </div>
-                            
+
                             <div className="p-6 space-y-4">
                                 {items.length === 0 ? (
                                     <div className="text-center py-12">
@@ -169,6 +195,7 @@ export default function Cart() {
                                                 selected: item.selected
                                             }}
                                             onToggle={toggleItem}
+                                            onDelete={handleDeleteItem}
                                         />
                                     ))
                                 )}
@@ -176,7 +203,6 @@ export default function Cart() {
                         </div>
                     </div>
 
-                    {/* Summary Section */}
                     <CartSummary
                         selectedItems={selectedItems.map(item => ({
                             id: item.id.toString(),
@@ -185,9 +211,12 @@ export default function Cart() {
                             pricePerKg: item.pricePerKg,
                             quantity: item.quantity,
                             seller: item.sellerName,
-                            selected: item.selected
+                            selected: item.selected,
+                            deliveryFee: item.deliveryFee
                         }))}
                         totalPrice={totalPrice}
+                        subtotal={subtotal}
+                        totalDeliveryFees={totalDeliveryFees}
                         onCheckout={handleCheckout}
                     />
                 </div>

@@ -4,201 +4,368 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, CheckCircle, Clock } from "lucide-react"
+import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, XCircle } from "lucide-react"
 import { format } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { toast, Toaster } from "sonner"
+import BuyerHeader from "./headers/BuyerHeader"
+import Link from "next/link"
 
-// Interface for what we want to display (Flattened Item)
+// --- HELPER COMPONENT: STAR RATING ---
+function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    onClick={() => interactive && setRating?.(star)}
+                    className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-transform active:scale-90`}
+                >
+                    <Star
+                        className={`w-4 h-4 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+}
+
+// --- FETCHES CANCELLATION REASON ---
+function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
+    const [reason, setReason] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReason = async () => {
+            try {
+                const token = sessionStorage.getItem("token");
+                const res = await fetch(`http://localhost:8080/api/buyer/orders/cancellation-detail/${orderId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setReason(data.reason);
+                }
+            } catch (err) {
+                console.error("Failed to fetch cancellation reason", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReason();
+    }, [orderId]);
+
+    if (loading) return <div className="mt-4 h-10 w-full animate-pulse bg-red-50 rounded-xl" />;
+    if (!reason) return null;
+
+    return (
+        <div className="mt-4 p-4 bg-red-50/50 border border-red-100 rounded-xl animate-in fade-in zoom-in-95 duration-300">
+            <p className="flex items-center gap-2 text-[10px] font-black uppercase text-red-600 mb-1">
+                <AlertCircle size={12} /> Reason for Cancellation
+            </p>
+            <p className="text-sm text-gray-700 italic font-medium">
+                "{reason}"
+            </p>
+        </div>
+    );
+}
+
 interface OrderItem {
     id: string
+    displayOrderId: string | number
     name: string
     quantity: number
     pricePerKg: number
     image: string
     sellerName: string
     orderDate: Date
-    status: "completed" | "pending"
-    totalPrice: number // Added total price for context
+    status: "completed" | "pending" | "cancelled"
+    totalPrice: number
+    otp?: string
+    orderReview?: any 
+    sellerId?: string
 }
 
 export function OrderHistoryClient() {
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
+    const gatewayUrl = "http://localhost:8080"
 
     useEffect(() => {
         fetchOrders()
     }, [])
 
     const fetchOrders = async () => {
-        const userId = sessionStorage.getItem("id") || "1"
+        const userId = sessionStorage.getItem("id")
+        const token = sessionStorage.getItem("token")
+        if (!userId) { setLoading(false); return; }
+
         try {
-            // Call the new Backend Endpoint
-            const res = await fetch(`http://localhost:8080/api/buyer/orders/${userId}`)
+            const res = await fetch(`${gatewayUrl}/api/buyer/orders/${userId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+
             if (res.ok) {
                 const backendOrders = await res.json()
-
-                // Transform Backend Data -> Frontend UI Structure
-                const allItems: OrderItem[] = []
+                const rawItemsList: any[] = []
+                const sellerIds = new Set<string>()
 
                 backendOrders.forEach((order: any) => {
-                    // 1. Determine Status
-                    // Backend: CREATED, PAID, COD_CONFIRMED, PROCESSING, COMPLETED
-                    // Frontend: "pending" or "completed"
-                    const uiStatus = order.status === "COMPLETED" ? "completed" : "pending"
-
-                    // 2. Parse the Items JSON string back into objects
-                    // The backend stores: "[{'productName':'Tomatoes', ...}]"
                     let parsedItems = []
                     try {
-                        // If itemsJson is "Items from Cart" (dummy text from COD), we handle it safely
-                        if (order.itemsJson && order.itemsJson.startsWith("[")) {
-                            parsedItems = JSON.parse(order.itemsJson)
-                        } else {
-                            // Fallback for text-only descriptions or legacy data
-                            parsedItems = [{ productName: "Order Items", quantity: 1, pricePerKg: order.amount / 100 }]
-                        }
-                    } catch (e) {
-                        console.error("Failed to parse items for order", order.id)
-                    }
+                        parsedItems = (order.itemsJson && order.itemsJson.startsWith("[")) 
+                            ? JSON.parse(order.itemsJson) 
+                            : [{ productName: "Order Items", quantity: 1, pricePerKg: order.amount / 100 }];
+                    } catch (e) { console.error("JSON Parse error", e) }
 
-                    // 3. Flatten: Create a row for each item in the order
-                    parsedItems.forEach((item: any, index: number) => {
-                        allItems.push({
-                            id: `${order.id}-${index}`, // Unique key
-                            name: item.productName || item.name || "Unknown Item",
-                            quantity: item.quantity || 1,
-                            pricePerKg: item.pricePerKg || 0,
-                            image: item.imageUrl || item.image || "/placeholder.svg",
-                            sellerName: item.sellerName || "AgroLink Seller",
-                            orderDate: new Date(order.createdAt),
-                            status: uiStatus,
-                            totalPrice: (order.amount / 100)
+                    parsedItems.forEach((item: any) => {
+                        const sId = item.sellerId || order.sellerId
+                        if (sId) sellerIds.add(sId)
+                        rawItemsList.push({
+                            orderId: order.id,
+                            itemData: item,
+                            status: order.status === "COMPLETED" ? "completed" : 
+                                    order.status === "CANCELLED" ? "cancelled" : "pending",
+                            createdAt: order.createdAt,
+                            amount: order.amount,
+                            sellerId: sId,
+                            otp: order.otp, 
+                            orderReview: order.orderReview 
                         })
                     })
                 })
 
-                setOrders(allItems)
+                let sellerNameMap: Record<string, string> = {}
+                if (sellerIds.size > 0) {
+                    const idsParam = Array.from(sellerIds).join(',')
+                    const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${idsParam}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    })
+                    if (nameRes.ok) sellerNameMap = await nameRes.json()
+                }
+
+                const finalOrders: OrderItem[] = rawItemsList
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((entry, index) => ({
+                        id: `${entry.orderId}-${index}`,
+                        displayOrderId: entry.orderId,
+                        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
+                        quantity: entry.itemData.quantity || 1,
+                        pricePerKg: entry.itemData.pricePerKg || 0,
+                        image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
+                        sellerId: entry.sellerId, 
+                        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
+                        orderDate: new Date(entry.createdAt),
+                        status: entry.status,
+                        totalPrice: (entry.amount / 100),
+                        otp: entry.otp,
+                        orderReview: entry.orderReview
+                    }))
+
+                setOrders(finalOrders)
             }
-        } catch (error) {
-            console.error("Failed to fetch order history", error)
-        } finally {
-            setLoading(false)
-        }
+        } catch (error) { console.error("Order fetch failed", error) } 
+        finally { setLoading(false) }
     }
 
-    const completedOrders = orders.filter((order) => order.status === "completed")
-    const pendingOrders = orders.filter((order) => order.status === "pending")
-
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
-                <p className="text-muted-foreground">View your vegetable orders and track their delivery status</p>
+        <div className="min-h-screen bg-gray-50/30">
+            <Toaster position="top-center" richColors />
+            <BuyerHeader />
+            <div className="max-w-6xl mx-auto p-8">
+                <h1 className="text-3xl font-bold tracking-tight mb-6 text-[#03230F]">Order History</h1>
+                <Tabs defaultValue="all" className="w-full">
+                    <TabsList className="bg-white border shadow-sm">
+                        <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
+                        <TabsTrigger value="completed">Completed ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
+                        <TabsTrigger value="pending">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+                        <TabsTrigger value="cancelled">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="mt-6">
+                        <TabsContent value="all">
+                            <OrderList orders={orders} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        <TabsContent value="completed">
+                            <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        <TabsContent value="pending">
+                            <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                        {/* THIS WAS MISSING: The content for the cancelled tab */}
+                        <TabsContent value="cancelled">
+                            <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders}/>
+                        </TabsContent>
+                    </div>
+                </Tabs>
             </div>
-
-            <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full max-w-md grid-cols-3 bg-secondary">
-                    <TabsTrigger value="all">All Orders ({orders.length})</TabsTrigger>
-                    <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
-                    <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
-                </TabsList>
-
-                <div className="mt-6">
-                    <TabsContent value="all" className="m-0">
-                        <OrderList orders={orders} loading={loading} />
-                    </TabsContent>
-                    <TabsContent value="completed" className="m-0">
-                        <OrderList orders={completedOrders} loading={loading} />
-                    </TabsContent>
-                    <TabsContent value="pending" className="m-0">
-                        <OrderList orders={pendingOrders} loading={loading} />
-                    </TabsContent>
-                </div>
-            </Tabs>
         </div>
     )
 }
 
-function OrderList({ orders, loading }: { orders: OrderItem[], loading: boolean }) {
-    if (loading) return <div className="text-center py-10">Loading orders...</div>
-    if (orders.length === 0) {
-        return (
-            <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
-                <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-semibold">No orders found</h3>
-                <p className="text-muted-foreground text-sm mt-2">
-                    You haven&apos;t placed any orders in this category yet.
-                </p>
-            </Card>
-        )
-    }
-
+function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loading: boolean, onRefresh: () => void }) {
+    if (loading) return <div className="text-center py-20 text-gray-400 font-medium">Loading your AgroLink history...</div>
+    if (orders.length === 0) return (
+        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
+            <Package className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+            <p className="text-gray-400">No orders found.</p>
+        </div>
+    )
+    
     return (
         <div className="space-y-4">
             {orders.map((order) => (
-                <Card key={order.id} className="p-6 overflow-hidden border-l-4 border-l-primary/20">
-                    <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                        {/* Image */}
-                        <div className="relative h-24 w-24 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                            <img
-                                src={order.image}
-                                alt={order.name}
-                                className="object-cover w-full h-full"
-                            />
-                        </div>
-
-                        {/* Details */}
-                        <div className="flex-1 space-y-1">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <h3 className="font-semibold text-lg">{order.name}</h3>
-                                    <p className="text-sm text-muted-foreground">Sold by {order.sellerName}</p>
-                                </div>
-                                <Badge
-                                    variant={order.status === "completed" ? "default" : "secondary"}
-                                    className={
-                                        order.status === "completed"
-                                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                    }
-                                >
-                                    {order.status === "completed" ? (
-                                        <span className="flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" /> Completed
-                    </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Pending
-                    </span>
-                                    )}
-                                </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border/50">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Quantity</p>
-                                    <p className="font-medium">{order.quantity} kg</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Price</p>
-                                    <p className="font-medium">Rs. {order.pricePerKg}/kg</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Order Date</p>
-                                    <p className="font-medium">
-                                        {format(order.orderDate, "MMM d, yyyy")}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Total</p>
-                                    <p className="font-medium text-primary">
-                                        Rs. {(order.quantity * order.pricePerKg).toFixed(2)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
+                <OrderCardItem key={order.id} order={order} onRefresh={onRefresh} />
             ))}
         </div>
     )
+}
+
+function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () => void }) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+
+    const hasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
+    const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
+
+    const handleSubmitReview = async () => {
+        if (rating === 0) { toast.error("Please select a rating"); return; }
+        setIsSubmitting(true);
+        const userId = sessionStorage.getItem("id");
+        const token = sessionStorage.getItem("token");
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/reviews/${order.displayOrderId}?userId=${userId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ rating, comment })
+            });
+
+            if (res.ok) {
+                toast.success("Review submitted!");
+                onRefresh(); 
+            }
+        } catch (err) { toast.error("Submission failed"); } 
+        finally { setIsSubmitting(false); }
+    };
+
+    return (
+        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md ${order.status === 'cancelled' ? 'border-l-red-500 opacity-90' : 'border-l-[#EEC044]'}`}>
+            <div className="p-6">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-50 border flex-shrink-0">
+                        <img src={order.image} className="object-cover w-full h-full" alt={order.name} />
+                    </div>
+                    <div className="flex-1 w-full">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
+                                <h3 className="font-bold text-xl text-[#03230F]">{order.name}</h3>
+                                <p className="text-sm font-semibold text-[#2d5016]">
+                                    Sold by <Link href={`/user/${order.sellerId}?role=SELLER`} className="hover:underline">{order.sellerName}</Link>
+                                </p>
+                            </div>
+                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold ${order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-100' : ''}`}>
+                                {order.status}
+                            </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Qty</p><p className="font-bold text-gray-800">{order.quantity} kg</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Rate</p><p className="font-bold text-gray-800">Rs. {order.pricePerKg}</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Date</p><p className="font-bold text-gray-800">{format(order.orderDate, "MMM d, yyyy")}</p></div>
+                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Total</p><p className="font-bold text-[#2d5016]">Rs. {order.totalPrice.toFixed(2)}</p></div>
+                        </div>
+
+                        {order.status === "pending" && order.otp && (
+                            <div className="mt-6 p-4 bg-green-50 border-2 border-dashed border-[#03230F]/10 rounded-2xl flex justify-between items-center">
+                                <div>
+                                    <p className="flex items-center gap-2 text-[10px] font-black uppercase text-[#03230F]">
+                                        <KeyRound className="w-3 h-3 text-[#EEC044]" /> Delivery Handover OTP
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 font-medium">Provide this code to the seller to confirm delivery</p>
+                                </div>
+                                <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-4 py-1 rounded-lg border shadow-sm">
+                                    {order.otp}
+                                </div>
+                            </div>
+                        )}
+
+                        {order.status === "cancelled" && (
+                            <CancelledReasonBlock orderId={order.displayOrderId} />
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {order.status === "completed" && (
+                <div className="bg-[#F8FAFC] border-t border-gray-100 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            {hasReviewed ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                        <span className="text-sm font-black uppercase text-green-600">Your Feedback to Seller</span>
+                                    </div>
+                                    <StarRating rating={order.orderReview.buyerRating} />
+                                    <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                        "{order.orderReview.buyerComment}"
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <MessageSquare className="w-4 h-4 text-[#03230F]" />
+                                        <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate your experience</h4>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <StarRating rating={rating} setRating={setRating} interactive={true} />
+                                        <textarea 
+                                            placeholder="How was the crop quality and transaction?"
+                                            className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/20"
+                                            rows={3}
+                                            value={comment}
+                                            onChange={(e) => setComment(e.target.value)}
+                                        />
+                                        <Button 
+                                            onClick={handleSubmitReview} 
+                                            disabled={isSubmitting} 
+                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2 rounded-xl uppercase tracking-widest transition-all hover:bg-black"
+                                        >
+                                            {isSubmitting ? "Submitting..." : "Submit Review"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-4 border-l-0 md:border-l md:pl-8 border-gray-200">
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-[#03230F]" />
+                                <h4 className="text-sm font-black uppercase tracking-widest text-[#03230F]">Seller's Feedback for You</h4>
+                            </div>
+                            {sellerHasReviewed ? (
+                                <div className="space-y-3">
+                                    <StarRating rating={order.orderReview.sellerRating} />
+                                    <p className="text-sm text-[#4A5568] leading-relaxed bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                        "{order.orderReview.sellerComment}"
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white/50 rounded-xl border border-dashed border-gray-200">
+                                    <Clock className="w-8 h-8 text-gray-300 mb-2" />
+                                    <p className="text-xs text-gray-400 font-medium px-4">
+                                        The seller hasn't left a review yet.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </Card>
+    );
 }

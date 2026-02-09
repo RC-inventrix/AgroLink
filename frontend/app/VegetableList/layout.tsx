@@ -1,5 +1,6 @@
 import Header from "@/components/header";
 import Footer from "@/components/Footer";
+import BuyerHeader from "@/components/headers/BuyerHeader";
 
 export default function AgroLinkLayout({
                                            children,
@@ -8,7 +9,7 @@ export default function AgroLinkLayout({
 }) {
     return (
         <>
-            <Header />
+            <BuyerHeader />
             {children}
             <Footer />
         </>

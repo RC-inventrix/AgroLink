@@ -16,6 +16,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,16 +30,25 @@ public class PaymentService {
 
     private final String FRONTEND_URL = "http://localhost:3000";
 
-    // 1. INJECT REPOSITORIES & OBJECT MAPPER
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
-    private final ObjectMapper objectMapper; // Spring Boot automatically provides this
+    private final ObjectMapper objectMapper;
 
     @PostConstruct
     public void init() {
         Stripe.apiKey = stripeSecretKey;
     }
 
+    /**
+     * Updated Stripe Checkout:
+     * Now pre-creates orders in the database with status CREATED.
+     */
+
+    private String generateOtp() {
+        return String.valueOf((int)((Math.random() * 900000) + 100000));
+    }
+
+    @Transactional
     public CheckoutResponse initiateCheckout(Long userId) throws StripeException {
         // 1. Fetch Cart Items
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
@@ -46,15 +56,7 @@ public class PaymentService {
             throw new RuntimeException("Cart is empty");
         }
 
-        // 2. Convert Items to JSON String (The Fix)
-        String itemsJson;
-        try {
-            itemsJson = objectMapper.writeValueAsString(cartItems);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error converting cart items to JSON", e);
-        }
-
-        // 3. Build Stripe Session
+        // 2. Build Stripe Session Parameters (Do not save to DB yet)
         SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(FRONTEND_URL + "/buyer/order-success?payment=success")
@@ -77,7 +79,7 @@ public class PaymentService {
                             .build());
         }
 
-        // Add Delivery Fee
+        // Add Delivery Fee to Stripe Session
         paramsBuilder.addLineItem(
                 SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
@@ -92,7 +94,33 @@ public class PaymentService {
                                         .build())
                         .build());
 
+        // 3. CREATE THE STRIPE SESSION FIRST
+        // This gives us a unique ID like 'cs_test_...'
         Session session = Session.create(paramsBuilder.build());
+
+        // 4. NOW SAVE TO DATABASE using the unique session ID
+        // This solves the "PENDING" duplicate key error
+        for (CartItem item : cartItems) {
+            String itemJson;
+            try {
+                itemJson = objectMapper.writeValueAsString(List.of(item));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Error mapping item JSON", e);
+            }
+
+            Order pendingOrder = Order.builder()
+                    .userId(userId)
+                    .sellerId(Long.valueOf(item.getSellerId()))
+                    .amount((long) (item.getPricePerKg() * item.getQuantity() * 100))
+                    .currency("lkr")
+                    .status(OrderStatus.CREATED)
+                    .itemsJson(itemJson)
+                    .stripeId(session.getId())
+                    .otp(generateOtp())
+                    .build();
+
+            orderRepository.save(pendingOrder);
+        }
 
         return CheckoutResponse.builder()
                 .sessionId(session.getId())
@@ -100,75 +128,45 @@ public class PaymentService {
                 .build();
     }
 
-    /*public void processCashOnDelivery(Long userId) {
-        List<CartItem> cartItems = cartRepository.findByUserId(userId);
-        if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
-        }
-
-        double totalAmount = cartItems.stream()
-                .mapToDouble(item -> item.getPricePerKg() * item.getQuantity())
-                .sum();
-        totalAmount += 30.0;
-
-        String fakeStripeId = "COD-" + UUID.randomUUID().toString();
-
-        Order order = Order.builder()
-                .userId(userId)
-                .stripeId(fakeStripeId)
-                .amount((long) (totalAmount * 100))
-                .currency("lkr")
-                .status(OrderStatus.COD_CONFIRMED)
-                .itemsJson("Items from Cart")
-                .build();
-
-        // 2. USE THE INJECTED INSTANCE (lowercase 'o')
-        orderRepository.save(order);
-        cartRepository.deleteAll(cartItems);
-
-        return CheckoutResponse.builder()
-                .sessionId(session.getId())
-                .url(session.getUrl())
-                .build();
-        
-    }*/
-
+    /**
+     * Cash on Delivery logic (Already correctly loops through items)
+     */
+    @Transactional
     public void processCashOnDelivery(Long userId) {
-        // 1. Fetch Cart Items
         List<CartItem> cartItems = cartRepository.findByUserId(userId);
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new RuntimeException("Cart is empty for user: " + userId);
         }
 
-        // 2. Convert Items to JSON String (The Fix)
-        String itemsJson;
-        try {
-            itemsJson = objectMapper.writeValueAsString(cartItems);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error converting cart items to JSON", e);
+        for (CartItem item : cartItems) {
+            try {
+                // Null-safe check
+                double price = item.getPricePerKg() != null ? item.getPricePerKg() : 0.0;
+                double qty = item.getQuantity() != null ? item.getQuantity() : 0.0;
+
+                double itemTotal = (price * qty) + 30.0;
+                String itemsJson = objectMapper.writeValueAsString(List.of(item));
+                String fakeStripeId = "COD-" + UUID.randomUUID().toString();
+
+                Order order = Order.builder()
+                        .userId(userId)
+                        .stripeId(fakeStripeId)
+                        .amount((long) (itemTotal * 100))
+                        .currency("lkr")
+                        .status(OrderStatus.COD_CONFIRMED)
+                        .itemsJson(itemsJson)
+                        .sellerId(Long.valueOf(item.getSellerId()))
+                        .otp(generateOtp())
+                        .build();
+
+                orderRepository.save(order);
+            } catch (Exception e) {
+                // This will help you see the EXACT error in your terminal
+                System.err.println("Error creating COD order for item: " + item.getProductName());
+                e.printStackTrace();
+                throw new RuntimeException("COD processing failed: " + e.getMessage());
+            }
         }
-
-        // 3. Calculate Total
-        double totalAmount = cartItems.stream()
-                .mapToDouble(item -> item.getPricePerKg() * item.getQuantity())
-                .sum();
-        totalAmount += 30.0; // Delivery Fee
-
-        String fakeStripeId = "COD-" + UUID.randomUUID().toString();
-
-        // 4. Create Order
-        Order order = Order.builder()
-                .userId(userId)
-                .stripeId(fakeStripeId)
-                .amount((long) (totalAmount * 100))
-                .currency("lkr")
-                .status(OrderStatus.COD_CONFIRMED)
-                .itemsJson(itemsJson) // <--- SAVING REAL JSON HERE
-                .build();
-
-        orderRepository.save(order);
-
-        // 5. Clear Cart
         cartRepository.deleteAll(cartItems);
     }
 }
