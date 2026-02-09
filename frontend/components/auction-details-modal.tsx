@@ -585,7 +585,7 @@ export function AuctionDetailsModal({
                                         disabled={isEndingAuction}
                                         className="w-full h-11 bg-[#D4A017] hover:bg-[#C49007] text-[#03230F] font-bold rounded-lg uppercase tracking-widest transition-all"
                                     >
-                                        {isEndingAuction ? "Ending..." : "End Auction & Select Winner"}
+                                        {isEndingAuction ? "Ending Auction..." : "Select Winner"}
                                     </Button>
                                 )}
 

@@ -6,7 +6,7 @@ import VegetableCard from "./vegetable-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-// 1. Updated Interface to include all required fields
+// 1. Updated Interface to include Auction fields
 interface Vegetable {
     id: string
     name: string
@@ -19,45 +19,57 @@ interface Vegetable {
     category: string
     rating: number
     pricingType: string
-    // New fields
     quantity: number
     deliveryAvailable: boolean
     baseCharge?: number
     extraRatePerKm?: number
-    // --- ADDED LOCATION FIELDS ---
     pickupAddress?: string
     pickupLatitude?: number
     pickupLongitude?: number
+
+    // --- AUCTION SPECIFIC FIELDS ---
+    isAuction?: boolean
+    currentBid?: number
+    startingPrice?: number
+    endTime?: string
+    bidCount?: number
 }
 
 export default function VegetableListings() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
-    const [priceRange, setPriceRange] = useState([0, 5000])
+    const [priceRange, setPriceRange] = useState([0, 50000]) // Increased max range for auctions
 
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
     useEffect(() => {
-        const fetchProductsAndNames = async () => {
+        const fetchData = async () => {
             try {
                 const token = sessionStorage.getItem("token");
-                // 1. Fetch products
-                const res = await fetch("http://localhost:8080/products");
-                if (!res.ok) throw new Error("Failed to fetch products");
-                const data = await res.json();
+                const headers:HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
 
-                // 2. Extract unique farmerIds
-                const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
+                // 1. Run fetches in parallel
+                const [productsRes, auctionsRes] = await Promise.all([
+                    fetch("http://localhost:8080/products"),
+                    // Assuming API Gateway routes /api/auctions to the Auction Service
+                    fetch("http://localhost:8080/api/auctions/active", { headers })
+                ]);
 
-                // 3. Fetch Full Names
+                // handle responses
+                const productsData = productsRes.ok ? await productsRes.json() : [];
+                const auctionsData = auctionsRes.ok ? await auctionsRes.json() : [];
+
+                // 2. Handle Farmer Names for Products (Auctions already have farmerName)
+                const uniqueProductFarmerIds = [...new Set(productsData.map((item: any) => item.farmerId))];
                 let fullNameMap: Record<string, string> = {};
-                if (uniqueFarmerIds.length > 0) {
+
+                if (uniqueProductFarmerIds.length > 0) {
                     try {
-                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
+                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueProductFarmerIds.join(',')}`, {
                             method: "GET",
-                            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+                            headers
                         });
                         fullNameMap = nameRes.ok ? await nameRes.json() : {};
                     } catch (e) {
@@ -65,8 +77,8 @@ export default function VegetableListings() {
                     }
                 }
 
-                // 4. Map Backend Data
-                const mappedData = data.map((item: any) => ({
+                // 3. Map Products
+                const mappedProducts: Vegetable[] = productsData.map((item: any) => ({
                     id: item.id?.toString() || "unique-id",
                     name: item.vegetableName,
                     image: item.images && item.images.length > 0 ? item.images[0].imageUrl : "/placeholder.svg",
@@ -78,35 +90,62 @@ export default function VegetableListings() {
                     sellerId: item.farmerId?.toString() || "",
                     seller: fullNameMap[item.farmerId] || `Farmer #${item.farmerId}`,
                     rating: 4.5,
-
-                    // Mapping required fields
                     quantity: item.quantity || 0,
                     deliveryAvailable: item.deliveryAvailable || false,
                     baseCharge: item.deliveryFeeFirst3Km,
                     extraRatePerKm: item.deliveryFeePerKm,
-
-                    // --- FIX: Map the Location Fields explicitly ---
                     pickupAddress: item.pickupAddress,
                     pickupLatitude: item.pickupLatitude,
-                    pickupLongitude: item.pickupLongitude
+                    pickupLongitude: item.pickupLongitude,
+                    isAuction: false
                 }));
 
-                setVegetables(mappedData);
+                // 4. Map Auctions
+                const mappedAuctions: Vegetable[] = auctionsData.map((item: any) => ({
+                    id: item.id?.toString(),
+                    name: item.productName,
+                    image: item.productImageUrl || "/placeholder.svg",
+                    // Use current highest bid or starting price for sorting/filtering logic
+                    price1kg: item.currentHighestBidAmount || item.startingPrice,
+                    price100g: 0, // Not applicable for auctions usually
+                    seller: item.farmerName || "Unknown Farmer",
+                    sellerId: item.farmerId?.toString(),
+                    description: item.description,
+                    category: "Auction", // Or specific category if available
+                    rating: 4.5, // Default or fetch real rating
+                    pricingType: "AUCTION",
+                    quantity: item.productQuantity || 1,
+                    deliveryAvailable: item.isDeliveryAvailable,
+                    baseCharge: 0, // Add to DTO if needed, or assume default
+                    pickupAddress: item.pickupAddress,
+
+                    // Auction Specifics
+                    isAuction: true,
+                    currentBid: item.currentHighestBidAmount,
+                    startingPrice: item.startingPrice,
+                    endTime: item.endTime,
+                    bidCount: item.bidCount
+                }));
+
+                // 5. Merge Data
+                setVegetables([...mappedAuctions, ...mappedProducts]);
+
             } catch (err) {
-                console.error("Error loading products:", err);
-                setError("Could not load products. Please ensure the backend is running.");
+                console.error("Error loading data:", err);
+                setError("Could not load marketplace items. Please check your connection.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchProductsAndNames();
+        fetchData();
     }, []);
 
     const filteredVegetables = useMemo(() => {
         return vegetables.filter((veg) => {
             const matchesSearch = veg.name.toLowerCase().includes(searchQuery.toLowerCase())
-            const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory
+            // Include Auctions in "All" or if a specific Auction category existed
+            const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory || (veg.isAuction && selectedCategory === "All")
             const matchesPrice = veg.price1kg >= priceRange[0] && veg.price1kg <= priceRange[1]
             return matchesSearch && matchesCategory && matchesPrice
         })
@@ -118,7 +157,7 @@ export default function VegetableListings() {
             <div className="bg-[#f8f8f8] py-12">
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
-                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables directly from farmers.</p>
+                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables and live auctions directly from farmers.</p>
                 </div>
             </div>
 
@@ -129,7 +168,7 @@ export default function VegetableListings() {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search vegetables..."
+                            placeholder="Search vegetables or auctions..."
                             className="pl-10 w-full"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -158,7 +197,7 @@ export default function VegetableListings() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Price Range (per kg)</label>
+                            <label className="text-sm font-medium mb-2 block">Price Range</label>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Min: Rs. {priceRange[0]}</span>
@@ -167,7 +206,7 @@ export default function VegetableListings() {
                                 <div className="flex gap-4">
                                     <input
                                         type="range"
-                                        min="0" max="5000"
+                                        min="0" max="50000"
                                         value={priceRange[1]}
                                         onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                                         className="w-full"
@@ -196,7 +235,11 @@ export default function VegetableListings() {
                         {filteredVegetables.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVegetables.map((veg) => (
-                                    <VegetableCard key={veg.id} vegetable={veg} />
+                                    <VegetableCard
+                                        // FIX: Use a composite key (type + id) to ensure uniqueness
+                                        key={`${veg.isAuction ? 'auction' : 'product'}-${veg.id}`}
+                                        vegetable={veg}
+                                    />
                                 ))}
                             </div>
                         ) : (
