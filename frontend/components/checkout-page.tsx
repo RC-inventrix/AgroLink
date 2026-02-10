@@ -245,10 +245,7 @@ export function CheckoutPage() {
                     <div className="mb-6 p-4 border border-border rounded-lg">
                         <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
                         <div className="space-y-3">
-                            <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "card" ? "var(--primary)" : undefined }}>
-                                <input type="radio" checked={paymentMethod === "card"} onChange={() => setPaymentMethod("card")} className="w-4 h-4" />
-                                <span className="font-semibold">Credit/Debit Card</span>
-                            </label>
+                            
                             <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer transition" style={{ borderColor: paymentMethod === "cash" ? "var(--primary)" : undefined }}>
                                 <input type="radio" checked={paymentMethod === "cash"} onChange={() => setPaymentMethod("cash")} className="w-4 h-4" />
                                 <span className="font-semibold">Cash on Delivery</span>
