@@ -27,12 +27,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate",
-                                "/auth/count/farmers", "/auth/count/buyers" , "/auth/user/**" , "/auth/fullnames").permitAll()
+                                "/auth/count/farmers", "/auth/count/buyers" , "/auth/user/**" , "/auth/fullnames" ).permitAll()
                         // 1. Admin Controller එකට අදාළ endpoints
                         .requestMatchers("/api/admin/register", "/api/admin/login").permitAll()
 
                         // 2. Auth Controller එකට අදාළ endpoints (මෙතන තමයි /auth/count තියෙන්නේ)
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate").permitAll()
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate" , "/auth/me").permitAll()
 
                         // 3. H2 Console එකට අවසර දීම
                         .requestMatchers("/h2-console/**").permitAll()
