@@ -3,21 +3,20 @@
 import { useState, useEffect } from "react"
 import {
     X, Gavel, MapPin, Truck, Clock, AlertCircle, Check,
-    Loader2, Navigation, User, ExternalLink, Store
+    Loader2, Navigation, ExternalLink, Store
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import LocationPicker from "@/components/LocationPicker" // Assuming this exists based on your provided files
+import LocationPicker from "@/components/LocationPicker"
 
-// Interfaces based on your project structure
+// Interfaces
 interface Vegetable {
     id: string
     name: string
     image: string
-    price1kg: number // Used as current price/start price proxy in listings
+    price1kg: number
     seller: string
     sellerId: string
     description: string
@@ -43,13 +42,24 @@ interface Bid {
     rank: number
 }
 
+interface FullAddress {
+    streetAddress: string
+    city: string
+    district: string
+    province: string
+    zipcode: string
+    latitude: number
+    longitude: number
+    formattedAddress?: string
+}
+
 interface AuctionBidPopupProps {
     isOpen: boolean
     onClose: () => void
     vegetable: Vegetable
 }
 
-// Reuse Haversine from your purchase form
+// Reuse Haversine from purchase form as fallback
 const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -70,6 +80,16 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 }
 
+// Format bid input with commas while preserving decimals
+const formatBidInput = (value: string) => {
+    if (!value) return ""
+    const [intPart, decimalPart] = value.split(".")
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+    return decimalPart !== undefined ? `${formattedInt}.${decimalPart}` : formattedInt
+}
+
+const parseBidAmount = (value: string) => parseFloat(value.replace(/,/g, ""))
+
 export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionBidPopupProps) {
     // --- State ---
     const [bids, setBids] = useState<Bid[]>([])
@@ -80,19 +100,29 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [confirming, setConfirming] = useState(false)
 
+    // User Details for Bid Submission
+    const [buyerEmail, setBuyerEmail] = useState<string>("")
+
+    // Auction Specific Delivery Config (fetched from live auction data)
+    const [auctionDeliveryConfig, setAuctionDeliveryConfig] = useState<{ base: number, extra: number }>({ base: 0, extra: 0 })
+
     // Address & Delivery State
-    const [userDefaultAddress, setUserDefaultAddress] = useState<{ address: string; lat: number; lng: number } | null>(null)
+    const [userDefaultAddress, setUserDefaultAddress] = useState<FullAddress | null>(null)
     const [addressOption, setAddressOption] = useState<"default" | "custom">("default")
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
+
+    // Custom Location Picker State
     const [tempCustomLocation, setTempCustomLocation] = useState<any>({ latitude: null, longitude: null, streetAddress: "" })
-    const [confirmedCustomLocation, setConfirmedCustomLocation] = useState<{ address: string; lat: number; lng: number } | null>(null)
+    const [confirmedCustomLocation, setConfirmedCustomLocation] = useState<FullAddress | null>(null)
+
+    // Calculations
     const [distance, setDistance] = useState<number>(0)
     const [deliveryFee, setDeliveryFee] = useState<number>(0)
     const [isCalculatingDistance, setIsCalculatingDistance] = useState(false)
 
     // --- Effects ---
 
-    // 1. Fetch Live Auction Details (Bids)
+    // 1. Fetch Live Auction Details & User Data
     useEffect(() => {
         if (isOpen && vegetable.id) {
             const fetchAuctionDetails = async () => {
@@ -102,40 +132,61 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                         const data = await res.json()
                         setBids(data.topBids || [])
                         setCurrentHighest(data.currentHighestBidAmount || data.startingPrice || 0)
+
+                        // Store delivery config from API directly
+                        setAuctionDeliveryConfig({
+                            base: data.baseDeliveryFee || 0,
+                            extra: data.extraFeePer3Km || 0
+                        })
                     }
                 } catch (e) {
                     console.error("Failed to fetch auction details", e)
                 }
             }
             fetchAuctionDetails()
-            // Poll every 10 seconds for updates
-            const interval = setInterval(fetchAuctionDetails, 10000)
+            const interval = setInterval(fetchAuctionDetails, 5000) // Polling
             return () => clearInterval(interval)
         }
     }, [isOpen, vegetable.id])
 
-    // 2. Fetch User Default Address
+    // 2. Fetch User Info (Email & Address)
     useEffect(() => {
         const fetchUserData = async () => {
             const userId = sessionStorage.getItem("id")
             const token = sessionStorage.getItem("token")
             if (userId && isOpen) {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/users/${userId}/address`, {
+                    // Fetch Email
+                    const userRes = await fetch(`http://localhost:8080/api/users/${userId}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
-                    if (res.ok) {
-                        const data = await res.json()
-                        const fullAddr = [data.address, data.city, data.district].filter(Boolean).join(", ")
+                    if (userRes.ok) {
+                        const userData = await userRes.json()
+                        setBuyerEmail(userData.email || "")
+                    }
+
+                    // Fetch Address
+                    const addrRes = await fetch(`http://localhost:8080/api/users/${userId}/address`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    })
+                    if (addrRes.ok) {
+                        const data = await addrRes.json()
+                        const fullAddrStr = [data.address, data.city, data.district].filter(Boolean).join(", ")
+
                         if (data.latitude && data.longitude) {
                             setUserDefaultAddress({
-                                address: fullAddr,
-                                lat: data.latitude,
-                                lng: data.longitude
+                                streetAddress: data.address || "",
+                                city: data.city || "",
+                                district: data.district || "",
+                                province: data.province || "",
+                                zipcode: data.zipcode || "",
+                                latitude: data.latitude,
+                                longitude: data.longitude,
+                                formattedAddress: fullAddrStr
                             })
                         }
                     }
-                } catch (error) { console.error("Failed to fetch address") }
+                } catch (error) { console.error("Failed to fetch user data") }
             }
         }
         fetchUserData()
@@ -157,7 +208,6 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
                 if (days > 0) setTimeLeft(`${days}d ${hours}h ${minutes}m`)
                 else setTimeLeft(`${hours}h ${minutes}m ${seconds}s`)
             }
@@ -165,7 +215,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
         return () => clearInterval(timer)
     }, [vegetable.endTime])
 
-    // 4. Delivery Calculation (Reused Logic)
+    // 4. Delivery Calculation (Reusing Purchase Form Logic)
     useEffect(() => {
         if (!vegetable.deliveryAvailable || !isOpen) {
             setDeliveryFee(0)
@@ -178,11 +228,11 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
             let targetLng: number | null = null
 
             if (addressOption === "default" && userDefaultAddress) {
-                targetLat = userDefaultAddress.lat
-                targetLng = userDefaultAddress.lng
+                targetLat = userDefaultAddress.latitude
+                targetLng = userDefaultAddress.longitude
             } else if (addressOption === "custom" && confirmedCustomLocation) {
-                targetLat = confirmedCustomLocation.lat
-                targetLng = confirmedCustomLocation.lng
+                targetLat = confirmedCustomLocation.latitude
+                targetLng = confirmedCustomLocation.longitude
             }
 
             if (targetLat && targetLng && vegetable.pickupLatitude && vegetable.pickupLongitude) {
@@ -197,7 +247,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                     let calculatedDistance = 0
 
                     if (data.code === "Ok" && data.routes && data.routes.length > 0) {
-                        calculatedDistance = parseFloat((data.routes[0].distance / 1000).toFixed(1))
+                        const distanceInMeters = data.routes[0].distance;
+                        calculatedDistance = parseFloat((distanceInMeters / 1000).toFixed(1));
                     } else {
                         calculatedDistance = parseFloat(getHaversineDistance(
                             vegetable.pickupLatitude!, vegetable.pickupLongitude!, targetLat, targetLng
@@ -205,36 +256,52 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                     }
 
                     setDistance(calculatedDistance)
-                    const base = vegetable.baseCharge || 0
-                    const rate = vegetable.extraRatePerKm || 0
-                    const chargeableDist = Math.max(0, calculatedDistance - 5) // Assuming 5km buffer logic from previous form
-                    setDeliveryFee(Math.round(base + (chargeableDist * rate)))
+
+                    // Fee Calculation Logic (Consistent with Purchase Form)
+                    // Use fetched config or fallbacks
+                    const base = auctionDeliveryConfig.base || vegetable.baseCharge || 0
+                    const rate = auctionDeliveryConfig.extra || vegetable.extraRatePerKm || 0
+
+                    const chargeableDist = Math.max(0, calculatedDistance - 5) // 5km buffer
+                    const fee = base + (chargeableDist * rate)
+                    setDeliveryFee(Math.round(fee))
 
                 } catch (error) {
                     console.error("Distance error", error)
                 } finally {
                     setIsCalculatingDistance(false)
                 }
+            } else {
+                setDistance(0)
+                setDeliveryFee(0)
             }
         }
         calculateRoute()
-    }, [addressOption, userDefaultAddress, confirmedCustomLocation, vegetable, isOpen])
-
+    }, [addressOption, userDefaultAddress, confirmedCustomLocation, vegetable, isOpen, auctionDeliveryConfig])
 
     // --- Handlers ---
 
     const handleBidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value
-        if (val === "" || /^\d*\.?\d*$/.test(val)) setBidAmount(val)
+        const raw = e.target.value.replace(/,/g, "")
+        if (raw === "" || /^\d*\.?\d*$/.test(raw)) setBidAmount(raw)
+    }
+
+    const preventScrollChange = (e: React.WheelEvent<HTMLInputElement>) => {
+        (e.target as HTMLInputElement).blur();
     }
 
     const saveCustomAddress = () => {
         if (tempCustomLocation.latitude && tempCustomLocation.streetAddress) {
             const addrStr = `${tempCustomLocation.streetAddress}, ${tempCustomLocation.city || ''}`
             setConfirmedCustomLocation({
-                address: addrStr,
-                lat: tempCustomLocation.latitude,
-                lng: tempCustomLocation.longitude
+                streetAddress: tempCustomLocation.streetAddress,
+                city: tempCustomLocation.city || "",
+                district: tempCustomLocation.district || "",
+                province: tempCustomLocation.province || "",
+                zipcode: tempCustomLocation.zipcode || "",
+                latitude: tempCustomLocation.latitude,
+                longitude: tempCustomLocation.longitude,
+                formattedAddress: addrStr
             })
             setIsAddressModalOpen(false)
         }
@@ -242,7 +309,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
 
     const validateBid = () => {
         setNotification(null)
-        const amount = parseFloat(bidAmount)
+        const amount = parseBidAmount(bidAmount)
         if (!amount || amount <= 0) {
             setNotification({ message: "Please enter a valid bid amount", type: "error" })
             return false
@@ -275,23 +342,28 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
             return
         }
 
-        // Prepare Delivery Address Object if needed
+        // Construct Full Delivery Address Object
         let deliveryAddressObj = null;
         if (vegetable.deliveryAvailable) {
             if (addressOption === "default" && userDefaultAddress) {
-                // We'd ideally need structured data here, but for now sending what we have
-                // The backend expects DeliveryAddress object.
-                // Since we only fetched lat/lng/string for display, we construct best effort
                 deliveryAddressObj = {
-                    streetAddress: userDefaultAddress.address, // fallback
-                    latitude: userDefaultAddress.lat,
-                    longitude: userDefaultAddress.lng
+                    streetAddress: userDefaultAddress.streetAddress,
+                    city: userDefaultAddress.city,
+                    district: userDefaultAddress.district,
+                    province: userDefaultAddress.province,
+                    zipcode: userDefaultAddress.zipcode,
+                    latitude: userDefaultAddress.latitude,
+                    longitude: userDefaultAddress.longitude
                 }
             } else if (addressOption === "custom" && confirmedCustomLocation) {
-                 deliveryAddressObj = {
-                    streetAddress: confirmedCustomLocation.address,
-                    latitude: confirmedCustomLocation.lat,
-                    longitude: confirmedCustomLocation.lng
+                deliveryAddressObj = {
+                    streetAddress: confirmedCustomLocation.streetAddress,
+                    city: confirmedCustomLocation.city,
+                    district: confirmedCustomLocation.district,
+                    province: confirmedCustomLocation.province,
+                    zipcode: confirmedCustomLocation.zipcode,
+                    latitude: confirmedCustomLocation.latitude,
+                    longitude: confirmedCustomLocation.longitude
                 }
             }
         }
@@ -306,8 +378,9 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 body: JSON.stringify({
                     bidderId: parseInt(userId),
                     bidderName: userName,
-                    bidAmount: parseFloat(bidAmount),
-                    deliveryAddress: deliveryAddressObj
+                    bidderEmail: buyerEmail, // Added email
+                    bidAmount: parseBidAmount(bidAmount),
+                    deliveryAddress: deliveryAddressObj // Full address object
                 })
             })
 
@@ -315,24 +388,19 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 const data = await res.json()
                 setNotification({ message: "Bid placed successfully!", type: "success" })
 
-                // Update local state immediately
                 setCurrentHighest(data.bidAmount)
-                // Add to top of list roughly (real update happens on next poll)
                 setBids(prev => [{
                     id: data.id,
                     bidderName: "You",
                     bidAmount: data.bidAmount,
                     bidTime: new Date().toISOString(),
                     rank: 1
-                }, ...prev].slice(0, 5)) // Keep top 5
+                }, ...prev].slice(0, 5))
 
                 setConfirming(false)
                 setBidAmount("")
-
-                // Optional: Close after delay
-                // setTimeout(onClose, 2000)
             } else {
-                const errData = await res.text() // Or json depending on backend error structure
+                const errData = await res.text()
                 setNotification({ message: `Failed: ${errData || "Could not place bid"}`, type: "error" })
                 setConfirming(false)
             }
@@ -346,7 +414,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
 
     if (!isOpen) return null
 
-    // Google Maps URL for Farmer
+    // FIX: Corrected Google Maps URL
     const googleMapsUrl = vegetable.pickupLatitude && vegetable.pickupLongitude
         ? `https://www.google.com/maps/search/?api=1&query=${vegetable.pickupLatitude},${vegetable.pickupLongitude}`
         : null;
@@ -370,9 +438,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                        {/* LEFT COLUMN: Item & Farmer Info */}
+                        {/* LEFT COLUMN */}
                         <div className="space-y-6">
-                            {/* Product Card */}
                             <div className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
                                 <img src={vegetable.image} alt={vegetable.name} className="w-24 h-24 rounded-lg object-cover bg-white" />
                                 <div>
@@ -385,7 +452,6 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                 </div>
                             </div>
 
-                            {/* Farmer Location */}
                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                                 <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                                     <MapPin className="w-4 h-4 text-orange-600" /> Farmer's Location
@@ -401,7 +467,6 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                 )}
                             </div>
 
-                            {/* Live Auction Stats */}
                             <div className="bg-blue-50 p-5 rounded-xl border border-blue-100">
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="flex items-center gap-2 text-blue-800 font-medium">
@@ -428,10 +493,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Delivery & Bidding Action */}
+                        {/* RIGHT COLUMN */}
                         <div className="space-y-6">
-
-                            {/* Delivery Section */}
                             {vegetable.deliveryAvailable ? (
                                 <div className="p-5 border border-gray-200 rounded-xl">
                                     <h3 className="font-semibold flex items-center gap-2 mb-4">
@@ -443,7 +506,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                             <RadioGroupItem value="default" id="popup-def" className="mt-1" />
                                             <div>
                                                 <Label htmlFor="popup-def">Registered Address</Label>
-                                                <p className="text-xs text-gray-500">{userDefaultAddress?.address || "No address found"}</p>
+                                                <p className="text-xs text-gray-500">{userDefaultAddress?.formattedAddress || "No address found"}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3">
@@ -457,7 +520,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                                         </Button>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-gray-500">{confirmedCustomLocation?.address || "Select a location"}</p>
+                                                <p className="text-xs text-gray-500">{confirmedCustomLocation?.formattedAddress || "Select a location"}</p>
                                             </div>
                                         </div>
                                     </RadioGroup>
@@ -486,11 +549,13 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                 <div className="relative mt-2 mb-2">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
                                     <Input
-                                        type="number"
-                                        value={bidAmount}
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={formatBidInput(bidAmount)}
                                         onChange={handleBidChange}
-                                        className="pl-10 h-12 text-lg font-bold"
-                                        placeholder={(currentHighest + 100).toFixed(2)}
+                                        onWheel={preventScrollChange}
+                                        className="pl-10 h-12 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        // Placeholder removed as requested
                                     />
                                 </div>
                                 <p className="text-xs text-gray-500 mb-4">
@@ -512,7 +577,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                     </div>
                 </div>
 
-                {/* Confirm Dialog Overlay (Inside Popup) */}
+                {/* Confirm Dialog */}
                 {confirming && (
                     <div className="absolute inset-0 z-10 bg-white/95 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95">
                         <div className="max-w-md w-full">
@@ -521,7 +586,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                             <div className="bg-gray-50 p-6 rounded-xl space-y-3 mb-6 border border-gray-200">
                                 <div className="flex justify-between text-gray-600">
                                     <span>Bid Amount</span>
-                                    <span>Rs. {formatCurrency(parseFloat(bidAmount))}</span>
+                                    <span>Rs. {formatCurrency(parseBidAmount(bidAmount))}</span>
                                 </div>
                                 {vegetable.deliveryAvailable && (
                                     <div className="flex justify-between text-gray-600">
@@ -531,7 +596,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                 )}
                                 <div className="border-t pt-3 flex justify-between font-bold text-lg text-blue-700">
                                     <span>Total Payable (If Won)</span>
-                                    <span>Rs. {formatCurrency(parseFloat(bidAmount) + deliveryFee)}</span>
+                                    <span>Rs. {formatCurrency(parseBidAmount(bidAmount) + deliveryFee)}</span>
                                 </div>
                             </div>
 
@@ -548,7 +613,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 )}
             </div>
 
-            {/* Address Modal (Nested) */}
+            {/* Address Modal */}
             {isAddressModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[80vh]">
@@ -576,3 +641,5 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
         </div>
     )
 }
+
+

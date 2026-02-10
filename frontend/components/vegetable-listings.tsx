@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, ChevronDown, Loader2 } from "lucide-react"
 import VegetableCard from "./vegetable-card"
+import AuctionBidPopup from "./auction-bid-popup" // Import the new component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -44,11 +45,14 @@ export default function VegetableListings() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
+    // Popup state
+    const [selectedAuction, setSelectedAuction] = useState<Vegetable | null>(null)
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const token = sessionStorage.getItem("token");
-                const headers:HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
+                const headers: HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
 
                 // 1. Run fetches in parallel
                 const [productsRes, auctionsRes] = await Promise.all([
@@ -118,6 +122,8 @@ export default function VegetableListings() {
                     deliveryAvailable: item.isDeliveryAvailable,
                     baseCharge: 0, // Add to DTO if needed, or assume default
                     pickupAddress: item.pickupAddress,
+                    pickupLatitude: item.pickupLatitude, // Added mappings
+                    pickupLongitude: item.pickupLongitude, // Added mappings
 
                     // Auction Specifics
                     isAuction: true,
@@ -152,7 +158,7 @@ export default function VegetableListings() {
     }, [searchQuery, selectedCategory, priceRange, vegetables])
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background relative">
             {/* Header Section */}
             <div className="bg-[#f8f8f8] py-12">
                 <div className="container mx-auto px-4">
@@ -239,6 +245,8 @@ export default function VegetableListings() {
                                         // FIX: Use a composite key (type + id) to ensure uniqueness
                                         key={`${veg.isAuction ? 'auction' : 'product'}-${veg.id}`}
                                         vegetable={veg}
+                                        // Pass the handler to open the popup
+                                        onPlaceBid={(auctionItem) => setSelectedAuction(auctionItem)}
                                     />
                                 ))}
                             </div>
@@ -250,6 +258,15 @@ export default function VegetableListings() {
                     </>
                 )}
             </div>
+
+            {/* Auction Popup */}
+            {selectedAuction && (
+                <AuctionBidPopup
+                    isOpen={!!selectedAuction}
+                    onClose={() => setSelectedAuction(null)}
+                    vegetable={selectedAuction}
+                />
+            )}
         </div>
     )
 }
