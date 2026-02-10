@@ -1,6 +1,7 @@
 package com.agrolink.indentityanduserservice.config;
 
 import com.agrolink.indentityanduserservice.services.AdminService;
+import com.agrolink.indentityanduserservice.services.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,7 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate",
-                                "/auth/count/farmers", "/auth/count/buyers").permitAll()
+                                "/auth/count/farmers", "/auth/count/buyers" , "/auth/user/**" , "/auth/fullnames").permitAll()
                         // 1. Admin Controller එකට අදාළ endpoints
                         .requestMatchers("/api/admin/register", "/api/admin/login").permitAll()
 
@@ -47,9 +48,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(AdminService adminService) {
+    public AuthenticationProvider authenticationProvider(CustomUserDetailsService customUserDetailsService) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(adminService);
+        provider.setUserDetailsService(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

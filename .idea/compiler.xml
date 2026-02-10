@@ -46,6 +46,7 @@
       <module name="auction-servie" target="21" />
       <module name="auth-service" target="25" />
       <module name="indentityAndUser-service" target="21" />
+      <module name="moderation-service" target="17" />
       <module name="notification-service" target="21" />
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>
