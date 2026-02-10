@@ -17,8 +17,8 @@ interface Vegetable {
     sellerId: string
     description: string
     rating: number
-    category?: string
-    pricingType?: string
+    category: string
+    pricingType: string
     quantity: number
     deliveryAvailable: boolean
     baseCharge?: number
@@ -34,7 +34,14 @@ interface Vegetable {
     bidCount?: number
 }
 
-export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
+// Added onPlaceBid prop to the component signature
+export default function VegetableCard({
+                                          vegetable,
+                                          onPlaceBid
+                                      }: {
+    vegetable: Vegetable,
+    onPlaceBid?: (veg: Vegetable) => void
+}) {
     const router = useRouter()
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -49,9 +56,13 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
         router.push("/buyer/bargain")
     }
 
-    const handleRedirectAuction = () => {
-        // Redirect to auction specific page
-        router.push(`/auction/${vegetable.id}`)
+    const handleBidClick = () => {
+        if (onPlaceBid) {
+            onPlaceBid(vegetable);
+        } else {
+            // Fallback for standalone usage
+            router.push(`/auction/${vegetable.id}`)
+        }
     }
 
     const handleContactSeller = () => {
@@ -208,7 +219,7 @@ export default function VegetableCard({ vegetable }: { vegetable: Vegetable }) {
                 <div className="space-y-2">
                     {vegetable.isAuction ? (
                         <Button
-                            onClick={handleRedirectAuction}
+                            onClick={handleBidClick}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
                         >
                             <Gavel className="h-4 w-4" />

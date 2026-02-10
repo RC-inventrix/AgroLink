@@ -491,6 +491,8 @@ public class AuctionService {
                 .isDeliveryAvailable(auction.getIsDeliveryAvailable())
                 .reservePrice(auction.getReservePrice())
                 .pickupAddress(auction.getPickupAddress())
+                .pickupLatitude(auction.getPickupLatitude())
+                .pickupLongitude(auction.getPickupLongitude())
                 .build();
     }
 
