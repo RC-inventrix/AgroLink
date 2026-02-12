@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-
+import Footer from "@/components/Footer";
 export default function AboutPage() {
     return (
         <div className="min-h-screen bg-background">
@@ -204,15 +204,8 @@ export default function AboutPage() {
                     </div>
                 </div>
             </section>
-
-            {/* Footer */}
-            <footer className="bg-[#03230F] border-t border-[#D4A650]/20 py-8">
-                <div className="container mx-auto px-4 lg:px-8">
-                    <div className="text-center text-white/70">
-                        <p>{"© 2026 AgroLink. All rights reserved."}</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
+            
 
         </div>
     )

@@ -150,21 +150,6 @@ export default function AgroLinkHome() {
                     </div>
                 </div>
 
-                {/*<div className="absolute top-6 sm:top-8 right-3 sm:right-12 z-20 w-80 sm:w-96">*/}
-                {/*    <div className="flex gap-1 sm:gap-2">*/}
-                {/*        <div className="flex-1 flex items-center gap-2 bg-white rounded-lg px-3 sm:px-4 py-2 shadow-lg">*/}
-                {/*            <Search className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />*/}
-                {/*            <input*/}
-                {/*                type="text"*/}
-                {/*                placeholder="Search vegetables..."*/}
-                {/*                className="flex-1 outline-none text-[#03230F] text-xs sm:text-sm"*/}
-                {/*            />*/}
-                {/*        </div>*/}
-                {/*        <button className="px-4 sm:px-6 py-2 bg-[#EEC044] text-[#03230F] rounded-lg font-semibold hover:bg-[#d9a83d] transition shadow-lg text-xs sm:text-base whitespace-nowrap">*/}
-                {/*            Search*/}
-                {/*        </button>*/}
-                {/*    </div>*/}
-                {/*</div>*/}
             </section>
 
             {/* Features Section */}
@@ -328,96 +313,6 @@ export default function AgroLinkHome() {
                 </div>
             </section>
             <Footer/>
-            {/*/!* Footer *!/*/}
-            {/*<footer className="bg-[#04000B] text-white py-8 sm:py-12 px-3 sm:px-6 lg:px-8">*/}
-            {/*    <div className="max-w-7xl mx-auto">*/}
-            {/*        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">*/}
-            {/*            /!* Brand *!/*/}
-            {/*            <div>*/}
-            {/*                <div className="flex items-center gap-2 mb-3 sm:mb-4">*/}
-            {/*                    <div className="w-8 h-8 bg-[#EEC044] rounded-lg flex items-center justify-center">*/}
-            {/*                        <Leaf className="text-[#03230F] w-5 h-5" />*/}
-            {/*                    </div>*/}
-            {/*                    <span className="text-lg sm:text-xl font-bold">AgroLink</span>*/}
-            {/*                </div>*/}
-            {/*                <p className="text-gray-400 text-xs sm:text-sm">*/}
-            {/*                    Connecting farmers and buyers for sustainable agriculture.*/}
-            {/*                </p>*/}
-            {/*            </div>*/}
-
-            {/*            /!* Quick Links *!/*/}
-            {/*            <div>*/}
-            {/*                <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Quick Links</h4>*/}
-            {/*                <ul className="space-y-1.5 sm:space-y-2 text-gray-400 text-xs sm:text-sm">*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Home*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            About*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Features*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Contact*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                </ul>*/}
-            {/*            </div>*/}
-
-            {/*            /!* Legal *!/*/}
-            {/*            <div>*/}
-            {/*                <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Legal</h4>*/}
-            {/*                <ul className="space-y-1.5 sm:space-y-2 text-gray-400 text-xs sm:text-sm">*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Privacy Policy*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Terms of Service*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                    <li>*/}
-            {/*                        <a href="#" className="hover:text-[#EEC044] transition">*/}
-            {/*                            Cookie Policy*/}
-            {/*                        </a>*/}
-            {/*                    </li>*/}
-            {/*                </ul>*/}
-            {/*            </div>*/}
-
-            {/*            /!* Contact *!/*/}
-            {/*            <div>*/}
-            {/*                <h4 className="font-semibold text-sm sm:text-base mb-3 sm:mb-4">Contact</h4>*/}
-            {/*                <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4">support@agrolink.com</p>*/}
-            {/*                <div className="flex gap-4">*/}
-            {/*                    <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">*/}
-            {/*                        <Facebook className="w-4 sm:w-5 h-4 sm:h-5" />*/}
-            {/*                    </a>*/}
-            {/*                    <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">*/}
-            {/*                        <Twitter className="w-4 sm:w-5 h-4 sm:h-5" />*/}
-            {/*                    </a>*/}
-            {/*                    <a href="#" className="text-gray-400 hover:text-[#EEC044] transition">*/}
-            {/*                        <Instagram className="w-4 sm:w-5 h-4 sm:h-5" />*/}
-            {/*                    </a>*/}
-            {/*                </div>*/}
-            {/*            </div>*/}
-            {/*        </div>*/}
-
-            {/*        /!* Copyright *!/*/}
-            {/*        <div className="border-t border-gray-700 pt-6 sm:pt-8 text-center text-gray-400 text-xs sm:text-sm">*/}
-            {/*            <p>&copy; 2025 AgroLink. All rights reserved. Connecting farmers and buyers worldwide.</p>*/}
-            {/*        </div>*/}
-            {/*    </div>*/}
-            {/*</footer>*/}
         </div>
     )
 }

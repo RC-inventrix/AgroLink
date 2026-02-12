@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Header from "@/components/header"
 import Image from "next/image";
 import Link from "next/link";
+import Footer from "@/components/Footer";
 
 export default function FeaturesPage() {
   return (
@@ -596,7 +597,7 @@ export default function FeaturesPage() {
           
         </div>
       </section>
-
+    <Footer/>
       
     </div>
   )
