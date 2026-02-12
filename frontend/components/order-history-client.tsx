@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
 import BuyerHeader from "./headers/BuyerHeader"
 import Link from "next/link"
+import ReportProblemModalBuyer from "./buyers/reportProblemModelBuyer"
 
 // --- HELPER COMPONENT: STAR RATING ---
 function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
@@ -83,7 +84,7 @@ interface OrderItem {
     status: "completed" | "pending" | "cancelled"
     totalPrice: number
     otp?: string
-    orderReview?: any 
+    orderReview?: any
     sellerId?: string
 }
 
@@ -114,8 +115,8 @@ export function OrderHistoryClient() {
                 backendOrders.forEach((order: any) => {
                     let parsedItems = []
                     try {
-                        parsedItems = (order.itemsJson && order.itemsJson.startsWith("[")) 
-                            ? JSON.parse(order.itemsJson) 
+                        parsedItems = (order.itemsJson && order.itemsJson.startsWith("["))
+                            ? JSON.parse(order.itemsJson)
                             : [{ productName: "Order Items", quantity: 1, pricePerKg: order.amount / 100 }];
                     } catch (e) { console.error("JSON Parse error", e) }
 
@@ -125,13 +126,13 @@ export function OrderHistoryClient() {
                         rawItemsList.push({
                             orderId: order.id,
                             itemData: item,
-                            status: order.status === "COMPLETED" ? "completed" : 
-                                    order.status === "CANCELLED" ? "cancelled" : "pending",
+                            status: order.status === "COMPLETED" ? "completed" :
+                                order.status === "CANCELLED" ? "cancelled" : "pending",
                             createdAt: order.createdAt,
                             amount: order.amount,
                             sellerId: sId,
-                            otp: order.otp, 
-                            orderReview: order.orderReview 
+                            otp: order.otp,
+                            orderReview: order.orderReview
                         })
                     })
                 })
@@ -154,7 +155,7 @@ export function OrderHistoryClient() {
                         quantity: entry.itemData.quantity || 1,
                         pricePerKg: entry.itemData.pricePerKg || 0,
                         image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
-                        sellerId: entry.sellerId, 
+                        sellerId: entry.sellerId,
                         sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
                         orderDate: new Date(entry.createdAt),
                         status: entry.status,
@@ -165,7 +166,7 @@ export function OrderHistoryClient() {
 
                 setOrders(finalOrders)
             }
-        } catch (error) { console.error("Order fetch failed", error) } 
+        } catch (error) { console.error("Order fetch failed", error) }
         finally { setLoading(false) }
     }
 
@@ -182,20 +183,20 @@ export function OrderHistoryClient() {
                         <TabsTrigger value="pending">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
                         <TabsTrigger value="cancelled">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
                     </TabsList>
-                    
+
                     <div className="mt-6">
                         <TabsContent value="all">
-                            <OrderList orders={orders} loading={loading} onRefresh={fetchOrders}/>
+                            <OrderList orders={orders} loading={loading} onRefresh={fetchOrders} />
                         </TabsContent>
                         <TabsContent value="completed">
-                            <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders}/>
+                            <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders} />
                         </TabsContent>
                         <TabsContent value="pending">
-                            <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders}/>
+                            <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders} />
                         </TabsContent>
                         {/* THIS WAS MISSING: The content for the cancelled tab */}
                         <TabsContent value="cancelled">
-                            <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders}/>
+                            <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders} />
                         </TabsContent>
                     </div>
                 </Tabs>
@@ -212,7 +213,7 @@ function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loadin
             <p className="text-gray-400">No orders found.</p>
         </div>
     )
-    
+
     return (
         <div className="space-y-4">
             {orders.map((order) => (
@@ -223,6 +224,7 @@ function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loadin
 }
 
 function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () => void }) {
+    const [showReportModal, setShowReportModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
@@ -245,9 +247,9 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
 
             if (res.ok) {
                 toast.success("Review submitted!");
-                onRefresh(); 
+                onRefresh();
             }
-        } catch (err) { toast.error("Submission failed"); } 
+        } catch (err) { toast.error("Submission failed"); }
         finally { setIsSubmitting(false); }
     };
 
@@ -271,7 +273,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                 {order.status}
                             </Badge>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                             <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Qty</p><p className="font-bold text-gray-800">{order.quantity} kg</p></div>
                             <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Rate</p><p className="font-bold text-gray-800">Rs. {order.pricePerKg}</p></div>
@@ -293,8 +295,30 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             </div>
                         )}
 
+
                         {order.status === "cancelled" && (
-                            <CancelledReasonBlock orderId={order.displayOrderId} />
+                            <div className="mt-4">
+                                <CancelledReasonBlock orderId={order.displayOrderId} />
+
+                                <div className=" mt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowReportModal(true)}
+                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase"
+                                    >
+                                        <AlertCircle size={12} className="mr-1" />
+                                        Report a Problem
+                                    </Button>
+                                </div>
+
+
+                                <ReportProblemModalBuyer
+                                    orderId={order.displayOrderId}
+                                    isOpen={showReportModal}
+                                    onClose={() => setShowReportModal(false)}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
@@ -323,16 +347,16 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                     </div>
                                     <div className="flex flex-col gap-3">
                                         <StarRating rating={rating} setRating={setRating} interactive={true} />
-                                        <textarea 
+                                        <textarea
                                             placeholder="How was the crop quality and transaction?"
                                             className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/20"
                                             rows={3}
                                             value={comment}
                                             onChange={(e) => setComment(e.target.value)}
                                         />
-                                        <Button 
-                                            onClick={handleSubmitReview} 
-                                            disabled={isSubmitting} 
+                                        <Button
+                                            onClick={handleSubmitReview}
+                                            disabled={isSubmitting}
                                             className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2 rounded-xl uppercase tracking-widest transition-all hover:bg-black"
                                         >
                                             {isSubmitting ? "Submitting..." : "Submit Review"}

@@ -164,7 +164,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
       secret_key: ${secret_key}        # <<-- set lowercase name to match application.properties
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET} # optional: webhook secret
       JWT_SECRET: ${JWT_KEY}
     depends_on:
       postgres:
@@ -200,10 +199,11 @@ services:
     networks:
       - agro-net
 
-  # 10. Auction Service
-  auction-service:
-    build: ./backend/auction-service
-    container_name: agro_auctions
+
+  # 10. Moderation (Report) Service
+  moderation-service:
+    build: ./backend/moderation-service # Path to your new Spring Boot project
+    container_name: agro_moderation
     ports:
       - "8084:8084"
     env_file:
@@ -215,15 +215,12 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
-      ORDER_SERVICE_HOST: order-payment-service
-      ORDER_SERVICE_PORT: 8075
+      JWT_SECRET: ${JWT_KEY}
     depends_on:
       postgres:
         condition: service_healthy
       service-discovery:
         condition: service_healthy
-      order-payment-service:
-        condition: service_started
     networks:
       - agro-net
 
