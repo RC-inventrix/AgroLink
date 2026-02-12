@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -398,40 +399,64 @@ public class AuctionService {
      */
     @Transactional(readOnly = true)
     public List<BuyerAuctionActivity> getBuyerAuctionActivity(Long buyerId) {
-        List<Bid> buyerBids = bidRepository.findByBidderId(buyerId);
-        
-        return buyerBids.stream()
-                .map(bid -> {
-                    Auction auction = bid.getAuction();
+        // 1. Find all distinct auctions the user has bid on
+        List<Auction> userAuctions = auctionRepository.findAuctionsWithBidsByBidderId(buyerId);
+
+        return userAuctions.stream()
+                .map(auction -> {
+                    // 2. Find user's highest bid on this auction
+                    List<Bid> myBids = bidRepository.findByAuctionIdAndBidderId(auction.getId(), buyerId);
+
+                    if (myBids.isEmpty()) return null;
+
+                    Bid myHighestBid = myBids.stream()
+                            .max(Comparator.comparing(Bid::getBidAmount))
+                            .orElseThrow();
+
+                    // 3. Find current rank
                     List<Bid> topBids = bidRepository.findTopBidsByAuctionId(auction.getId());
-                    
-                    int rank = IntStream.range(0, topBids.size())
-                            .filter(i -> topBids.get(i).getBidderId().equals(buyerId))
-                            .findFirst()
-                            .orElse(-1) + 1;
+                    int rank = -1;
 
-                    boolean isWinning = !topBids.isEmpty() && 
-                            topBids.get(0).getBidderId().equals(buyerId);
-                    boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED && 
+                    for (int i = 0; i < topBids.size(); i++) {
+                        if (topBids.get(i).getBidderId().equals(buyerId)) {
+                            rank = i + 1;
+                            break;
+                        }
+                    }
+
+                    int displayRank = (rank != -1) ? rank : 6;
+                    boolean isWinning = (rank == 1);
+                    boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED &&
                             auction.getWinningBidId() != null &&
-                            auction.getWinningBidId().equals(bid.getId());
+                            auction.getWinningBidId().equals(myHighestBid.getId());
 
+                    // 4. Map to Updated DTO
                     return BuyerAuctionActivity.builder()
                             .auctionId(auction.getId())
                             .productName(auction.getProductName())
                             .productImageUrl(auction.getProductImageUrl())
                             .auctionStatus(auction.getStatus())
                             .auctionEndTime(auction.getEndTime())
-                            .myHighestBid(bid.getBidAmount())
+                            .myHighestBid(myHighestBid.getBidAmount())
                             .currentHighestBid(auction.getCurrentHighestBidAmount())
                             .isWinning(isWinning)
                             .hasWon(hasWon)
-                            .myBidRank(rank)
+                            .myBidRank(displayRank)
+                            // New Fields Mapped Here
+                            .farmerName(auction.getFarmerName())
+                            .productQuantity(auction.getProductQuantity())
+                            .description(auction.getDescription())
+                            .isDeliveryAvailable(auction.getIsDeliveryAvailable())
+                            .baseDeliveryFee(auction.getBaseDeliveryFee())
+                            .extraFeePer3Km(auction.getExtraFeePer3Km())
+                            .pickupLatitude(auction.getPickupLatitude())
+                            .pickupLongitude(auction.getPickupLongitude())
+                            .myLastBidAddress(myHighestBid.getDeliveryAddress())
                             .build();
                 })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
-
     /**
      * Map Auction entity to AuctionResponse DTO.
      */
@@ -468,6 +493,7 @@ public class AuctionService {
                 .updatedAt(auction.getUpdatedAt())
                 .build();
     }
+
 
     /**
      * Map Auction entity to AuctionListItem DTO.
