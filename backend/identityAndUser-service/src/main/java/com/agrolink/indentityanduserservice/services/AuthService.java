@@ -22,7 +22,7 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // AuthService class එක ඇතුළට මේක දාන්න
+
 
     public long getActiveFarmerCount() {
         return userRepository.countByRole(Role.Farmer);

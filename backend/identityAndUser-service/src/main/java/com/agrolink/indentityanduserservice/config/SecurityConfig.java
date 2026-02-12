@@ -1,6 +1,7 @@
 package com.agrolink.indentityanduserservice.config;
 
-import com.agrolink.indentityanduserservice.services.AdminService;
+import com.agrolink.indentityanduserservice.services.CustomUserDetailsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,35 +12,47 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthFilter; // Inject your custom filter
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authenticationProvider) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints
+                        .requestMatchers(
+                                "/auth/register",
+                                "/auth/login",
+                                "/auth/count/**",
+                                "/auth/validate",
+                                "/auth/check-email",
+                                "/api/admin/register",
+                                "/api/admin/login",
+                                "/h2-console/**"
+                        ).permitAll()
 
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate",
-                                "/auth/count/farmers", "/auth/count/buyers").permitAll()
-                        // 1. Admin Controller එකට අදාළ endpoints
-                        .requestMatchers("/api/admin/register", "/api/admin/login").permitAll()
+                        // Protected endpoints (Requires Token)
+                        // Note: Removed /auth/me from permitAll so Spring properly validates the token
+                        .requestMatchers("/auth/me", "/auth/profile/update").authenticated()
 
-                        // 2. Auth Controller එකට අදාළ endpoints (මෙතන තමයි /auth/count තියෙන්නේ)
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/count", "/auth/validate").permitAll()
-
-                        // 3. H2 Console එකට අවසර දීම
-                        .requestMatchers("/h2-console/**").permitAll()
-
-                        // අනිත් හැම request එකකටම login වෙන්න ඕන
                         .anyRequest().authenticated()
                 )
-                // H2 Console එක හරියට වැඩ කරන්න නම් මේ කෑල්ල ඕන (Frames allow කරන්න)
+                // Set session management to stateless for JWT
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider)
+                // IMPORTANT: Add your JWT filter before the standard login filter
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .httpBasic(Customizer.withDefaults());
 
@@ -47,9 +60,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(AdminService adminService) {
+    public AuthenticationProvider authenticationProvider(CustomUserDetailsService customUserDetailsService) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(adminService);
+        provider.setUserDetailsService(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
