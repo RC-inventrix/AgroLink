@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import citiesData from "@/data/srilanka-cities.json"
 import { isWithinCityRadius } from "@/lib/geo-utils"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 
 // --- Interfaces ---
 interface LocationData {
@@ -44,11 +44,12 @@ interface Province {
 }
 
 // --- Helper Components ---
-function MapController({ center }: { center: [number, number] }) {
+function MapController({ center }: { center: [number, number] | null }) {
     const map = useMap()
     useEffect(() => {
-        if (center[0] && center[1]) {
-            map.setView(center, 13)
+        if (center) {
+            map.setView(center, 13, { animate: true })
+            map.invalidateSize()
         }
     }, [center, map])
     return null
@@ -116,10 +117,31 @@ export default function LocationPickerMap({
                                               label = "Location",
                                           }: LocationPickerProps) {
 
-    // --- Fix for Leaflet Icons ---
+    // --- State ---
+    const [provinces] = useState<Province[]>(citiesData.provinces as unknown as Province[])
+    const [districts, setDistricts] = useState<District[]>([])
+    const [cities, setCities] = useState<City[]>([])
+
+    // FIX: Generate a random ID for the map container on every mount.
+    // This forces React to create a brand new DOM node if the component remounts,
+    // ensuring Leaflet never sees an "initialized" container.
+    const mapId = useMemo(() => `map-${Date.now()}-${Math.random()}`, [])
+
+    const [targetCenter, setTargetCenter] = useState<[number, number] | null>(null)
+    const initialCenter: [number, number] = [7.8731, 80.7718]
+
+    const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
+        value.latitude && value.longitude ? [value.latitude, value.longitude] : null
+    )
+    const [boundaryError, setBoundaryError] = useState("")
+    const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null)
+
+    // --- Effects ---
+
+    // 1. Icon Fix
     useEffect(() => {
         // @ts-ignore
-        if (!L.Icon.Default.prototype._getIconUrl_Original) {
+        if (typeof window !== "undefined" && !L.Icon.Default.prototype._getIconUrl_Original) {
             // @ts-ignore
             L.Icon.Default.prototype._getIconUrl_Original = L.Icon.Default.prototype._getIconUrl;
             // @ts-ignore
@@ -130,19 +152,9 @@ export default function LocationPickerMap({
                 shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
             })
         }
-    }, []);
+    }, [])
 
-    const [provinces] = useState<Province[]>(citiesData.provinces as unknown as Province[])
-    const [districts, setDistricts] = useState<District[]>([])
-    const [cities, setCities] = useState<City[]>([])
-    const [mapCenter, setMapCenter] = useState<[number, number]>([7.8731, 80.7718])
-    const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
-        value.latitude && value.longitude ? [value.latitude, value.longitude] : null
-    )
-    const [boundaryError, setBoundaryError] = useState("")
-    const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null)
-
-    // 1. Update districts
+    // 2. Data Cascading
     useEffect(() => {
         if (value.province) {
             const province = provinces.find((p) => p.name === value.province)
@@ -153,7 +165,6 @@ export default function LocationPickerMap({
         }
     }, [value.province, provinces])
 
-    // 2. Update cities
     useEffect(() => {
         if (value.district) {
             const district = districts.find((d) => d.name === value.district)
@@ -163,13 +174,13 @@ export default function LocationPickerMap({
         }
     }, [value.district, districts])
 
-    // 3. Update map center
     useEffect(() => {
         if (value.city) {
             const city = cities.find((c) => c.name === value.city)
             if (city) {
-                setMapCenter([city.lat, city.lng])
+                setTargetCenter([city.lat, city.lng])
                 setSelectedCityCenter({ lat: city.lat, lng: city.lng })
+
                 if (!markerPosition) {
                     setMarkerPosition([city.lat, city.lng])
                     onChange({ ...value, latitude: city.lat, longitude: city.lng })
@@ -178,7 +189,7 @@ export default function LocationPickerMap({
         }
     }, [value.city, cities])
 
-    // Handlers
+    // --- Handlers ---
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         onChange({
             province: e.target.value,
@@ -220,7 +231,6 @@ export default function LocationPickerMap({
     const inputClasses = isDark
         ? "w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
         : "w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-
     const labelClasses = isDark
         ? "text-white/70 text-xs font-semibold ml-1 mb-1 block"
         : "text-muted-foreground text-sm font-semibold mb-1 block"
@@ -271,17 +281,21 @@ export default function LocationPickerMap({
 
             {/* Map Section */}
             {value.city && (
-                <div className="animate-in fade-in duration-300 mt-4">
+                <div className="mt-4 animate-in fade-in duration-300">
                     <label className={labelClasses}>Pin Your Exact Location</label>
                     <p className={isDark ? "text-white/50 text-xs mb-2" : "text-muted-foreground text-xs mb-2"}>
                         Click on the map or drag the marker.
                     </p>
 
-                    {/* Key ensures a new map instance when city changes */}
-                    <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0">
+                    <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0 bg-muted/10 flex items-center justify-center">
+                        {/* KEY FIX: The 'key' prop here is the most important part.
+                            By setting it to 'mapId' (which is random on every mount),
+                            we force React to destroy the old div and create a new one
+                            whenever this component is remounted.
+                        */}
                         <MapContainer
-                            key={value.city}
-                            center={mapCenter}
+                            key={mapId}
+                            center={initialCenter}
                             zoom={13}
                             style={{ height: "100%", width: "100%" }}
                             scrollWheelZoom={true}
@@ -290,7 +304,9 @@ export default function LocationPickerMap({
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
-                            <MapController center={mapCenter} />
+
+                            <MapController center={targetCenter} />
+
                             <LocationMarker
                                 position={markerPosition}
                                 onPositionChange={handleMarkerPositionChange}

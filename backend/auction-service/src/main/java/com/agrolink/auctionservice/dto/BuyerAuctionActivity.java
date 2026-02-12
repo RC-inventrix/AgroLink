@@ -1,6 +1,7 @@
 package com.agrolink.auctionservice.dto;
 
 import com.agrolink.auctionservice.model.AuctionStatus;
+import com.agrolink.auctionservice.model.DeliveryAddress;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +12,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * DTO for buyer's auction activity (my bids, won auctions).
+ * Updated DTO for buyer's auction activity.
+ * Includes extended product details and delivery configuration.
  */
 @Data
 @NoArgsConstructor
@@ -31,6 +33,22 @@ public class BuyerAuctionActivity {
     private BigDecimal currentHighestBid;
     private boolean isWinning;
     private boolean hasWon;
-
     private int myBidRank;
+
+    // --- NEW FIELDS FOR UI ENHANCEMENT ---
+    private String farmerName;
+    private Double productQuantity;
+    private String description;
+
+    // Delivery Configuration
+    private Boolean isDeliveryAvailable;
+    private BigDecimal baseDeliveryFee;
+    private BigDecimal extraFeePer3Km;
+
+    // Coordinates for Fee Calculation
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+
+    // User's previous context
+    private DeliveryAddress myLastBidAddress;
 }
