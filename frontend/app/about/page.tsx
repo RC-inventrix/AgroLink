@@ -7,7 +7,7 @@ export default function AboutPage() {
     return (
         <div className="min-h-screen bg-background">
 
-            {/* --- START: Header --- */}
+
             <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-14 sm:h-16">
@@ -54,7 +54,7 @@ export default function AboutPage() {
                     </div>
                 </div>
             </nav>
-            {/* --- END: Header --- */}
+
 
 
             {/* Hero Section */}
