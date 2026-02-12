@@ -1,5 +1,6 @@
 package com.agrolink.indentityanduserservice.repository;
 
+import com.agrolink.indentityanduserservice.model.Role;
 import com.agrolink.indentityanduserservice.model.User;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,8 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User,Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+
+
+    // මේකෙන් තමයි Role එකට අදාළව (FARMER ද BUYER ද කියලා) ගණන් කරන්නේ
+    long countByRole(Role role);
 
     @Transactional
     @Modifying

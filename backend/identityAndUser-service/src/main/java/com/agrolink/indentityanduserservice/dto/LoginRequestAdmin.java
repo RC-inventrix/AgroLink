@@ -3,7 +3,7 @@ package com.agrolink.indentityanduserservice.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-@Data
+@Data // This automatically creates getters, setters, toString, etc.
 public class LoginRequestAdmin {
 
     @NotBlank(message = "username is required")
@@ -12,17 +12,4 @@ public class LoginRequestAdmin {
     @NotBlank(message = "password is required")
     private String password;
 
-    public String getUsername() {
-        return username;
-    }
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }
