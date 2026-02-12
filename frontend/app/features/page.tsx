@@ -16,11 +16,58 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Header from "@/components/header"
+import Image from "next/image";
+import Link from "next/link";
 
 export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      
+        <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-14 sm:h-16">
+
+                    {/* Logo Section */}
+                    <div className="flex items-center gap-2">
+                        <Image
+                            src="/images/Group-6.png"
+                            alt="AgroLink Logo"
+                            width={180}
+                            height={64}
+                            className="h-8 sm:h-12 w-auto"
+                        />
+                    </div>
+
+                    {/* Desktop Menu */}
+                    <div className="hidden md:flex items-center gap-5 lg:gap-15">
+                        <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
+                            Home
+                        </Link>
+                        <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
+                            About
+                        </Link>
+                        <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
+                            Features
+                        </Link>
+                    </div>
+
+                    {/* Auth Buttons - Desktop */}
+                    <div className="hidden md:flex items-center gap-2 lg:gap-3">
+                        <Link href="/login">
+                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
+                                Login
+                            </button>
+                        </Link>
+
+                        <Link href="/register">
+                            <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
+                                Register
+                            </button>
+                        </Link>
+                    </div>
+
+                </div>
+            </div>
+        </nav>
 
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20">
