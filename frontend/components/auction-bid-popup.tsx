@@ -102,6 +102,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
 
     // User Details for Bid Submission
     const [buyerEmail, setBuyerEmail] = useState<string>("")
+    const [buyerName, setBuyerName] = useState<string>("")
 
     // Auction Specific Delivery Config (fetched from live auction data)
     const [auctionDeliveryConfig, setAuctionDeliveryConfig] = useState<{ base: number, extra: number }>({ base: 0, extra: 0 })
@@ -163,6 +164,9 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                     if (userRes.ok) {
                         const userData = await userRes.json()
                         setBuyerEmail(userData.email || "")
+
+                        const fullName = userData.fullname || userData.name || sessionStorage.getItem("name") || "Valued Bidder";
+                        setBuyerName(fullName);
                     }
 
                     // Fetch Address
@@ -334,7 +338,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
     const submitBid = async () => {
         setLoading(true)
         const userId = sessionStorage.getItem("id")
-        const userName = sessionStorage.getItem("name") || "Bidder"
+       // const userName = sessionStorage.getItem("name") || "Bidder"
 
         if (!userId) {
             setNotification({ message: "You must be logged in to bid", type: "error" })
@@ -377,7 +381,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 },
                 body: JSON.stringify({
                     bidderId: parseInt(userId),
-                    bidderName: userName,
+                    bidderName: buyerName,
                     bidderEmail: buyerEmail, // Added email
                     bidAmount: parseBidAmount(bidAmount),
                     deliveryAddress: deliveryAddressObj // Full address object
