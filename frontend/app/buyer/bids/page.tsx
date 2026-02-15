@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
     AlertCircle, Clock, Gavel, Loader2, MapPin,
-    User, Package, Truck, Info, CheckCircle2, XCircle
+    User, Package, Truck, CheckCircle2, XCircle, RefreshCw
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -48,6 +48,7 @@ interface BuyerAuctionActivity {
     extraFeePer3Km: number;
     pickupLatitude?: number;
     pickupLongitude?: number;
+    // This is the address from the user's last bid, used for delivery calc
     myLastBidAddress?: DeliveryAddress;
 }
 
@@ -61,33 +62,61 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
-// Haversine formula to estimate delivery fee on frontend for "Bid Again" preview
-const calculateEstimatedDeliveryFee = (
-    auction: BuyerAuctionActivity
-): number => {
-    if (!auction.isDeliveryAvailable || !auction.myLastBidAddress?.latitude || !auction.pickupLatitude) {
-        return 0;
-    }
-
+// Haversine fallback
+const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Earth radius in km
-    const dLat = ((auction.myLastBidAddress.latitude - auction.pickupLatitude) * Math.PI) / 180;
-    const dLon = ((auction.myLastBidAddress.longitude! - auction.pickupLongitude!) * Math.PI) / 180;
-
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((auction.pickupLatitude * Math.PI) / 180) * Math.cos((auction.myLastBidAddress.latitude * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
+    return parseFloat((R * c).toFixed(1));
+};
 
-    let fee = auction.baseDeliveryFee || 0;
-    if (distance > 3 && auction.extraFeePer3Km) {
-        const extraKm = distance - 3;
-        const extraIntervals = Math.ceil(extraKm / 3);
-        fee += auction.extraFeePer3Km * extraIntervals;
+// OSRM Distance Logic (Ported from AuctionBidPopup)
+const calculateDeliveryCost = async (auction: BuyerAuctionActivity): Promise<{ distance: number, fee: number }> => {
+    if (!auction.isDeliveryAvailable || !auction.myLastBidAddress?.latitude || !auction.pickupLatitude) {
+        return { distance: 0, fee: 0 };
     }
 
-    return fee;
+    const startLat = auction.pickupLatitude;
+    const startLng = auction.pickupLongitude!;
+    const endLat = auction.myLastBidAddress.latitude;
+    const endLng = auction.myLastBidAddress.longitude!;
+
+    let distanceKm = 0;
+
+    try {
+        // Try OSRM first for driving distance
+        const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+            distanceKm = parseFloat((data.routes[0].distance / 1000).toFixed(1));
+        } else {
+            throw new Error("OSRM no route");
+        }
+    } catch (e) {
+        // Fallback to Haversine
+        distanceKm = getHaversineDistance(startLat, startLng, endLat, endLng);
+    }
+
+    // Fee Calculation
+    const base = auction.baseDeliveryFee || 0;
+    const rate = auction.extraFeePer3Km || 0;
+
+    // Logic: Base fee covers first 3km. Extra fee for every 3km chunk thereafter.
+    let fee = base;
+    if (distanceKm > 3 && rate > 0) {
+        const extraKm = distanceKm - 3;
+        const extraIntervals = Math.ceil(extraKm / 3);
+        fee += rate * extraIntervals;
+    }
+
+    return { distance: distanceKm, fee: Math.round(fee) };
 };
 
 // --- Components ---
@@ -132,6 +161,7 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
     );
 };
 
+// Bid Again Modal (Uses OSRM Logic internally too via calculateDeliveryCost)
 const BidAgainModal = ({
                            isOpen,
                            onClose,
@@ -145,22 +175,23 @@ const BidAgainModal = ({
 }) => {
     const [bidAmountStr, setBidAmountStr] = useState('');
     const [loading, setLoading] = useState(false);
-    const [deliveryFee, setDeliveryFee] = useState(0);
+    const [deliveryInfo, setDeliveryInfo] = useState({ distance: 0, fee: 0 });
 
     useEffect(() => {
         if (isOpen) {
-            setDeliveryFee(calculateEstimatedDeliveryFee(auction));
             setBidAmountStr('');
+            // Calculate fee dynamically on open
+            calculateDeliveryCost(auction).then(info => setDeliveryInfo(info));
         }
     }, [isOpen, auction]);
 
     if (!isOpen) return null;
 
     const currentBidAmount = parseFloat(bidAmountStr.replace(/,/g, '')) || 0;
-    const totalAmount = currentBidAmount + deliveryFee;
+    const totalAmount = currentBidAmount + deliveryInfo.fee;
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value.replace(/[^0-9]/g, ''); // Only numbers
+        const raw = e.target.value.replace(/[^0-9]/g, '');
         if (raw) {
             setBidAmountStr(parseInt(raw).toLocaleString());
         } else {
@@ -180,10 +211,10 @@ const BidAgainModal = ({
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const bidderId = localStorage.getItem('buyerId') || sessionStorage.getItem('id');
-            const bidderName = localStorage.getItem('name') || sessionStorage.getItem('name') || "Buyer";
 
-            if (!bidderId) {
-                toast.error("User not authenticated");
+            if (!bidderId || !token) {
+                toast.error("Session expired. Please log in again.");
+                setLoading(false);
                 return;
             }
 
@@ -195,11 +226,8 @@ const BidAgainModal = ({
                 },
                 body: JSON.stringify({
                     bidderId: parseInt(bidderId),
-                    bidderName: bidderName,
                     bidAmount: amount,
-                    // Send null delivery address to re-use previous logic or default on backend
-                    // (Assumption based on existing 'Bid Again' flow without address picker)
-                    deliveryAddress: auction.myLastBidAddress
+                    deliveryAddress: auction.myLastBidAddress || null
                 })
             });
 
@@ -209,7 +237,14 @@ const BidAgainModal = ({
                 onClose();
             } else {
                 const errorText = await res.text();
-                toast.error(`Bid failed: ${errorText || "Could not place bid"}`);
+                let message = "Could not place bid";
+                try {
+                    const jsonError = JSON.parse(errorText);
+                    message = jsonError.message || message;
+                } catch (e) {
+                    message = errorText || message;
+                }
+                toast.error(message);
             }
         } catch (error) {
             console.error(error);
@@ -257,7 +292,7 @@ const BidAgainModal = ({
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-500">Est. Delivery Fee</span>
                                 <span className="font-semibold text-gray-600">
-                                    {auction.isDeliveryAvailable ? `Rs. ${formatCurrency(deliveryFee)}` : 'N/A'}
+                                    {auction.isDeliveryAvailable ? `Rs. ${formatCurrency(deliveryInfo.fee)}` : 'N/A'}
                                 </span>
                             </div>
                             <Separator className="bg-gray-200" />
@@ -294,9 +329,14 @@ const AuctionCard = ({
     onRefresh: () => void;
 }) => {
     const [showBidModal, setShowBidModal] = useState(false);
+    const [deliveryInfo, setDeliveryInfo] = useState<{ distance: number, fee: number } | null>(null);
     const placeholderImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f9fafb" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominantBaseline="middle" textAnchor="middle" fontFamily="sans-serif" fontSize="14" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
 
-    // Status Determination
+    // Calculate delivery on mount
+    useEffect(() => {
+        calculateDeliveryCost(auction).then(info => setDeliveryInfo(info));
+    }, [auction]);
+
     const isOutbid = auction.auctionStatus === 'ACTIVE' && !auction.isWinning;
     const isWinning = auction.auctionStatus === 'ACTIVE' && auction.isWinning;
     const isWon = auction.hasWon;
@@ -349,70 +389,104 @@ const AuctionCard = ({
                                 {auction.description || "No description provided."}
                             </p>
 
-                            {/* Meta Info Grid */}
-                            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            {/* Info Grid - Updated Logic */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+
+                                {/* Delivery Status & Fee */}
                                 <div className="flex items-center gap-1.5">
-                                    <Truck className={`w-3.5 h-3.5 ${auction.isDeliveryAvailable ? 'text-green-600' : 'text-gray-400'}`} />
-                                    <span>{auction.isDeliveryAvailable ? "Delivery Available" : "Pickup Only"}</span>
+                                    <Truck className={`w-3.5 h-3.5 ${auction.isDeliveryAvailable ? 'text-green-600' : 'text-orange-500'}`} />
+                                    {auction.isDeliveryAvailable ? (
+                                        <span>
+                                            Delivery Available
+                                            {deliveryInfo && <span className="font-bold ml-1 text-green-700">
+                                                (Rs. {formatCurrency(deliveryInfo.fee)})
+                                            </span>}
+                                        </span>
+                                    ) : (
+                                        <span className="text-orange-700 font-semibold">Pickup Only</span>
+                                    )}
                                 </div>
+
+                                {/* Address Context */}
                                 <div className="flex items-center gap-1.5 truncate">
                                     <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                                    <span className="truncate" title={auction.myLastBidAddress?.city}>
-                                        To: {auction.myLastBidAddress?.city || "Location Not Set"}
+                                    <span className="truncate" title={auction.isDeliveryAvailable ? auction.myLastBidAddress?.city : "Farmer Location"}>
+                                        {auction.isDeliveryAvailable
+                                            ? `To: ${auction.myLastBidAddress?.city || "Set on Bid"}`
+                                            : `From: ${"Farmer's Location"}` // You could pass pickupAddress city via DTO if needed
+                                        }
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Status Message & Actions */}
+                        {/* Bids & Actions */}
                         <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 pt-3 border-t border-gray-100">
-                            <div>
+                            <div className="w-full sm:w-auto">
+                                {/* Winning Status */}
                                 {isWinning && (
-                                    <div className="flex items-center gap-2 text-green-700">
+                                    <div className="flex items-center gap-2 text-green-700 mb-2">
                                         <CheckCircle2 className="w-4 h-4" />
-                                        <span className="text-xs font-bold uppercase">You currently have the highest bid</span>
+                                        <span className="text-xs font-bold uppercase">Winning Bid</span>
                                     </div>
                                 )}
                                 {isOutbid && (
-                                    <div className="flex items-center gap-2 text-red-600">
+                                    <div className="flex items-center gap-2 text-red-600 mb-2">
                                         <XCircle className="w-4 h-4" />
-                                        <span className="text-xs font-bold uppercase">Someone has outbid you!</span>
+                                        <span className="text-xs font-bold uppercase">Outbid by Someone</span>
                                     </div>
                                 )}
                                 {isWon && (
-                                    <div className="flex items-center gap-2 text-[#D4A017]">
+                                    <div className="flex items-center gap-2 text-[#D4A017] mb-2">
                                         <Gavel className="w-4 h-4" />
                                         <span className="text-xs font-bold uppercase">Auction Won</span>
                                     </div>
                                 )}
-                                <div className="mt-1">
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Your Highest Bid</span>
-                                    <span className="text-lg font-black text-[#03230F]">
-                                        Rs. {formatCurrency(auction.myHighestBid)}
-                                    </span>
+
+                                {/* Bid Comparison Grid */}
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                                    {/* My Bid */}
+                                    <div>
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+                                            My Bid
+                                        </span>
+                                        <span className="text-base font-bold text-[#03230F]">
+                                            Rs. {formatCurrency(auction.myHighestBid)}
+                                        </span>
+                                    </div>
+
+                                    {/* Current Highest (Only show if different from mine or outbid) */}
+                                    {(isOutbid || auction.currentHighestBid > auction.myHighestBid) && (
+                                        <div>
+                                            <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
+                                                Highest
+                                            </span>
+                                            <span className="text-base font-bold text-red-600">
+                                                Rs. {formatCurrency(auction.currentHighestBid)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="w-full sm:w-auto">
+                            <div className="w-full sm:w-auto flex justify-end">
                                 {auction.auctionStatus === 'ACTIVE' && (
                                     <Button
-                                        onClick={() => isWinning ? null : setShowBidModal(true)}
-                                        disabled={isWinning}
-                                        className={`w-full sm:w-auto font-bold uppercase tracking-widest text-xs h-10 px-6 ${
-                                            isWinning
-                                                ? 'bg-transparent border border-green-600 text-green-700 hover:bg-green-50'
-                                                : 'bg-[#03230F] text-[#D4A017] hover:bg-[#05391a] shadow-md'
+                                        onClick={() => setShowBidModal(true)}
+                                        className={`w-full sm:w-auto font-bold uppercase tracking-widest text-xs h-10 px-6 ${isWinning
+                                            ? 'bg-white border-2 border-green-600 text-green-700 hover:bg-green-50'
+                                            : 'bg-[#D4A017] text-[#03230F] hover:bg-[#b88a12] shadow-md'
                                         }`}
                                     >
-                                        {isWinning ? "Leading" : "Place Another Bid"}
+                                        {isWinning ? "Increase Bid" : "Place Higher Bid"}
                                     </Button>
                                 )}
 
                                 {isWon && (
                                     <Link href="/buyer/orders">
-                                        <Button className="w-full sm:w-auto bg-[#D4A017] text-[#03230F] hover:bg-[#b88a12] font-black uppercase tracking-widest text-xs h-10 px-6">
-                                            View Order
+                                        <Button className="w-full sm:w-auto bg-[#03230F] text-[#D4A017] hover:bg-black font-black uppercase tracking-widest text-xs h-10 px-6">
+                                            Checkout Now
                                         </Button>
                                     </Link>
                                 )}
@@ -444,41 +518,47 @@ export default function MyBidsDashboard() {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('active');
 
-    const fetchAuctions = async () => {
+    // Fetch Logic
+    const fetchAuctions = useCallback(async (isSilent = false) => {
         try {
-            setLoading(true);
+            if (!isSilent) setLoading(true);
             const buyerId = localStorage.getItem('buyerId') || sessionStorage.getItem('id');
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
             if (!buyerId) {
                 setError("User ID not found. Please log in.");
+                setLoading(false);
                 return;
             }
 
             const response = await fetch(`http://localhost:8080/api/auctions/buyer/${buyerId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch auctions');
-            }
+            if (!response.ok) throw new Error('Failed to fetch auctions');
 
             const data = await response.json();
             setAuctions(data);
             setError(null);
         } catch (err) {
             console.error(err);
-            setError("Could not load your bids. Please try again.");
+            if (!isSilent) setError("Could not load your bids. Please try again.");
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
-    };
+    }, []);
 
+    // Initial Fetch & Polling
     useEffect(() => {
         fetchAuctions();
-    }, []);
+
+        // Auto-refresh every 10 seconds to keep bid status live
+        const interval = setInterval(() => {
+            fetchAuctions(true);
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [fetchAuctions]);
 
     const activeBids = useMemo(() => auctions.filter((a) => a.auctionStatus === 'ACTIVE'), [auctions]);
     const wonAuctions = useMemo(() => auctions.filter((a) => a.hasWon === true), [auctions]);
@@ -490,7 +570,7 @@ export default function MyBidsDashboard() {
     const renderTabContent = (data: BuyerAuctionActivity[], emptyMsg: string) => {
         if (data.length === 0) {
             return (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 animate-in fade-in zoom-in-95 duration-300">
                     <div className="bg-gray-50 p-4 rounded-full mb-4">
                         <Gavel className="w-8 h-8 text-gray-300" />
                     </div>
@@ -505,7 +585,7 @@ export default function MyBidsDashboard() {
                     <AuctionCard
                         key={auction.auctionId}
                         auction={auction}
-                        onRefresh={fetchAuctions}
+                        onRefresh={() => fetchAuctions(false)}
                     />
                 ))}
             </div>
@@ -517,16 +597,26 @@ export default function MyBidsDashboard() {
             <Toaster richColors position="top-center" />
             <BuyerHeader />
             <main className="container max-w-5xl mx-auto p-4 md:p-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black uppercase tracking-widest text-[#03230F]">My Bids</h1>
-                    <p className="text-gray-500 text-sm mt-2 font-medium">Manage your active bids and view your auction history.</p>
+                <div className="mb-8 flex justify-between items-end">
+                    <div>
+                        <h1 className="text-3xl font-black uppercase tracking-widest text-[#03230F]">My Bids</h1>
+                        <p className="text-gray-500 text-sm mt-2 font-medium">Manage your active bids and view your auction history.</p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchAuctions(false)}
+                        className="hidden md:flex gap-2"
+                    >
+                        <RefreshCw className="w-4 h-4" /> Refresh
+                    </Button>
                 </div>
 
                 {error && (
                     <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200 text-red-800 rounded-xl">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription className="font-medium">{error}</AlertDescription>
-                        <Button variant="link" onClick={fetchAuctions} className="text-red-800 underline ml-2 p-0 h-auto font-bold">Retry</Button>
+                        <Button variant="link" onClick={() => fetchAuctions(false)} className="text-red-800 underline ml-2 p-0 h-auto font-bold">Retry</Button>
                     </Alert>
                 )}
 
@@ -538,7 +628,7 @@ export default function MyBidsDashboard() {
                     </div>
                 ) : (
                     <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="bg-white border p-1 rounded-xl mb-6 h-auto inline-flex">
+                        <TabsList className="bg-white border p-1 rounded-xl mb-6 h-auto inline-flex shadow-sm">
                             <TabsTrigger
                                 value="active"
                                 className="rounded-lg px-6 py-2.5 font-bold data-[state=active]:bg-[#03230F] data-[state=active]:text-[#D4A017] transition-all"
