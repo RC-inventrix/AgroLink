@@ -4,22 +4,25 @@ import com.agrolink.auctionservice.dto.UserResponseDto;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Slf4j
 public class UserServiceClient {
 
     @Autowired
     private RestTemplate restTemplate;
 
-    // This URL matches the one you provided in the prompt
-    private final String USER_SERVICE_URL = "http://localhost:8080/api/users/";
+    // DIRECT Connection to Order Service (Port 8075)
+    private final String ORDER_SERVICE_URL = "http://localhost:8075/api/users/";
 
     public UserResponseDto getUserById(Long userId) {
         try {
-            return restTemplate.getForObject(USER_SERVICE_URL + userId, UserResponseDto.class);
+            log.info("Calling Order Service: " + ORDER_SERVICE_URL + userId);
+            return restTemplate.getForObject(ORDER_SERVICE_URL + userId, UserResponseDto.class);
         } catch (Exception e) {
-            // Handle timeout or 404
-            throw new RuntimeException("Could not verify user identity with OrderService");
+            log.error("Failed to call Order Service at {}: {}", ORDER_SERVICE_URL + userId, e.getMessage());
+            return null;
         }
     }
 }
