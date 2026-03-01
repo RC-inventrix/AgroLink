@@ -37,6 +37,18 @@ public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @GetMapping("/count/farmers")
+    public ResponseEntity<Long> getFarmerCount() {
+        return ResponseEntity.ok(service.getActiveFarmerCount());
+    }
+
+    @GetMapping("/count/buyers")
+    public ResponseEntity<Long> getBuyerCount() {
+        return ResponseEntity.ok(service.getActiveBuyerCount());
+    }
+
+
+
     // --- FIX: Endpoint to resolve "NoResourceFoundException" for /auth/user/{id} ---
     @GetMapping("/user/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
@@ -143,4 +155,28 @@ public class AuthController {
         }
         return ResponseEntity.ok("Email is available");
     }
+
+    // Endpoint to get total number of users
+    @GetMapping("/count")
+    public ResponseEntity<Long> getUserCount() {
+        try {
+            long count = service.getTotalUserCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/total-users")
+    public ResponseEntity<Long> getTotalUsers() {
+        try {
+            long count = service.getTotalUserCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            // මොකක් හරි අවුලක් ගියොත් Error එකක් යවනවා
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
 }
