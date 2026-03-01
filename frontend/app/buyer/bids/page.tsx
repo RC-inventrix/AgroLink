@@ -35,11 +35,11 @@ interface BuyerAuctionActivity {
     auctionEndTime: string;
     myHighestBid: number;
     currentHighestBid: number;
+    highestBidderId: number;
     isWinning: boolean;
     hasWon: boolean;
     myBidRank: number;
 
-    // Extended Details
     farmerName: string;
     productQuantity: number;
     description: string;
@@ -48,7 +48,6 @@ interface BuyerAuctionActivity {
     extraFeePer3Km: number;
     pickupLatitude?: number;
     pickupLongitude?: number;
-    // This is the address from the user's last bid, used for delivery calc
     myLastBidAddress?: DeliveryAddress;
 }
 
@@ -62,9 +61,8 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
-// Haversine fallback
 const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -75,7 +73,6 @@ const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: nu
     return parseFloat((R * c).toFixed(1));
 };
 
-// OSRM Distance Logic (Ported from AuctionBidPopup)
 const calculateDeliveryCost = async (auction: BuyerAuctionActivity): Promise<{ distance: number, fee: number }> => {
     if (!auction.isDeliveryAvailable || !auction.myLastBidAddress?.latitude || !auction.pickupLatitude) {
         return { distance: 0, fee: 0 };
@@ -89,7 +86,6 @@ const calculateDeliveryCost = async (auction: BuyerAuctionActivity): Promise<{ d
     let distanceKm = 0;
 
     try {
-        // Try OSRM first for driving distance
         const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=false`;
         const res = await fetch(url);
         const data = await res.json();
@@ -100,15 +96,12 @@ const calculateDeliveryCost = async (auction: BuyerAuctionActivity): Promise<{ d
             throw new Error("OSRM no route");
         }
     } catch (e) {
-        // Fallback to Haversine
         distanceKm = getHaversineDistance(startLat, startLng, endLat, endLng);
     }
 
-    // Fee Calculation
     const base = auction.baseDeliveryFee || 0;
     const rate = auction.extraFeePer3Km || 0;
 
-    // Logic: Base fee covers first 3km. Extra fee for every 3km chunk thereafter.
     let fee = base;
     if (distanceKm > 3 && rate > 0) {
         const extraKm = distanceKm - 3;
@@ -161,7 +154,6 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
     );
 };
 
-// Bid Again Modal (Uses OSRM Logic internally too via calculateDeliveryCost)
 const BidAgainModal = ({
                            isOpen,
                            onClose,
@@ -180,7 +172,6 @@ const BidAgainModal = ({
     useEffect(() => {
         if (isOpen) {
             setBidAmountStr('');
-            // Calculate fee dynamically on open
             calculateDeliveryCost(auction).then(info => setDeliveryInfo(info));
         }
     }, [isOpen, auction]);
@@ -323,10 +314,12 @@ const BidAgainModal = ({
 
 const AuctionCard = ({
                          auction,
-                         onRefresh
+                         onRefresh,
+                         currentUserId
                      }: {
     auction: BuyerAuctionActivity;
     onRefresh: () => void;
+    currentUserId: number | null;
 }) => {
     const [showBidModal, setShowBidModal] = useState(false);
     const [deliveryInfo, setDeliveryInfo] = useState<{ distance: number, fee: number } | null>(null);
@@ -335,14 +328,17 @@ const AuctionCard = ({
         ? `https://www.google.com/maps/search/?api=1&query=${auction.pickupLatitude},${auction.pickupLongitude}`
         : null;
 
-    // Calculate delivery on mount
     useEffect(() => {
         calculateDeliveryCost(auction).then(info => setDeliveryInfo(info));
     }, [auction]);
 
-    const isOutbid = auction.auctionStatus === 'ACTIVE' && !auction.isWinning;
-    const isWinning = auction.auctionStatus === 'ACTIVE' && auction.isWinning;
-    const isWon = auction.hasWon;
+    // ✅ THE DOUBLE-LAYER FIX:
+    // Checks API's boolean. If serialization fails, falls back to direct explicit ID comparison!
+    const isWinning = auction.auctionStatus === 'ACTIVE' &&
+        (auction.isWinning === true || auction.highestBidderId === currentUserId);
+
+    const isOutbid = auction.auctionStatus === 'ACTIVE' && !isWinning;
+    const isWon = auction.hasWon === true;
 
     let borderColor = 'border-gray-200';
     if (isWinning) borderColor = 'border-green-500';
@@ -353,7 +349,6 @@ const AuctionCard = ({
         <>
             <Card className={`group relative overflow-hidden bg-white transition-all hover:shadow-lg border-l-4 ${borderColor}`}>
                 <div className="flex flex-col md:flex-row">
-                    {/* Image Section */}
                     <div className="relative w-full md:w-48 h-48 md:h-auto flex-shrink-0 bg-gray-50">
                         <Image
                             src={auction.productImageUrl || placeholderImage}
@@ -370,7 +365,6 @@ const AuctionCard = ({
                         </div>
                     </div>
 
-                    {/* Content Section */}
                     <div className="flex-1 p-5 flex flex-col justify-between">
                         <div>
                             <div className="flex justify-between items-start mb-2">
@@ -392,10 +386,7 @@ const AuctionCard = ({
                                 {auction.description || "No description provided."}
                             </p>
 
-                            {/* Info Grid - Updated Logic */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-
-                                {/* Delivery Status & Fee */}
                                 <div className="flex items-center gap-1.5">
                                     <Truck className={`w-3.5 h-3.5 ${auction.isDeliveryAvailable ? 'text-green-600' : 'text-orange-500'}`} />
                                     {auction.isDeliveryAvailable ? (
@@ -410,7 +401,6 @@ const AuctionCard = ({
                                     )}
                                 </div>
 
-                                {/* Address Context */}
                                 <div className="flex items-center gap-1.5 truncate">
                                     <MapPin className="w-3.5 h-3.5 text-blue-500" />
                                     <span className="truncate" title={auction.isDeliveryAvailable ? auction.myLastBidAddress?.city : "Farmer Location"}>
@@ -418,27 +408,25 @@ const AuctionCard = ({
                                             ? `To: ${auction.myLastBidAddress?.city || "Set on Bid"}`
                                             : farmerMapLink
                                                 ? <a href={farmerMapLink} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">From: Farmer's Location</a>
-                                                : `From: ${"Farmer's Location"}` // You could pass pickupAddress city via DTO if needed
+                                                : `From: ${"Farmer's Location"}`
                                         }
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Bids & Actions */}
                         <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 pt-3 border-t border-gray-100">
                             <div className="w-full sm:w-auto">
-                                {/* Winning Status */}
                                 {isWinning && (
                                     <div className="flex items-center gap-2 text-green-700 mb-2">
                                         <CheckCircle2 className="w-4 h-4" />
-                                        <span className="text-xs font-bold uppercase">Winning Bid</span>
+                                        <span className="text-xs font-bold uppercase">You are the highest bidder</span>
                                     </div>
                                 )}
                                 {isOutbid && (
                                     <div className="flex items-center gap-2 text-red-600 mb-2">
                                         <XCircle className="w-4 h-4" />
-                                        <span className="text-xs font-bold uppercase">Outbid by Someone</span>
+                                        <span className="text-xs font-bold uppercase">Outbid by another user</span>
                                     </div>
                                 )}
                                 {isWon && (
@@ -448,9 +436,7 @@ const AuctionCard = ({
                                     </div>
                                 )}
 
-                                {/* Bid Comparison Grid */}
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                                    {/* My Bid */}
                                     <div>
                                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
                                             My Bid
@@ -460,7 +446,6 @@ const AuctionCard = ({
                                         </span>
                                     </div>
 
-                                    {/* Current Highest (Only show if different from mine or outbid) */}
                                     {(isOutbid || auction.currentHighestBid > auction.myHighestBid) && (
                                         <div>
                                             <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
@@ -474,7 +459,6 @@ const AuctionCard = ({
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="w-full sm:w-auto flex justify-end">
                                 {auction.auctionStatus === 'ACTIVE' && (
                                     <Button
@@ -523,7 +507,9 @@ export default function MyBidsDashboard() {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('active');
 
-    // Fetch Logic
+    // ✅ Extract the explicit User ID exactly once to pass to children
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
     const fetchAuctions = useCallback(async (isSilent = false) => {
         try {
             if (!isSilent) setLoading(true);
@@ -535,6 +521,9 @@ export default function MyBidsDashboard() {
                 setLoading(false);
                 return;
             }
+
+            // Set for child components to use
+            setCurrentUserId(parseInt(buyerId, 10));
 
             const response = await fetch(`http://localhost:8080/api/auctions/buyer/${buyerId}`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -553,15 +542,11 @@ export default function MyBidsDashboard() {
         }
     }, []);
 
-    // Initial Fetch & Polling
     useEffect(() => {
         fetchAuctions();
-
-        // Auto-refresh every 10 seconds to keep bid status live
         const interval = setInterval(() => {
             fetchAuctions(true);
         }, 10000);
-
         return () => clearInterval(interval);
     }, [fetchAuctions]);
 
@@ -591,6 +576,7 @@ export default function MyBidsDashboard() {
                         key={auction.auctionId}
                         auction={auction}
                         onRefresh={() => fetchAuctions(false)}
+                        currentUserId={currentUserId} // Passing explicit parsed ID
                     />
                 ))}
             </div>

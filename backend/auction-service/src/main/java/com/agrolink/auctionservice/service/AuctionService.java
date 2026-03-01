@@ -59,6 +59,7 @@ public class AuctionService {
                 .startingPrice(request.getStartingPrice())
                 .reservePrice(request.getReservePrice())
                 .currentHighestBidAmount(null)
+                .highestBidderId(null) // Initialize as null
                 .isDeliveryAvailable(request.getIsDeliveryAvailable())
                 .baseDeliveryFee(request.getBaseDeliveryFee())
                 .extraFeePer3Km(request.getExtraFeePer3Km())
@@ -115,18 +116,12 @@ public class AuctionService {
         return auctions.stream().map(this::mapToAuctionListItem).collect(Collectors.toList());
     }
 
-    // ---------------------------------------------------------
-    // ✅ PLACE BID IMPLEMENTATION
-    // ---------------------------------------------------------
     @Transactional
     public BidResponse placeBid(Long auctionId, PlaceBidRequest request) {
-
-        // 1. SECURE USER LOOKUP
         log.info("Verifying Bidder ID: {}", request.getBidderId());
         UserResponseDto bidderInfo = userServiceClient.getUserById(request.getBidderId());
 
         if (bidderInfo == null) {
-            // This is where it was failing before because the client couldn't reach localhost
             throw new RuntimeException("Bid rejected: User verification failed (Order Service unreachable or User ID invalid).");
         }
 
@@ -135,11 +130,9 @@ public class AuctionService {
 
         log.info("Bidder Verified: Name={}, Email={}", safeName, safeEmail);
 
-        // 2. Fetch Auction
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found with id: " + auctionId));
 
-        // 3. Validate Status
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new RuntimeException("Auction is not active. Current status: " + auction.getStatus());
         }
@@ -147,7 +140,6 @@ public class AuctionService {
             throw new RuntimeException("Auction has ended");
         }
 
-        // 4. Validate Amount
         BigDecimal minimumBid = auction.getCurrentHighestBidAmount() != null
                 ? auction.getCurrentHighestBidAmount()
                 : auction.getStartingPrice();
@@ -156,7 +148,6 @@ public class AuctionService {
             throw new RuntimeException("Bid amount must be greater than current highest bid: " + minimumBid);
         }
 
-        // 5. Create Bid
         Bid bid = Bid.builder()
                 .auction(auction)
                 .bidderId(request.getBidderId())
@@ -169,8 +160,10 @@ public class AuctionService {
 
         bid = bidRepository.save(bid);
 
-        // 6. Update Auction
+        // ✅ ATOMIC UPDATE: Update both amount and owner ID on the auction record
         auction.setCurrentHighestBidAmount(request.getBidAmount());
+        auction.setHighestBidderId(request.getBidderId());
+
         try {
             auctionRepository.save(auction);
         } catch (OptimisticLockException e) {
@@ -178,7 +171,6 @@ public class AuctionService {
             throw new RuntimeException("Another bid was placed simultaneously. Please try again.");
         }
 
-        // 7. Prune
         pruneExcessBids(auctionId);
 
         return mapToBidResponse(bid, 1);
@@ -196,7 +188,6 @@ public class AuctionService {
         }
     }
 
-    // Other existing methods (updateReservePrice, etc.) remain the same...
     @Transactional
     public Auction updateReservePrice(Long auctionId, UpdateReservePriceRequest request) {
         Auction auction = auctionRepository.findById(auctionId)
@@ -300,8 +291,23 @@ public class AuctionService {
         return userAuctions.stream().map(auction -> {
             List<Bid> myBids = bidRepository.findByAuctionIdAndBidderId(auction.getId(), buyerId);
             if (myBids.isEmpty()) return null;
+
             Bid myHighestBid = myBids.stream().max(Comparator.comparing(Bid::getBidAmount)).orElseThrow();
             List<Bid> topBids = bidRepository.findTopBidsByAuctionId(auction.getId());
+
+            // ✅ FALLBACK LOGIC: Handle legacy auctions where highestBidderId is null
+            Long actualHighestBidderId = auction.getHighestBidderId();
+            if (actualHighestBidderId == null && !topBids.isEmpty()) {
+                actualHighestBidderId = topBids.get(0).getBidderId();
+            }
+
+            // ✅ EXACT OWNERSHIP CALCULATION
+            boolean isWinning = actualHighestBidderId != null && actualHighestBidderId.equals(buyerId);
+
+            boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED &&
+                    auction.getWinningBidId() != null &&
+                    auction.getWinningBidId().equals(myHighestBid.getId());
+
             int rank = -1;
             for (int i = 0; i < topBids.size(); i++) {
                 if (topBids.get(i).getBidderId().equals(buyerId)) {
@@ -310,10 +316,6 @@ public class AuctionService {
                 }
             }
             int displayRank = (rank != -1) ? rank : 6;
-            boolean isWinning = (rank == 1);
-            boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED &&
-                    auction.getWinningBidId() != null &&
-                    auction.getWinningBidId().equals(myHighestBid.getId());
 
             return BuyerAuctionActivity.builder()
                     .auctionId(auction.getId())
@@ -323,6 +325,7 @@ public class AuctionService {
                     .auctionEndTime(auction.getEndTime())
                     .myHighestBid(myHighestBid.getBidAmount())
                     .currentHighestBid(auction.getCurrentHighestBidAmount())
+                    .highestBidderId(actualHighestBidderId) // ✅ Exporting the guaranteed ID
                     .isWinning(isWinning)
                     .hasWon(hasWon)
                     .myBidRank(displayRank)
