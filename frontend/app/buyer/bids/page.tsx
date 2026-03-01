@@ -331,6 +331,9 @@ const AuctionCard = ({
     const [showBidModal, setShowBidModal] = useState(false);
     const [deliveryInfo, setDeliveryInfo] = useState<{ distance: number, fee: number } | null>(null);
     const placeholderImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f9fafb" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominantBaseline="middle" textAnchor="middle" fontFamily="sans-serif" fontSize="14" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+    const farmerMapLink = (auction.pickupLatitude && auction.pickupLongitude)
+        ? `https://www.google.com/maps/search/?api=1&query=${auction.pickupLatitude},${auction.pickupLongitude}`
+        : null;
 
     // Calculate delivery on mount
     useEffect(() => {
@@ -413,7 +416,9 @@ const AuctionCard = ({
                                     <span className="truncate" title={auction.isDeliveryAvailable ? auction.myLastBidAddress?.city : "Farmer Location"}>
                                         {auction.isDeliveryAvailable
                                             ? `To: ${auction.myLastBidAddress?.city || "Set on Bid"}`
-                                            : `From: ${"Farmer's Location"}` // You could pass pickupAddress city via DTO if needed
+                                            : farmerMapLink
+                                                ? <a href={farmerMapLink} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">From: Farmer's Location</a>
+                                                : `From: ${"Farmer's Location"}` // You could pass pickupAddress city via DTO if needed
                                         }
                                     </span>
                                 </div>
