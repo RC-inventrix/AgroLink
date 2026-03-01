@@ -226,7 +226,7 @@ services:
 
   # 11. Chatbot Service (AI Customer Support via Gemini)
   chatbot-service:
-    build: ./backend/chatbot-service
+    build: backend/chatbot-service
     container_name: agro_chatbot
     ports:
       - "8085:8085"
