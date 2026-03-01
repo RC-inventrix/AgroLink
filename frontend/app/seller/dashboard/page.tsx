@@ -13,7 +13,7 @@ import Footer from "@/components/footer/Footer";
 
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
-    const [userName, setUserName] = useState("sunil");
+    const [userName, setUserName] = useState<string | null>(null);
     
     // 1. New State for Orders and Analytics
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -40,7 +40,7 @@ export default function SellerDashboard() {
                 });
                 if (userRes.ok) {
                     const userData = await userRes.json();
-                    setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "sunil");
+                    setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
                 // B. Fetch Order Analytics (Revenue & Completed Counts)
