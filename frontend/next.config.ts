@@ -6,13 +6,13 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'agrolink-dev-images.s3.amazonaws.com',
+                hostname: 'agrolink-dev-images.s3.ap-south-1.amazonaws.com',
                 port: '',
                 pathname: '/**',
             },
         ],
     },
-
+    reactStrictMode: false,
     // 2. Your existing API redirects
     async rewrites() {
         return [

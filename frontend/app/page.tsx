@@ -40,7 +40,7 @@ export default function AgroLinkHome() {
                                 alt="AgroLink Logo"
                                 width={180}
                                 height={64}
-                                className="h-8 sm:h-12 w-auto"
+                                className="w-full h-auto"
                             />
                         </div>
 
