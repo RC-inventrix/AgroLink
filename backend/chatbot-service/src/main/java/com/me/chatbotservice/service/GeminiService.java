@@ -50,29 +50,38 @@ public class GeminiService {
     }
 
     public String chat(String userMessage) {
-        String systemInstruction = String.format(SYSTEM_PROMPT_TEMPLATE, faqContent);
+        String systemInstructionText = String.format(SYSTEM_PROMPT_TEMPLATE, faqContent);
 
+        // Updated "system_instruction" to "systemInstruction" for Gemini 2.0 strictness
         Map<String, Object> requestBody = Map.of(
-                "system_instruction", Map.of(
-                        "parts", List.of(Map.of("text", systemInstruction))
-                ),
-                "contents", List.of(
-                        Map.of(
-                                "role", "user",
-                                "parts", List.of(Map.of("text", userMessage))
-                        )
-                )
+                "systemInstruction", Map.of("parts", List.of(Map.of("text", systemInstructionText))),
+                "contents", List.of(Map.of("role", "user", "parts", List.of(Map.of("text", userMessage))))
         );
 
-        Map<?, ?> response = geminiWebClient.post()
-                .uri("/v1beta/models/gemini-1.5-flash:generateContent?key={key}", geminiApiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        try {
+            Map<?, ?> response = geminiWebClient.post()
+                    .uri("/v1beta/models/gemini-2.0-flash:generateContent?key={key}", geminiApiKey)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
 
-        return extractReply(response);
+            return extractReply(response);
+
+        } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
+            // THIS WILL REVEAL THE EXACT ERROR FROM GOOGLE
+            log.error("Google API rejected the request. Status: {}, Body: {}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+
+            if (e.getStatusCode().value() == 429) {
+                return "I am receiving too many questions right now! Please wait a moment and try again.";
+            }
+            return "Configuration error with the AI. Please check the backend logs.";
+        } catch (Exception e) {
+            log.error("Error communicating with Gemini API", e);
+            return "I'm sorry, I am having trouble connecting right now. Please try again later.";
+        }
     }
 
     @SuppressWarnings("unchecked")
