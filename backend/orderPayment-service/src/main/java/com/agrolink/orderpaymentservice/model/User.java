@@ -12,12 +12,16 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // ✅ CRITICAL: These fields were missing.
+    // Without them, the API sends null to the Auction Service.
+    private String email;
+    private String fullname;
+
     private String address;
     private String city;
     private String district;
     private String province;
 
-    // Coordinates for distance calculation
     private Double latitude;
     private Double longitude;
 }

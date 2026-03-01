@@ -63,7 +63,18 @@ public class AuctionController {
         List<AuctionListItem> auctions = auctionService.getAuctionsByFarmerId(farmerId, status);
         return ResponseEntity.ok(auctions);
     }
-
+    @PostMapping("/{id}/start-now")
+    public ResponseEntity<Auction> startAuctionNow(@PathVariable Long id) {
+        Auction auction = auctionService.startAuctionNow(id);
+        return ResponseEntity.ok(auction);
+    }
+    @PatchMapping("/{id}/time")
+    public ResponseEntity<Auction> updateAuctionTime(
+            @PathVariable Long id,
+            @RequestBody UpdateTimeRequest request) { // You need to create this DTO
+        Auction auction = auctionService.updateAuctionTime(id, request.getStartTime(), request.getEndTime());
+        return ResponseEntity.ok(auction);
+    }
     /**
      * Update reserve price for an active auction.
      */

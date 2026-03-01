@@ -37,4 +37,10 @@ public class AuctionListItem {
     private int bidCount;
 
     private Boolean isDeliveryAvailable;
+    private BigDecimal reservePrice;
+    private String pickupAddress;
+
+    // FIX: Added coordinates to support map/distance on listing & popup
+    private Double pickupLatitude;
+    private Double pickupLongitude;
 }
