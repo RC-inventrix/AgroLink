@@ -1,5 +1,6 @@
 package com.agrolink.productcatalogservice.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long farmerId;
 
     private String vegetableName;
@@ -26,21 +28,31 @@ public class Product {
     private double quantity;
 
     @Enumerated(EnumType.STRING)
-    private PriceType pricingType; // FIXED or BIDDING
+    private PriceType pricingType;
 
     private Double fixedPrice;
     private Double biddingPrice;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime biddingStartDate;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime biddingEndDate;
 
     @Column(length = 1000)
     private String description;
 
-    // --- NEW DELIVERY FIELDS ---
-    private Boolean deliveryAvailable; // True if seller delivers
-    private Double deliveryFeeFirst3Km; // Price for first 3 km
-    private Double deliveryFeePerKm;    // Price per extra km
+    private Boolean deliveryAvailable;
 
-    @ElementCollection
-    private List<String> images;
+    // RENAMED to match DTO/Frontend (was First5Km)
+    private Double deliveryFeeFirst3Km;
+
+    private Double deliveryFeePerKm;
+
+    private String pickupAddress;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductImage> images;
 }

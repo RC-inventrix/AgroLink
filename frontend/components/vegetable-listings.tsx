@@ -3,107 +3,167 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, ChevronDown, Loader2 } from "lucide-react"
 import VegetableCard from "./vegetable-card"
+import AuctionBidPopup from "./auction-bid-popup" // Import the new component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import BuyerHeader from "./headers/BuyerHeader"
 
-// 1. Define the Interface (Matches your VegetableCard props)
+// 1. Updated Interface to include Auction fields
 interface Vegetable {
     id: string
     name: string
     image: string
-    price100g: number // We will calculate this
-    price1kg: number  // Maps to backend 'fixedPrice'
-    seller: string    // Placeholder for now
-    sellerId: string  // Added to match VegetableCard requirements
+    price100g: number
+    price1kg: number
+    seller: string
+    sellerId: string
     description: string
     category: string
-    rating: number    // Placeholder for now
-    pricingType: string // Added to check if it's FIXED or BIDDING
+    rating: number
+    pricingType: string
+    quantity: number
+    deliveryAvailable: boolean
+    baseCharge?: number
+    extraRatePerKm?: number
+    pickupAddress?: string
+    pickupLatitude?: number
+    pickupLongitude?: number
+
+    // --- AUCTION SPECIFIC FIELDS ---
+    isAuction?: boolean
+    currentBid?: number
+    startingPrice?: number
+    endTime?: string
+    bidCount?: number
 }
 
 export default function VegetableListings() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
-    const [priceRange, setPriceRange] = useState([0, 5000]) // Increased range for realistic prices
+    const [priceRange, setPriceRange] = useState([0, 50000]) // Increased max range for auctions
 
-    // 2. New State for Real Data
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
-    // 3. Fetch Data from Backend
-    // Inside vegetable-listings.tsx
-// Inside your VegetableListings component
-useEffect(() => {
-    const fetchProductsAndNames = async () => {
-        try {
-            const token = sessionStorage.getItem("token");
-            // 1. Fetch products from Product Catalog Service
-            const res = await fetch("http://localhost:8080/products");
-            if (!res.ok) throw new Error("Failed to fetch products");
-            const data = await res.json();
+    // Popup state
+    const [selectedAuction, setSelectedAuction] = useState<Vegetable | null>(null)
 
-            // 2. Extract all unique farmerIds from the product list
-            const uniqueFarmerIds = [...new Set(data.map((item: any) => item.farmerId))];
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const token = sessionStorage.getItem("token");
+                const headers: HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
 
-            // 3. Fetch Full Names from Identity Service (Port 8080)
-            const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueFarmerIds.join(',')}`, {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            const fullNameMap = nameRes.ok ? await nameRes.json() : {};
+                // 1. Run fetches in parallel
+                const [productsRes, auctionsRes] = await Promise.all([
+                    fetch("http://localhost:8080/products"),
+                    // Assuming API Gateway routes /api/auctions to the Auction Service
+                    fetch("http://localhost:8080/api/auctions/active", { headers })
+                ]);
 
-            // 4. Map Backend Data to Frontend Interface with actual names
-            const mappedData = data.map((item: any) => ({
-                id: item.id.toString(),
-                name: item.vegetableName,
-                image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
-                price1kg: item.fixedPrice || item.biddingPrice || 0,
-                price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
-                pricingType: item.pricingType,
-                description: item.description,
-                category: item.category,
-                sellerId: item.farmerId.toString(),
-                
-                // Assign the actual name from the Identity Service map
-                seller: fullNameMap[item.farmerId] || "Unknown Farmer", 
-                
-                rating: 4.5
-            }));
+                // handle responses
+                const productsData = productsRes.ok ? await productsRes.json() : [];
+                const auctionsData = auctionsRes.ok ? await auctionsRes.json() : [];
 
-            setVegetables(mappedData);
-        } catch (err) {
-            console.error("Error loading products:", err);
-            setError("Could not load products. Please ensure the backend is running.");
-        } finally {
-            setLoading(false);
-        }
-    };
+                // 2. Handle Farmer Names for Products (Auctions already have farmerName)
+                const uniqueProductFarmerIds = [...new Set(productsData.map((item: any) => item.farmerId))];
+                let fullNameMap: Record<string, string> = {};
 
-    fetchProductsAndNames();
-}, []);
+                if (uniqueProductFarmerIds.length > 0) {
+                    try {
+                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueProductFarmerIds.join(',')}`, {
+                            method: "GET",
+                            headers
+                        });
+                        fullNameMap = nameRes.ok ? await nameRes.json() : {};
+                    } catch (e) {
+                        console.warn("Could not fetch farmer names", e);
+                    }
+                }
 
-    // 5. Filter Logic (Updated to use 'vegetables' state)
+                // 3. Map Products
+                const mappedProducts: Vegetable[] = productsData.map((item: any) => ({
+                    id: item.id?.toString() || "unique-id",
+                    name: item.vegetableName,
+                    image: item.images && item.images.length > 0 ? item.images[0].imageUrl : "/placeholder.svg",
+                    price1kg: item.fixedPrice || item.biddingPrice || 0,
+                    price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
+                    pricingType: item.pricingType,
+                    description: item.description,
+                    category: item.category,
+                    sellerId: item.farmerId?.toString() || "",
+                    seller: fullNameMap[item.farmerId] || `Farmer #${item.farmerId}`,
+                    rating: 4.5,
+                    quantity: item.quantity || 0,
+                    deliveryAvailable: item.deliveryAvailable || false,
+                    baseCharge: item.deliveryFeeFirst3Km,
+                    extraRatePerKm: item.deliveryFeePerKm,
+                    pickupAddress: item.pickupAddress,
+                    pickupLatitude: item.pickupLatitude,
+                    pickupLongitude: item.pickupLongitude,
+                    isAuction: false
+                }));
+
+                // 4. Map Auctions
+                const mappedAuctions: Vegetable[] = auctionsData.map((item: any) => ({
+                    id: item.id?.toString(),
+                    name: item.productName,
+                    image: item.productImageUrl || "/placeholder.svg",
+                    // Use current highest bid or starting price for sorting/filtering logic
+                    price1kg: item.currentHighestBidAmount || item.startingPrice,
+                    price100g: 0, // Not applicable for auctions usually
+                    seller: item.farmerName || "Unknown Farmer",
+                    sellerId: item.farmerId?.toString(),
+                    description: item.description,
+                    category: "Auction", // Or specific category if available
+                    rating: 4.5, // Default or fetch real rating
+                    pricingType: "AUCTION",
+                    quantity: item.productQuantity || 1,
+                    deliveryAvailable: item.isDeliveryAvailable,
+                    baseCharge: 0, // Add to DTO if needed, or assume default
+                    pickupAddress: item.pickupAddress,
+                    pickupLatitude: item.pickupLatitude, // Added mappings
+                    pickupLongitude: item.pickupLongitude, // Added mappings
+
+                    // Auction Specifics
+                    isAuction: true,
+                    currentBid: item.currentHighestBidAmount,
+                    startingPrice: item.startingPrice,
+                    endTime: item.endTime,
+                    bidCount: item.bidCount
+                }));
+
+                // 5. Merge Data
+                setVegetables([...mappedAuctions, ...mappedProducts]);
+
+            } catch (err) {
+                console.error("Error loading data:", err);
+                setError("Could not load marketplace items. Please check your connection.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
     const filteredVegetables = useMemo(() => {
         return vegetables.filter((veg) => {
             const matchesSearch = veg.name.toLowerCase().includes(searchQuery.toLowerCase())
-            const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory
-            // Filter based on price per kg
+            // Include Auctions in "All" or if a specific Auction category existed
+            const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory || (veg.isAuction && selectedCategory === "All")
             const matchesPrice = veg.price1kg >= priceRange[0] && veg.price1kg <= priceRange[1]
             return matchesSearch && matchesCategory && matchesPrice
         })
     }, [searchQuery, selectedCategory, priceRange, vegetables])
 
     return (
-        <div className="min-h-screen bg-background">
-
-            
+        <div className="min-h-screen bg-background relative">
             {/* Header Section */}
-            <div className="bg-[#f8f8f8] #EEC044 py-12">
+            <div className="bg-[#f8f8f8] py-12">
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
-                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables directly from farmers.</p>
+                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables and live auctions directly from farmers.</p>
                 </div>
             </div>
 
@@ -114,14 +174,13 @@ useEffect(() => {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search vegetables..."
+                            placeholder="Search vegetables or auctions..."
                             className="pl-10 w-full"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    {/* Category Filter */}
                     <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
                         {["All", "Leafy", "Root", "Fruit", "Organic"].map((cat) => (
                             <Button
@@ -144,17 +203,16 @@ useEffect(() => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Price Range (per kg)</label>
+                            <label className="text-sm font-medium mb-2 block">Price Range</label>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Min: Rs. {priceRange[0]}</span>
                                     <span className="text-sm text-muted-foreground">Max: Rs. {priceRange[1]}</span>
                                 </div>
-                                {/* Simple Range Inputs for Demo */}
                                 <div className="flex gap-4">
                                     <input
                                         type="range"
-                                        min="0" max="5000"
+                                        min="0" max="50000"
                                         value={priceRange[1]}
                                         onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                                         className="w-full"
@@ -176,16 +234,20 @@ useEffect(() => {
                     </div>
                 ) : (
                     <>
-                        {/* Results Count */}
                         <p className="text-muted-foreground mb-6">
                             Showing <span className="font-semibold text-foreground">{filteredVegetables.length}</span> results
                         </p>
 
-                        {/* Vegetables Grid */}
                         {filteredVegetables.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVegetables.map((veg) => (
-                                    <VegetableCard key={veg.id} vegetable={veg} />
+                                    <VegetableCard
+                                        // FIX: Use a composite key (type + id) to ensure uniqueness
+                                        key={`${veg.isAuction ? 'auction' : 'product'}-${veg.id}`}
+                                        vegetable={veg}
+                                        // Pass the handler to open the popup
+                                        onPlaceBid={(auctionItem) => setSelectedAuction(auctionItem)}
+                                    />
                                 ))}
                             </div>
                         ) : (
@@ -196,6 +258,15 @@ useEffect(() => {
                     </>
                 )}
             </div>
+
+            {/* Auction Popup */}
+            {selectedAuction && (
+                <AuctionBidPopup
+                    isOpen={!!selectedAuction}
+                    onClose={() => setSelectedAuction(null)}
+                    vegetable={selectedAuction}
+                />
+            )}
         </div>
     )
 }

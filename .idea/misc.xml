@@ -15,10 +15,14 @@
         <option value="$PROJECT_DIR$/backend/orderPayment-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/agro-chat/pom.xml" />
         <option value="$PROJECT_DIR$/backend/chat-service/pom.xml" />
+        <option value="$PROJECT_DIR$/auction-servie/pom.xml" />
+        <option value="$PROJECT_DIR$/auction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/auction-service/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/auction-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/auth-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/product-service/pom.xml" />
       </set>
