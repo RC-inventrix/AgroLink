@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard, ShoppingBag, ShoppingCart, Heart, Package, TrendingUp, FileText, MessageSquare,
+  LayoutDashboard, ShoppingBag, ShoppingCart, Heart, Package, TrendingUp, FileText, MessageSquare, Gavel,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +15,7 @@ const navItems = [
   { href: "/buyer/bargain-history", label: "Bargains", icon: TrendingUp },
   { href: "/buyer/requests", label: "Item Requests", icon: FileText },
   { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
+  { href: "/buyer/bids", label: "My Bids", icon: Gavel },
 ]
 
 interface DashboardNavProps {

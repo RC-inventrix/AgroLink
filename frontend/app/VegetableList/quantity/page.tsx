@@ -21,6 +21,7 @@ interface Vegetable {
     pickupLatitude?: number
     pickupLongitude?: number
     pickupAddress?: string // Farmer's address
+    quantity: number
 }
 
 export default function Page() {

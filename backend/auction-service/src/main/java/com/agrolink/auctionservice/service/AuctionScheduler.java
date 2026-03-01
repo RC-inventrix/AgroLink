@@ -29,4 +29,8 @@ public class AuctionScheduler {
             log.error("Error processing expired auctions: {}", e.getMessage(), e);
         }
     }
+    @Scheduled(fixedRate = 60000) // Every 1 minute
+    public void checkScheduledAuctions() {
+        auctionService.activateScheduledAuctions();
+    }
 }
