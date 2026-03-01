@@ -42,4 +42,7 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
      */
     @Query("SELECT a FROM Auction a JOIN Bid b ON a.winningBidId = b.id WHERE b.bidderId = :bidderId AND a.status = 'COMPLETED'")
     List<Auction> findWonAuctionsByBidderId(@Param("bidderId") Long bidderId);
+
+    List<Auction> findByStatusAndStartTimeBefore(AuctionStatus status, LocalDateTime now);
+
 }

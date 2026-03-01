@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Eye, Upload, X, Check, AlertCircle, MapPin, Home, Loader2, StopCircle, ImageIcon } from "lucide-react"
+import { Eye, Upload, X, Check, AlertCircle, MapPin, Home, Loader2, StopCircle, ImageIcon, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -133,7 +133,8 @@ export default function VegetableForm() {
         quantity: "",
         pricingType: "fixed",
         fixedPrice: "",
-        biddingPrice: "",
+        biddingPrice: "", // Starting Price
+        reservePrice: "", // New Reserve Price
         biddingStartDate: "",
         biddingEndDate: "",
         description: "",
@@ -153,6 +154,31 @@ export default function VegetableForm() {
 
     const [images, setImages] = useState<File[]>([])
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
+    const [auctionDuration, setAuctionDuration] = useState<string | null>(null)
+
+    // --- EFFECT: Calculate Duration ---
+    useEffect(() => {
+        if (formData.biddingStartDate && formData.biddingEndDate) {
+            const start = new Date(formData.biddingStartDate);
+            const end = new Date(formData.biddingEndDate);
+
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                const diffMs = end.getTime() - start.getTime();
+
+                if (diffMs > 0) {
+                    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    setAuctionDuration(`${days} Days, ${hours} Hours`);
+                } else {
+                    setAuctionDuration("Invalid duration (End time must be after Start time)");
+                }
+            } else {
+                setAuctionDuration(null);
+            }
+        } else {
+            setAuctionDuration(null);
+        }
+    }, [formData.biddingStartDate, formData.biddingEndDate]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
@@ -180,6 +206,26 @@ export default function VegetableForm() {
         // Blurring the input removes focus, so scrolling moves the page instead of the number
         (e.target as HTMLInputElement).blur();
     }
+
+    // --- HELPER: Format number with commas (e.g. 1000 -> 1,000) ---
+    const formatNumber = (value: string) => {
+        if (!value) return "";
+        const parts = value.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+    };
+
+    // --- HANDLER: specific for price inputs to handle commas ---
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        // Remove commas to store the clean number in state
+        const rawValue = value.replace(/,/g, "");
+
+        // Only allow digits and a single decimal point
+        if (/^\d*\.?\d*$/.test(rawValue)) {
+            setFormData((prev) => ({ ...prev, [name]: rawValue }));
+        }
+    };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
@@ -253,6 +299,20 @@ export default function VegetableForm() {
             return;
         }
 
+        // --- VALIDATION FOR AUCTION ---
+        if (formData.pricingType === "bidding") {
+            const start = new Date(formData.biddingStartDate);
+            const end = new Date(formData.biddingEndDate);
+            if (end <= start) {
+                setNotification({ message: "Auction end time must be after start time.", type: 'error' });
+                return;
+            }
+            if (!formData.biddingPrice) {
+                setNotification({ message: "Starting bid price is required.", type: 'error' });
+                return;
+            }
+        }
+
         setIsLoading(true);
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
@@ -296,42 +356,76 @@ export default function VegetableForm() {
                 finalLng = defaultLocation.longitude;
             }
 
-            const payload = {
-                farmerId: myId,
-                vegetableName: formData.vegetableName,
-                category: formData.category,
-                quantity: parseFloat(formData.quantity),
-                pricingType: formData.pricingType.toUpperCase(),
-                description: formData.description,
-                fixedPrice: formData.fixedPrice ? parseFloat(formData.fixedPrice) : null,
-                biddingPrice: formData.biddingPrice ? parseFloat(formData.biddingPrice) : null,
-                biddingStartDate: formData.biddingStartDate || null,
-                biddingEndDate: formData.biddingEndDate || null,
-                deliveryAvailable: formData.willDeliver === "yes",
-                deliveryFeeFirst3Km: formData.baseCharge ? parseFloat(formData.baseCharge) : null,
-                deliveryFeePerKm: formData.extraRatePerKm ? parseFloat(formData.extraRatePerKm) : null,
-                pickupAddress: finalAddress,
-                pickupLatitude: finalLat,
-                pickupLongitude: finalLng,
-                imageUrls: uploadedUrls
-            };
+            let response;
 
-            const res = await fetch("http://localhost:8080/products", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload),
-                signal
-            })
+            // --- BRANCH LOGIC ---
+            if (formData.pricingType === "fixed") {
+                // Existing Fixed Price Flow
+                const payload = {
+                    farmerId: myId,
+                    vegetableName: formData.vegetableName,
+                    category: formData.category,
+                    quantity: parseFloat(formData.quantity),
+                    pricingType: "FIXED",
+                    description: formData.description,
+                    fixedPrice: formData.fixedPrice ? parseFloat(formData.fixedPrice) : null,
+                    deliveryAvailable: formData.willDeliver === "yes",
+                    deliveryFeeFirst3Km: formData.baseCharge ? parseFloat(formData.baseCharge) : null,
+                    deliveryFeePerKm: formData.extraRatePerKm ? parseFloat(formData.extraRatePerKm) : null,
+                    pickupAddress: finalAddress,
+                    pickupLatitude: finalLat,
+                    pickupLongitude: finalLng,
+                    imageUrls: uploadedUrls
+                };
 
-            if (res.ok) {
-                setNotification({ message: "Product listed successfully!", type: 'success' });
+                response = await fetch("http://localhost:8080/products", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload),
+                    signal
+                });
+            } else {
+                // --- NEW AUCTION FLOW ---
+                const auctionPayload = {
+                    farmerId: parseInt(myId),
+                    farmerName: sessionStorage.getItem("name") || "Farmer",
+                    productId: 0, // Placeholder as per requirement to not use products table
+                    productName: formData.vegetableName,
+                    productQuantity: parseFloat(formData.quantity),
+                    productImageUrl: uploadedUrls[0], // Use primary image
+                    description: formData.description,
+                    startTime: formData.biddingStartDate.length === 16 ? formData.biddingStartDate + ":00" : formData.biddingStartDate,
+                    endTime: formData.biddingEndDate.length === 16 ? formData.biddingEndDate + ":00" : formData.biddingEndDate,
+                    startingPrice: parseFloat(formData.biddingPrice),
+                    reservePrice: formData.reservePrice ? parseFloat(formData.reservePrice) : null,
+                    isDeliveryAvailable: formData.willDeliver === "yes",
+                    baseDeliveryFee: formData.baseCharge ? parseFloat(formData.baseCharge) : null,
+                    extraFeePer3Km: formData.extraRatePerKm ? parseFloat(formData.extraRatePerKm) : null,
+                    pickupAddress: finalAddress,
+                    pickupLatitude: finalLat,
+                    pickupLongitude: finalLng
+                };
+
+                response = await fetch("http://localhost:8080/api/auctions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(auctionPayload),
+                    signal
+                });
+            }
+
+            if (response.ok) {
+                setNotification({ message: formData.pricingType === "fixed" ? "Product listed successfully!" : "Auction created successfully!", type: 'success' });
                 setTimeout(() => router.push("/seller/dashboard"), 2000);
             } else {
-                const errorData = await res.json().catch(() => null);
-                throw new Error(errorData?.message || "Failed to save product details.");
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || "Failed to save details.");
             }
 
         } catch (error: any) {
@@ -353,8 +447,10 @@ export default function VegetableForm() {
                     <div className="bg-card border border-border p-8 rounded-xl shadow-2xl max-w-sm w-full text-center space-y-6">
                         <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto" />
                         <div className="space-y-2">
-                            <h3 className="text-xl font-bold text-foreground">Uploading...</h3>
-                            <p className="text-muted-foreground text-sm">Please wait while we secure your product data.</p>
+                            <h3 className="text-xl font-bold text-foreground">
+                                {formData.pricingType === "fixed" ? "Uploading Product..." : "Creating Auction..."}
+                            </h3>
+                            <p className="text-muted-foreground text-sm">Please wait while we secure your data.</p>
                         </div>
                         <Button variant="destructive" onClick={handleCancelUpload} className="w-full gap-2">
                             <StopCircle className="w-4 h-4" /> Cancel Upload
@@ -412,7 +508,7 @@ export default function VegetableForm() {
                             placeholder="e.g. 50"
                             value={formData.quantity}
                             onChange={handleInputChange}
-                            onWheel={preventScrollChange} // <--- Added Fix
+                            onWheel={preventScrollChange}
                             className="w-full"
                         />
                     </div>
@@ -427,7 +523,9 @@ export default function VegetableForm() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <RadioGroupItem value="bidding" id="bidding" />
-                                <Label htmlFor="bidding" className="cursor-pointer">Bidding</Label>
+                                <Label htmlFor="bidding" className="cursor-pointer">
+                                    Sell in Auction <span className="font-normal text-muted-foreground ml-1">(where you can sell your item by putting it in an auction)</span>
+                                </Label>
                             </div>
                         </RadioGroup>
                     </div>
@@ -444,33 +542,80 @@ export default function VegetableForm() {
                                 placeholder="Enter price per kg"
                                 value={formData.fixedPrice}
                                 onChange={handleInputChange}
-                                onWheel={preventScrollChange} // <--- Added Fix
+                                onWheel={preventScrollChange}
                                 className="w-full"
                             />
                         </div>
                     ) : (
-                        <div className="mb-8 space-y-4 bg-muted/30 p-4 rounded-lg animate-in slide-in-from-left-2 duration-300">
-                            <div>
-                                <Label htmlFor="biddingPrice" className="text-base font-semibold mb-2 block">Starting Bid (LKR)</Label>
-                                <Input
-                                    required
-                                    id="biddingPrice"
-                                    name="biddingPrice"
-                                    type="number"
-                                    value={formData.biddingPrice}
-                                    onChange={handleInputChange}
-                                    onWheel={preventScrollChange} // <--- Added Fix
-                                />
+                        <div className="mb-8 space-y-6 bg-muted/30 p-6 rounded-lg animate-in slide-in-from-left-2 duration-300 border border-border">
+
+                            {/* Row 1: Prices */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <Label htmlFor="biddingPrice" className="text-base font-semibold mb-2 block">Starting Bid (LKR)</Label>
+                                    <Input
+                                        required
+                                        id="biddingPrice"
+                                        name="biddingPrice"
+                                        type="text" // Changed to text to support commas
+                                        inputMode="decimal" // Helps mobile keyboards show numbers
+                                        placeholder="Min price to start"
+                                        value={formatNumber(formData.biddingPrice)} // Format for display
+                                        onChange={handlePriceChange} // Use new handler
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="reservePrice" className="text-base font-semibold mb-2 block">Reserve Price (LKR)</Label>
+                                    <Input
+                                        id="reservePrice"
+                                        name="reservePrice"
+                                        type="text" // Changed to text to support commas
+                                        inputMode="decimal" // Helps mobile keyboards show numbers
+                                        placeholder="Lowest acceptable price"
+                                        value={formatNumber(formData.reservePrice)} // Format for display
+                                        onChange={handlePriceChange} // Use new handler
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">If bids don't reach this amount, the item won't be sold.</p>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+
+                            {/* Row 2: Dates */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <Label className="mb-2 block text-sm">Start Date</Label>
-                                    <Input type="datetime-local" name="biddingStartDate" value={formData.biddingStartDate} onChange={handleInputChange} />
+                                    <Label htmlFor="biddingStartDate" className="text-base font-semibold mb-2 block">Auction Start Date & Time</Label>
+                                    <Input
+                                        required
+                                        type="datetime-local"
+                                        id="biddingStartDate"
+                                        name="biddingStartDate"
+                                        value={formData.biddingStartDate}
+                                        onChange={handleInputChange}
+                                    />
                                 </div>
                                 <div>
-                                    <Label className="mb-2 block text-sm">End Date</Label>
-                                    <Input type="datetime-local" name="biddingEndDate" value={formData.biddingEndDate} onChange={handleInputChange} />
+                                    <Label htmlFor="biddingEndDate" className="text-base font-semibold mb-2 block">Auction End Date & Time</Label>
+                                    <Input
+                                        required
+                                        type="datetime-local"
+                                        id="biddingEndDate"
+                                        name="biddingEndDate"
+                                        value={formData.biddingEndDate}
+                                        onChange={handleInputChange}
+                                    />
                                 </div>
+                            </div>
+
+                            {/* Duration Display */}
+                            <div className="flex items-center gap-2 p-3 bg-background rounded border border-border/50 text-sm">
+                                <Clock className="w-4 h-4 text-primary" />
+                                <span className="font-medium">Estimated Duration:</span>
+                                {auctionDuration ? (
+                                    <span className={auctionDuration.includes("Invalid") ? "text-destructive" : "text-foreground"}>
+                                        {auctionDuration}
+                                    </span>
+                                ) : (
+                                    <span className="text-muted-foreground italic">Select dates to calculate</span>
+                                )}
                             </div>
                         </div>
                     )}
@@ -528,7 +673,7 @@ export default function VegetableForm() {
                         <div className="bg-muted/30 rounded-lg p-6 mb-8 animate-in zoom-in-95 duration-300">
                             <h3 className="text-base font-semibold mb-6 text-foreground">Delivery Charges</h3>
                             <div className="mb-6">
-                                <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 5 km (LKR)</Label>
+                                <Label htmlFor="baseCharge" className="text-base font-semibold mb-2 block">Base Charge - First 3 km (LKR)</Label>
                                 <Input
                                     required
                                     id="baseCharge"
@@ -536,12 +681,12 @@ export default function VegetableForm() {
                                     type="number"
                                     value={formData.baseCharge}
                                     onChange={handleInputChange}
-                                    onWheel={preventScrollChange} // <--- Added Fix
+                                    onWheel={preventScrollChange}
                                     placeholder="e.g. 200"
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km - After 5 km (LKR)</Label>
+                                <Label htmlFor="extraRatePerKm" className="text-base font-semibold mb-2 block">Extra Rate per km - After 3 km (LKR)</Label>
                                 <Input
                                     required
                                     id="extraRatePerKm"
@@ -549,7 +694,7 @@ export default function VegetableForm() {
                                     type="number"
                                     value={formData.extraRatePerKm}
                                     onChange={handleInputChange}
-                                    onWheel={preventScrollChange} // <--- Added Fix
+                                    onWheel={preventScrollChange}
                                     placeholder="e.g. 50"
                                 />
                             </div>
@@ -612,7 +757,7 @@ export default function VegetableForm() {
 
                     <div className="flex gap-4">
                         <Button disabled={isLoading || isCompressing} type="submit" size="lg" className="flex-1 sm:flex-none min-w-[150px]">
-                            {isLoading ? "Adding Item..." : "Add Item"}
+                            {isLoading ? (formData.pricingType === "fixed" ? "Adding Item..." : "Starting Auction...") : (formData.pricingType === "fixed" ? "Add Item" : "Start Auction")}
                         </Button>
                         <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>Cancel</Button>
                     </div>

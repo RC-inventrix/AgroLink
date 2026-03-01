@@ -52,7 +52,7 @@ public class Bid {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "bid_time", nullable = false)
     private LocalDateTime bidTime;
-
+    //private Long auctionId;
     // Embedded delivery address
     @Embedded
     private DeliveryAddress deliveryAddress;
