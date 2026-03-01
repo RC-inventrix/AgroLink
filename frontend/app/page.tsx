@@ -12,7 +12,6 @@ import {
     MessageCircle,
     Lock,
     ChevronRight,
-
 } from "lucide-react"
 import Footer from "@/components/Footer";
 
@@ -31,6 +30,17 @@ export default function AgroLinkHome() {
 
     return (
         <div className="min-h-screen bg-white text-[#03230F]">
+            {/* Inline Style for Marquee Animation */}
+            <style jsx>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-marquee {
+                    animation: marquee 25s linear infinite;
+                }
+            `}</style>
+
             <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-14 sm:h-16">
@@ -40,7 +50,7 @@ export default function AgroLinkHome() {
                                 alt="AgroLink Logo"
                                 width={180}
                                 height={64}
-                                className="w-full h-auto"
+                                className="h-8 sm:h-12 w-auto"
                             />
                         </div>
 
@@ -58,17 +68,15 @@ export default function AgroLinkHome() {
                             >
                                 Features
                             </a>
-                            
                         </div>
 
                         {/* Auth Buttons - Desktop */}
                         <div className="hidden md:flex items-center gap-2 lg:gap-3">
-
-                           <Link href="/login">
-                               <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                   Login
-                               </button>
-                           </Link>
+                            <Link href="/login">
+                                <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
+                                    Login
+                                </button>
+                            </Link>
                             {/* Wrapped Register Button */}
                             <Link href="/register">
                                 <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
@@ -144,13 +152,33 @@ export default function AgroLinkHome() {
                                         Get Started
                                     </button>
                                 </Link>
-                                
                             </div>
                         </div>
                     </div>
                 </div>
-
             </section>
+
+            {/* Marquee Section */}
+            <div className="w-full py-4 sm:py-5 overflow-hidden bg-[#03230F] text-white relative z-10 border-y-2 border-[#EEC044]/20">
+                <div className="flex gap-8 sm:gap-12 w-max animate-marquee">
+                    {/* Set 1 */}
+                    <div className="flex items-center gap-8 sm:gap-12 text-sm sm:text-base lg:text-lg tracking-widest whitespace-nowrap uppercase font-medium">
+                        <div className="flex items-center">Fresh Produce <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Fair Pricing <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Direct from Farmers <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">AI Price Insights <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Secure Trading <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                    </div>
+                    {/* Set 2 (Duplicate for infinite scroll) */}
+                    <div className="flex items-center gap-8 sm:gap-12 text-sm sm:text-base lg:text-lg tracking-widest whitespace-nowrap uppercase font-medium">
+                        <div className="flex items-center">Fresh Produce <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Fair Pricing <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Direct from Farmers <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">AI Price Insights <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        <div className="flex items-center">Secure Trading <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                    </div>
+                </div>
+            </div>
 
             {/* Features Section */}
             <section id="features" className="py-8 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 bg-white">
@@ -173,61 +201,6 @@ export default function AgroLinkHome() {
                             <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Farmers</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
                                 Create listings, manage orders, get AI-powered price suggestions, and connect directly with buyers.
-                            </p>
-                        </div>
-
-                        {/* Feature 2 */}
-                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
-                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                <ShoppingCart className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                            </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Buyers</h3>
-                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Search fresh products, post item requests, negotiate prices, and support local farmers directly.
-                            </p>
-                        </div>
-
-                        {/* Feature 3 */}
-                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
-                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                <Users className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                            </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Dual Search System</h3>
-                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Search farmer products or create buyer requests. Find exactly what you need in our marketplace.
-                            </p>
-                        </div>
-
-                        {/* Feature 4 */}
-                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
-                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                <MessageCircle className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                            </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Chat & Reviews</h3>
-                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Real-time chat with buyers/farmers, ratings, reviews, and feedback to build trust and community.
-                            </p>
-                        </div>
-
-                        {/* Feature 5 */}
-                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
-                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                <Lock className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                            </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Secure & Verified</h3>
-                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Role-based authentication, secure payments, and verified profiles for farmers, buyers, and admins.
-                            </p>
-                        </div>
-
-                        {/* Feature 6 */}
-                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
-                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                            </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">AI Price Insights</h3>
-                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Smart pricing suggestions based on market trends, demand, and product quality for fair deals.
                             </p>
                         </div>
                     </div>
