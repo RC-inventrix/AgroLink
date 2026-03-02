@@ -3,15 +3,11 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-
-      <!-- Keep only one Maven default profile (duplicate removed) -->
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
       </profile>
-
-      <!-- Product Catalog Profile (Lombok 1.18.42) -->
       <profile name="Annotation profile for productCatalog-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -21,8 +17,6 @@
         </processorPath>
         <module name="productCatalog-service" />
       </profile>
-
-      <!-- Shared Services Profile (api-gateway, orderPayment, etc.) -->
       <profile name="Annotation profile for core-services" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -36,8 +30,6 @@
         <module name="identityAndUser-service" />
         <module name="service-discovery" />
       </profile>
-
-      <!-- Auction Service Profile -->
       <profile name="Annotation profile for auction-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -47,11 +39,17 @@
         </processorPath>
         <module name="auction-service" />
       </profile>
-
+      <profile name="Annotation profile for chatbot-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+        </processorPath>
+        <module name="chatbot-service" />
+      </profile>
     </annotationProcessing>
-
     <bytecodeTargetLevel>
-      <module name="auction-service" target="21" />
       <module name="auth-service" target="25" />
       <module name="indentityAndUser-service" target="21" />
       <module name="moderation-service" target="17" />
@@ -59,13 +57,13 @@
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>
   </component>
-
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="agro-chat" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
       <module name="auction-service" options="-parameters" />
       <module name="auth-service" options="-parameters" />
+      <module name="chatbot-service" options="-parameters" />
       <module name="config-server" options="-parameters" />
       <module name="identityAndUser-service" options="-parameters" />
       <module name="moderation-service" options="-parameters" />
