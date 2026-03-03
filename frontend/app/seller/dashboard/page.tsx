@@ -14,8 +14,8 @@ import Footer from "@/components/footer/Footer";
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
-    
-    // 1. New State for Orders and Analytics
+
+    // State for Orders and Analytics
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
         totalCompletedIncome: 0,
@@ -34,7 +34,7 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
-                // A. Fetch User Data
+                // Fetch User Data
                 const userRes = await fetch(`${baseUrl}/auth/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -43,17 +43,17 @@ export default function SellerDashboard() {
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // B. Fetch Order Analytics (Revenue & Completed Counts)
+                // Fetch Order Analytics
                 const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // C. Fetch All Orders to calculate specific "To Do" logic and list
+                // Fetch All Orders
                 const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // D. Fetch Active Products Count
+                // Fetch Active Products Count
                 const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -63,7 +63,7 @@ export default function SellerDashboard() {
                     const allOrders: any[] = await ordersRes.json();
                     const allProducts: any[] = await productsRes.json();
 
-                    // Filter orders using your "To Do" logic: PAID, COD_CONFIRMED, CREATED, PENDING
+                    // Filter orders
                     const filteredPending = allOrders.filter((o) =>
                         ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
                     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -170,22 +170,11 @@ export default function SellerDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column: AI & Pending Orders List */}
                         <div className="lg:col-span-2 space-y-8">
-                            {/* AI Card */}
-                            <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Sparkles className="text-[#EEC044]" size={20} />
-                                    <h3 className="font-bold text-gray-800">AI Smart Insight</h3>
-                                </div>
-                                <div className="flex items-center gap-6 bg-green-50 p-4 rounded-2xl">
-                                    <div className="text-4xl">🌱</div>
-                                    <div>
-                                        <h4 className="font-bold text-[#03230F]">Best to grow: Red Onions</h4>
-                                        <p className="text-sm text-gray-600">Based on upcoming rainy weather patterns in your region.</p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Pending Orders Section - DYNAMIC LIST */}
+                            {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
+                            <CropRecommendationCard />
+
+                            {/* Pending Orders Section */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-gray-800 text-lg">Current Pending Orders</h3>
@@ -193,7 +182,7 @@ export default function SellerDashboard() {
                                         View All Orders <ChevronRight size={16} />
                                     </Link>
                                 </div>
-                                
+
                                 <div className="space-y-4">
                                     {pendingOrders.length > 0 ? (
                                         pendingOrders.slice(0, 5).map((order) => (
@@ -252,6 +241,10 @@ export default function SellerDashboard() {
     );
 }
 
+// ----------------------------------------------------------------------
+// HELPER COMPONENTS
+// ----------------------------------------------------------------------
+
 function StatCard({ label, value, Icon, highlight, color }: { label: string, value: string | number, Icon: any, highlight?: boolean, color?: string }) {
     return (
         <div className={`p-6 rounded-4xl shadow-sm border transition-transform hover:scale-[1.02] ${highlight ? 'bg-[#EEC044] border-[#EEC044]' : 'bg-white border-gray-100'}`}>
@@ -260,6 +253,130 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
             </div>
             <div className={`text-2xl font-bold ${highlight ? 'text-[#03230F]' : 'text-gray-800'}`}>{value}</div>
             <div className={`text-sm ${highlight ? 'text-[#03230F]/70' : 'text-gray-500'}`}>{label}</div>
+        </div>
+    );
+}
+
+// New AI Crop Recommendation Sub-component
+function CropRecommendationCard() {
+    const [temperature, setTemperature] = useState("");
+    const [humidity, setHumidity] = useState("");
+    const [rainfall, setRainfall] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handlePredict = async () => {
+        if (!temperature || !humidity || !rainfall) {
+            setError("Please fill in all fields.");
+            return;
+        }
+
+        setLoading(true);
+        setResult(null);
+        setError(null);
+
+        try {
+            const response = await fetch("http://localhost:8080/api/crop/recommend", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    temperature: Number(temperature),
+                    humidity: Number(humidity),
+                    rainfall: Number(rainfall),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to get crop prediction");
+            }
+
+            const data = await response.json();
+            // Assuming your backend returns a field named 'crop'
+            setResult(data.crop);
+        } catch (err: any) {
+            setError(err.message || "Something went wrong. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                    <Sparkles className="text-[#EEC044]" size={20} />
+                    <h3 className="font-bold text-gray-800">AI Smart Insight</h3>
+                </div>
+                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">Powered by ML</span>
+            </div>
+
+            {/* Input Form Area */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature (°C)</label>
+                    <input
+                        type="number"
+                        placeholder="e.g. 28"
+                        value={temperature}
+                        onChange={e => setTemperature(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Humidity (%)</label>
+                    <input
+                        type="number"
+                        placeholder="e.g. 70"
+                        value={humidity}
+                        onChange={e => setHumidity(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Rainfall (mm)</label>
+                    <input
+                        type="number"
+                        placeholder="e.g. 120"
+                        value={rainfall}
+                        onChange={e => setRainfall(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
+                    />
+                </div>
+            </div>
+
+            <div className="flex justify-end mb-6">
+                <button
+                    onClick={handlePredict}
+                    disabled={loading}
+                    className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {loading ? "Analyzing Weather..." : "Recommend Crop"}
+                </button>
+            </div>
+
+            {/* Results Display */}
+            {(result || error) ? (
+                <div className={`flex items-center gap-6 p-4 rounded-2xl transition-all ${error ? 'bg-red-50' : 'bg-green-50'}`}>
+                    <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
+                    <div>
+                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>
+                            {error ? 'Analysis Error' : `Best to grow: ${result}`}
+                        </h4>
+                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>
+                            {error ? error : "Based on the weather conditions you provided."}
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex items-center gap-6 p-4 rounded-2xl bg-gray-50 border border-dashed border-gray-200">
+                    <div className="text-4xl opacity-50">☁️</div>
+                    <div>
+                        <h4 className="font-bold text-gray-500">Awaiting Data</h4>
+                        <p className="text-sm text-gray-400">Enter your local weather conditions above to get an AI-powered recommendation.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
