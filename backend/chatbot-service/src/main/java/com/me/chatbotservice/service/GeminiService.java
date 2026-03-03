@@ -60,7 +60,7 @@ public class GeminiService {
 
         try {
             Map<?, ?> response = geminiWebClient.post()
-                    .uri("/v1beta/models/gemini-2.0-flash:generateContent?key={key}", geminiApiKey)
+                    .uri("/v1beta/models/gemini-2.5-flash:generateContent?key={key}", geminiApiKey)
                     .header("Content-Type", "application/json")
                     .bodyValue(requestBody)
                     .retrieve()
