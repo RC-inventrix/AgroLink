@@ -224,6 +224,16 @@ export default function AgroLinkHome() {
                                 Search farmer products or create buyer requests. Find exactly what you need in our marketplace.
                             </p>
                         </div>
+                            {/* Feature 4 */}
+                        <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
+                                <MessageCircle className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Chat & Reviews</h3>
+                            <p className="text-xs sm:text-sm md:text-base text-gray-600">
+                                Real-time chat with buyers/farmers, ratings, reviews, and feedback to build trust and community.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
