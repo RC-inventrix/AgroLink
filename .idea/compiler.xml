@@ -8,21 +8,23 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
       </profile>
-      <profile name="Annotation profile for productCatalog-service" enabled="true">
+      <profile name="Annotation profile for agro-chat" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
-        <module name="productCatalog-service" />
+        <module name="agro-chat" />
       </profile>
+      <profile name="Annotation profile for productCatalog-service" enabled="true">
       <profile name="Annotation profile for core-services" enabled="true">
       <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
         </processorPath>
         <module name="orderPayment-service" />
@@ -31,16 +33,19 @@
         <module name="productCatalog-service" />
         <module name="auction-service" />
         <module name="identityAndUser-service" />
-        <module name="service-discovery" />
+        <module name="productCatalog-service" />
       </profile>
-      <profile name="Annotation profile for auction-service" enabled="true">
+      <profile name="Annotation profile for service-discovery" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
         </processorPath>
+        <module name="api-gateway" />
+        <module name="config-server" />
         <module name="auction-service" />
+        <module name="service-discovery" />
       </profile>
       <profile name="Annotation profile for chatbot-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
