@@ -26,7 +26,7 @@ public class ReportService {
         return reportRepository.findByReportedId(reportedId);
     }
 
-    public UserReport resolveReport(Long reportId, Long adminId, String remarks) {
+    public UserReport resolveReport(Long reportId, Long adminId, String remarks, String action) {
         UserReport report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 

@@ -23,28 +23,39 @@ export default function AdminLogin() {
     if (error) setError("")
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+// Inside AdminLogin.tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError("");
 
-    try {
-      // Backend URL එක (Port 8081)
-      const response = await axios.post("http://localhost:8081/api/admin/login", {
-        username: formData.username,
-        password: formData.password,
-      })
+  try {
+    const response = await axios.post("http://localhost:8080/api/admin/login", {
+      username: formData.username,
+      password: formData.password,
+    });
 
-      if (response.status === 200) {
-        router.push("/admin/dashboard") 
+    // DEBUG: Check what the backend is actually sending
+    console.log("Backend Response:", response.data);
+
+    if (response.status === 200) {
+      // 1. Check if the field is 'token' or 'accessToken' or 'jwt'
+      const token = response.data.token || response.data.jwt; 
+      
+      if (token) {
+        // 2. Use sessionStorage so ReportsSummary can find it
+        sessionStorage.setItem("token", token);
+        router.push("/admin/dashboard");
+      } else {
+        setError("Login successful, but no token was received.");
       }
-    } catch (err: any) {
-      console.error("Login failed", err)
-      setError("Invalid username or password. Please try again.")
-    } finally {
-      setIsLoading(false)
     }
+  } catch (err: any) {
+    setError("Invalid username or password.");
+  } finally {
+    setIsLoading(false);
   }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#03230F]/5 p-4">

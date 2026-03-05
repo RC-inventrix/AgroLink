@@ -2,87 +2,76 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Eye, EyeOff, Leaf, AlertCircle } from "lucide-react"
-import RoleSelect from "./role-select"
+import { Eye, EyeOff, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image";
 
 export default function LoginForm() {
     const router = useRouter()
-    const [email, setEmail] = useState("")
+    const [identifier, setIdentifier] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
-    const [selectedRole, setSelectedRole] = useState("farmer")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
     const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+        e.preventDefault();
+        setIsLoading(true);
+        setError("");
 
-    try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-        const isAdmins = selectedRole === "admin";
-        const endpoint = isAdmins ? "/api/admin/login" : "/auth/login";
-        
-        const payload = isAdmins 
-            ? { username: email, password: password } 
-            : { identifier: email, password: password };
+        try {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+            
+            // Logic updated to use the /auth/login endpoint from AuthController.java
+            const response = await fetch(`${baseUrl}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    identifier: identifier, // Matches LoginRequest DTO
+                    password: password 
+                }),
+            });
 
-        const response = await fetch(`${baseUrl}${endpoint}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
+            const data = await response.json();
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            // Handle specific HTTP Status Codes if message isn't in JSON
-            if (response.status === 401) {
-                throw new Error(data.message || "Incorrect email or password.");
-            } else if (response.status === 404) {
-                throw new Error("No account found with this email.");
-            } else if (response.status === 500) {
-                throw new Error("Server is currently down. Please try again later.");
+            if (!response.ok) {
+                // Backend returns specific error messages in a Map
+                if (response.status === 401) {
+                    throw new Error(data.message || "Incorrect email or password.");
+                } else if (response.status === 403) {
+                    throw new Error(data.message || "Your account is temporarily disabled.");
+                } else if (response.status === 500) {
+                    throw new Error("Server is currently down. Please try again later.");
+                }
+                throw new Error(data.message || "Login failed.");
             }
-            throw new Error(data.message || "Login failed. Please check your connection.");
-        }
 
-        // SUCCESS LOGIC: Store user data
+            // SUCCESS LOGIC: Store user data based on AuthResponse
             sessionStorage.setItem("token", data.token); 
             sessionStorage.setItem("userRole", data.role);
             sessionStorage.setItem("userEmail", data.email);
-            sessionStorage.setItem("id", data.id);
+            sessionStorage.setItem("id", data.id); // userId from backend response
 
             // REDIRECTION LOGIC
-            if (isAdmins) {
-                sessionStorage.setItem("adminSession", "true");
-                router.push("/admin/dashboard");
+            const role = data.role.toLowerCase();
+            if (role === "buyer") {
+                router.push("/buyer/dashboard");
+            } else if (role === "farmer") {
+                router.push("/seller/dashboard");
             } else {
-                const role = data.role.toLowerCase();
-                if (role === "buyer") {
-                    router.push("/buyer/dashboard");
-                } else if (role === "farmer") {
-                    router.push("/seller/dashboard");
-                } else {
-                    // Fallback if role doesn't match
-                    router.push("/dashboard");
-                }
+                router.push("/dashboard");
             }
         
-    } catch (err: any) {
-        // If it's a network error (server not reachable)
-        if (err.message === "Failed to fetch") {
-            setError("Unable to connect to the server. Please check your internet.");
-        } else {
-            setError(err.message);
+        } catch (err: any) {
+            if (err.message === "Failed to fetch") {
+                setError("Unable to connect to the server. Please check your internet.");
+            } else {
+                setError(err.message);
+            }
+        } finally {
+            setIsLoading(false);
         }
-    } finally {
-        setIsLoading(false);
-    }
-};
+    };
 
     return (
         <div className="w-full max-w-md">
@@ -97,7 +86,6 @@ export default function LoginForm() {
                         className="h-8 sm:h-12 w-auto"
                     />
                 </div>
-
             </div>
 
             {/* Login Card */}
@@ -116,8 +104,6 @@ export default function LoginForm() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    
-
                     <div>
                         <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
                             Email Address / Username
@@ -125,8 +111,8 @@ export default function LoginForm() {
                         <input
                             id="email"
                             type="text"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
                             placeholder="you@example.com"
                             className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all"
                             style={{
@@ -189,9 +175,6 @@ export default function LoginForm() {
                     </button>
 
                     <div className="relative my-6">
-                        {/*<div className="absolute inset-0 flex items-center">*/}
-                        {/*    <div className="w-full border-t border-gray-600"></div>*/}
-                        {/*</div>*/}
                         <div className="relative flex justify-center text-xs uppercase">
                             <span className="px-2 text-gray-400">New to AgroLink?</span>
                         </div>
@@ -211,10 +194,6 @@ export default function LoginForm() {
                     </div>
                 </form>
             </div>
-
-            {/*<div className="mt-8 text-center text-xs text-muted-foreground">*/}
-            {/*    <p>Protected by industry-leading security</p>*/}
-            {/*</div>*/}
         </div>
     )
 }

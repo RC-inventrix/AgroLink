@@ -16,15 +16,15 @@ export function StatisticsCards() {
     const fetchData = async () => {
       try {
         // 1. Total Users
-        const usersRes = await axios.get("http://127.0.0.1:8081/auth/count")
+        const usersRes = await axios.get("http://localhost:8080/auth/count")
         setTotalUsers(usersRes.data.toString())
 
         // 2. Active Farmers (අලුත් එක)
-        const farmersRes = await axios.get("http://127.0.0.1:8081/auth/count/farmers")
+        const farmersRes = await axios.get("http://localhost:8080/auth/count/farmers")
         setActiveFarmers(farmersRes.data.toString())
 
         // 3. Active Buyers (අලුත් එක)
-        const buyersRes = await axios.get("http://127.0.0.1:8081/auth/count/buyers")
+        const buyersRes = await axios.get("http://localhost:8080/auth/count/buyers")
         setActiveBuyers(buyersRes.data.toString())
 
       } catch (error) {

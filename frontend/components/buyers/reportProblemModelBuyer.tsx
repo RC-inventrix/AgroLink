@@ -70,14 +70,15 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderId,
-          reporterId,
-          reportedId,
-          issueType: selectedIssue,
-          description: details,
-          evidenceUrls: uploadedUrls 
-        }),
+  orderId: Number(orderId),
+  reporterId: Number(reporterId),
+  reportedId: Number(reportedId),
+  issueType: selectedIssue,
+  description: details,
+  evidenceUrls: uploadedUrls,
+})
       });
+      console.log({ orderId, reporterId, reportedId, selectedIssue })
 
       if (response.ok) {
         toast.success("Report submitted successfully!");

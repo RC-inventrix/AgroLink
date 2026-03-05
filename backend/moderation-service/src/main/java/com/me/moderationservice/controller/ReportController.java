@@ -39,12 +39,14 @@ public class ReportController {
     }
 
     // 2. Resolve a report (Used by Admins)
+    // 2. Resolve a report (Used by Admins)
     @PatchMapping("/resolve/{id}")
     public ResponseEntity<UserReport> resolveReport(
             @PathVariable Long id,
             @RequestParam Long adminId,
-            @RequestParam(required = false) String remarks) {
-        return ResponseEntity.ok(reportService.resolveReport(id, adminId, remarks));
+            @RequestParam(required = false) String remarks,
+            @RequestParam String action) { // <-- Added 'action' parameter
+        return ResponseEntity.ok(reportService.resolveReport(id, adminId, remarks, action));
     }
 
     // 3. Get all reports for the Admin Dashboard
