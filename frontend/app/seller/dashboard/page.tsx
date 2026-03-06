@@ -5,7 +5,10 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight } from "lucide-react";
+import { 
+    Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, 
+    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone 
+} from "lucide-react";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -14,8 +17,8 @@ import Footer from "@/components/footer/Footer";
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
+    const [isBanned, setIsBanned] = useState<boolean>(false); // Ban state
     
-    // 1. New State for Orders and Analytics
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
         totalCompletedIncome: 0,
@@ -34,26 +37,34 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
-                // A. Fetch User Data
+                // A. Fetch User Data and check for Ban Status
                 const userRes = await fetch(`${baseUrl}/auth/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
+                
                 if (userRes.ok) {
                     const userData = await userRes.json();
+                    
+                    // Check the isBanned flag from the User model
+                    if (userData.isBanned) {
+                        setIsBanned(true);
+                        return; // Halt further data fetching for security
+                    }
+
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // B. Fetch Order Analytics (Revenue & Completed Counts)
+                // B. Fetch Analytics
                 const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // C. Fetch All Orders to calculate specific "To Do" logic and list
+                // C. Fetch Orders
                 const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // D. Fetch Active Products Count
+                // D. Fetch Products
                 const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -63,7 +74,6 @@ export default function SellerDashboard() {
                     const allOrders: any[] = await ordersRes.json();
                     const allProducts: any[] = await productsRes.json();
 
-                    // Filter orders using your "To Do" logic: PAID, COD_CONFIRMED, CREATED, PENDING
                     const filteredPending = allOrders.filter((o) =>
                         ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
                     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -102,7 +112,6 @@ export default function SellerDashboard() {
         fetchDashboardData();
         syncGlobalUnread();
 
-        // WebSocket for real-time chat notifications
         const socket = new SockJS(`${chatUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -116,6 +125,47 @@ export default function SellerDashboard() {
         client.activate();
         return () => { void client.deactivate(); };
     }, []);
+
+    // --- RENDER BANNED VIEW IF NECESSARY ---
+    if (isBanned) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl overflow-hidden border border-red-100">
+                    <div className="bg-red-600 p-6 flex justify-center">
+                        <AlertCircle size={64} className="text-white animate-pulse" />
+                    </div>
+                    <div className="p-8 text-center">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Restricted</h2>
+                        <p className="text-gray-600 mb-6">
+                            Your account has been <strong>banned</strong> for policy violation. Please contact customer service for more information.
+                        </p>
+                        
+                        <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3 text-left border border-gray-100">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Support Contact</p>
+                            <div className="flex items-center gap-3 text-gray-700">
+                                <Mail size={18} className="text-red-500" />
+                                <span className="text-sm font-medium">agrolinkcustomerservice@gmail.com</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-gray-700">
+                                <Phone size={18} className="text-red-500" />
+                                <span className="text-sm font-medium">+94 11 234 5678</span>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => {
+                                sessionStorage.clear();
+                                window.location.href = "/login";
+                            }}
+                            className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
+                        >
+                            <LogOut size={18} /> Logout from System
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8F9FA]">
@@ -168,9 +218,7 @@ export default function SellerDashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column: AI & Pending Orders List */}
                         <div className="lg:col-span-2 space-y-8">
-                            {/* AI Card */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Sparkles className="text-[#EEC044]" size={20} />
@@ -185,7 +233,6 @@ export default function SellerDashboard() {
                                 </div>
                             </div>
 
-                            {/* Pending Orders Section - DYNAMIC LIST */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-gray-800 text-lg">Current Pending Orders</h3>
@@ -225,7 +272,6 @@ export default function SellerDashboard() {
                             </div>
                         </div>
 
-                        {/* Right Column: Notifications */}
                         <div className="space-y-8">
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex items-center gap-2 mb-6">

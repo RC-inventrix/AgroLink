@@ -2,9 +2,12 @@ package com.me.moderationservice.service;
 
 import com.me.moderationservice.dto.ReportRequest;
 import com.me.moderationservice.model.UserReport;
+import com.me.moderationservice.model.User; // Ensure you have the shadow User entity in this project
 import com.me.moderationservice.repository.ReportRepository;
+import com.me.moderationservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Added for data integrity
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportService {
     private final ReportRepository reportRepository;
+    private final UserRepository userRepository;
 
     public UserReport saveReport(UserReport report) {
         return reportRepository.save(report);
@@ -26,32 +30,53 @@ public class ReportService {
         return reportRepository.findByReportedId(reportedId);
     }
 
+    /**
+     * Resolves a report and applies penalty points to the reported user.
+     * Logic: LOW = 0 points, MEDIUM = 1 point, HIGH = 2 points.
+     * If user points reach 6, the user is banned.
+     */
+    @Transactional // Ensures both Report and User updates succeed or fail together
     public UserReport resolveReport(Long reportId, Long adminId, String remarks, String action) {
+        // 1. Fetch and update the Report status
         UserReport report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         report.setAdminId(adminId);
         report.setAdminRemarks(remarks);
+        report.setActionTaken(action); // Uses the action selected in the frontend popup
         report.setResolvedAt(LocalDateTime.now());
         report.setStatus("RESOLVED");
 
-        // Automatic outcome based on the RiskLevel mapped from your specific issues
-        switch (report.getRiskLevel()) {
-            case LOW -> report.setActionTaken("WARNING");
-            case MEDIUM -> report.setActionTaken("6H_SUSPENSION");
-            case HIGH -> report.setActionTaken("24H_SUSPENSION");
+        // 2. Fetch the reported User from the shared 'users' table
+        User reportedUser = userRepository.findById(report.getReportedId())
+                .orElseThrow(() -> new RuntimeException("Reported user not found"));
+
+        // 3. Calculate points based on RiskLevel
+        int pointsToAdd = 0;
+        if (report.getRiskLevel() == UserReport.RiskLevel.MEDIUM) {
+            pointsToAdd = 1;
+        } else if (report.getRiskLevel() == UserReport.RiskLevel.HIGH) {
+            pointsToAdd = 2;
         }
 
+        // 4. Update user points and check for 6-point ban threshold
+        int currentPoints = reportedUser.getPenaltyPoints();
+        int newTotalPoints = currentPoints + pointsToAdd;
+
+        reportedUser.setPenaltyPoints(newTotalPoints);
+
+        if (newTotalPoints >= 6) {
+            reportedUser.setBanned(true);
+        }
+
+        // 5. Save both changes to the shared database
+        userRepository.save(reportedUser);
         return reportRepository.save(report);
     }
 
     public List<UserReport> getReportsByReporter(Long reporterId) {
         List<UserReport> reports = reportRepository.findByReporterId(reporterId);
-        if (reports.isEmpty()) {
-            // You can return an empty list or throw a custom exception
-            return List.of();
-        }
-        return reports;
+        return reports.isEmpty() ? List.of() : reports;
     }
 
     public UserReport submitReport(ReportRequest request) {
@@ -61,10 +86,8 @@ public class ReportService {
         report.setReportedId(request.getReportedId());
         report.setIssueType(request.getIssueType());
         report.setDescription(request.getDescription());
-        report.setEvidenceUrls(request.getEvidenceUrls()); // Saving the links
+        report.setEvidenceUrls(request.getEvidenceUrls());
 
         return reportRepository.save(report);
     }
-
-
 }

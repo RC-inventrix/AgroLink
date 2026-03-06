@@ -125,8 +125,18 @@ public class AuthController {
             return ResponseEntity.status(401).body("Not authenticated");
         }
         String email = authentication.getName();
-        String fullName = service.getFullNameByEmail(email);
-        return ResponseEntity.ok(java.util.Map.of("fullName", fullName));
+
+        User user = service.findByEmail(email);
+
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "fullName", user.getFullname(),
+                "isBanned", user.isBanned() // Adding the flag here
+        ));
     }
 
     @GetMapping("/fullnames")
@@ -175,6 +185,23 @@ public class AuthController {
         } catch (Exception e) {
             // මොකක් හරි අවුලක් ගියොත් Error එකක් යවනවා
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // Add this to AuthController.java
+    @PatchMapping("/user/{id}/ban")
+    public ResponseEntity<?> banUser(@PathVariable Long id, @RequestParam boolean status) {
+        try {
+            // Attempt to find and update the user through the service
+            User updatedUser = service.updateUserBannedStatus(id, status);
+            return ResponseEntity.ok(Map.of(
+                    "message", "User ban status updated successfully",
+                    "isBanned", updatedUser.isBanned()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Server error: " + e.getMessage());
         }
     }
 

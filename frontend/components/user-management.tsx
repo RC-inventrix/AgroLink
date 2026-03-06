@@ -1,85 +1,139 @@
 "use client"
 
-import { useState } from "react"
-import { Trash2, Ban, MessageSquare, CheckCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Trash2, Ban, MessageSquare, CheckCircle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
 export function UserManagement() {
-  // NOTE: Methana 'setUsers' ekathu kara
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "Ahmed Hassan",
-      type: "Farmer",
-      email: "ahmed@farm.com",
-      status: "active",
-      joinDate: "2024-01-15",
-      reports: 0,
-    },
-    {
-      id: 2,
-      name: "Zainab Ali",
-      type: "Buyer",
-      email: "zainab@buyer.com",
-      status: "active",
-      joinDate: "2024-02-20",
-      reports: 1,
-    },
-    {
-      id: 3,
-      name: "Suspicious Account",
-      type: "Farmer",
-      email: "suspicious@farm.com",
-      status: "flagged",
-      joinDate: "2024-11-10",
-      reports: 3,
-    },
-    {
-      id: 4,
-      name: "Banned User",
-      type: "Buyer",
-      email: "banned@user.com",
-      status: "banned",
-      joinDate: "2024-03-05",
-      reports: 5,
-    },
-  ])
+  const [users, setUsers] = useState<{ id: number; name: string; email: string; type: string; status: string; reports: number }[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // --- NEW FUNCTION: User Ban kirime logic eka ---
-  const handleBanUser = (userId: number) => {
-    // 1. Confirmation ekak gannawa (Optional)
-    const isConfirmed = window.confirm("Are you sure you want to ban this user?");
-    
-    if (isConfirmed) {
-      // 2. State eka update karanawa
-      setUsers(users.map((user) => 
-        user.id === userId ? { ...user, status: "banned" } : user
-      ));
+  useEffect(() => {
+    fetchReportedUsers()
+  }, [])
+
+  const fetchReportedUsers = async () => {
+    try {
+      setLoading(true)
+      const token = sessionStorage.getItem("token")
+      if (!token) {
+        console.error("No authentication token found")
+        setLoading(false)
+        return
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+
+      // 1. Fetch reports from Moderation Service
+      const reportRes = await fetch('http://localhost:8080/api/v1/moderation/all', { headers })
+      if (!reportRes.ok) throw new Error("Failed to fetch reports")
+      const allReports = await reportRes.json()
+
+      // 2. Map counts using 'reportedId' (Matches UserReport.java)
+      const reportMap = allReports.reduce((acc: any, report: any) => {
+        const targetId = report.reportedId
+        if (targetId) {
+          acc[targetId] = (acc[targetId] || 0) + 1
+        }
+        return acc
+      }, {})
+
+      const uniqueIds = Object.keys(reportMap)
+      if (uniqueIds.length === 0) {
+        setUsers([])
+        setLoading(false)
+        return
+      }
+
+      // 3. Fetch user details from Identity Service
+      const idsParam = uniqueIds.join(',')
+      const namesRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${idsParam}`, { headers })
+      if (!namesRes.ok) throw new Error("Failed to fetch user names")
+      const namesMap = await namesRes.json()
+
+      // 4. Build final list
+      const formattedUsers = uniqueIds.map(id => ({
+        id: parseInt(id),
+        name: namesMap[id] || "Unknown User",
+        email: `UID: ${id}`, 
+        type: "Reported", 
+        status: "flagged",
+        reports: reportMap[id]
+      }))
+
+      setUsers(formattedUsers)
+    } catch (error) {
+      console.error("Moderation Data Error:", error)
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
-  // Optional: Ban eka ain karanna (Unban) function ekak
-  const handleUnbanUser = (userId: number) => {
+  const handleBanUser = async (userId: number) => {
+    if (window.confirm("Are you sure you want to ban this user?")) {
+      try {
+        const token = sessionStorage.getItem("token")
+        if (!token) {
+          alert("Authentication error. Please log in again.")
+          return
+        }
+
+        // 1. Directly update User table in Identity Service
+        const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=true`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          // 2. Update local state
+          setUsers(users.map((user) => 
+            user.id === userId ? { ...user, status: "banned" } : user
+          ))
+          alert("User has been successfully banned in the system.")
+        } else {
+          const errorData = await response.json()
+          alert(`Failed: ${errorData.message || 'Check permissions'}`)
+        }
+      } catch (error) {
+        alert("A network error occurred.")
+      }
+    }
+  }
+
+  const handleUnbanUser = async (userId: number) => {
     if (window.confirm("Unban this user?")) {
-      setUsers(users.map((user) => 
-        user.id === userId ? { ...user, status: "active" } : user
-      ));
-    }
-  };
+      try {
+        const token = sessionStorage.getItem("token")
+        const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=false`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
 
-  /* Helper functions for colors */
+        if (response.ok) {
+          setUsers(users.map((user) => 
+            user.id === userId ? { ...user, status: "active" } : user
+          ))
+        }
+      } catch (error) {
+        alert("Operation failed.")
+      }
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
-        return "bg-green-100 text-green-700"
-      case "flagged":
-        return "bg-orange-100 text-orange-700"
-      case "banned":
-        return "bg-red-100 text-red-700"
-      default:
-        return ""
+      case "active": return "bg-green-100 text-green-700"
+      case "flagged": return "bg-orange-100 text-orange-700"
+      case "banned": return "bg-red-100 text-red-700"
+      default: return ""
     }
   }
 
@@ -87,78 +141,68 @@ export function UserManagement() {
     return type === "Farmer" ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-700"
   }
 
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>Reported Accounts Management</CardTitle>
           <p className="mt-2 text-sm text-muted-foreground">
-            Take action on user accounts based on report investigations
+            Review and manage accounts that have been reported by users.
           </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between border-b border-border pb-4 last:border-b-0"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                      <span className="text-sm font-semibold text-foreground">{user.name.charAt(0)}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground">{user.name}</h4>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+            {users.length === 0 ? (
+              <p className="text-center py-4 text-muted-foreground">No reported users found.</p>
+            ) : (
+              users.map((user) => (
+                <div key={user.id} className="flex items-center justify-between border-b border-border pb-4 last:border-b-0">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                        <span className="text-sm font-semibold text-foreground">{user.name.charAt(0)}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">{user.name}</h4>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Badge className={getTypeColor(user.type)}>{user.type}</Badge>
-                  <Badge className={getStatusColor(user.status)}>
-                    {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                  </Badge>
-                  {user.reports > 0 && <Badge className="bg-red-100 text-red-700">{user.reports} reports</Badge>}
-                </div>
-
-                <div className="ml-4 flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                  
-                  {/* --- UPDATED BAN BUTTON --- */}
-                  {user.status === "banned" ? (
-                    // User danata ban wela nam 'Unban' button eka pennanawa
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => handleUnbanUser(user.id)}
-                        title="Unban User"
-                    >
+                  <div className="flex items-center gap-2">
+                    <Badge className={getTypeColor(user.type)}>{user.type}</Badge>
+                    <Badge className={getStatusColor(user.status)}>
+                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                    </Badge>
+                    {user.reports > 0 && <Badge className="bg-red-100 text-red-700">{user.reports} reports</Badge>}
+                  </div>
+                  <div className="ml-4 flex gap-2">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                    {user.status === "banned" ? (
+                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUnbanUser(user.id)} title="Unban User">
                         <CheckCircle className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    // Nathnam 'Ban' button eka pennanawa
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
-                        onClick={() => handleBanUser(user.id)}
-                        title="Ban User"
-                    >
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600 hover:bg-red-50" onClick={() => handleBanUser(user.id)} title="Ban User">
                         <Ban className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
-
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

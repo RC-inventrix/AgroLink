@@ -41,6 +41,13 @@ public class User {
     private Double latitude;
     private Double longitude;
 
+    @Column(nullable = false)
+    private int penaltyPoints = 0; // Tracks the accumulated severity points
+
+    @Column(nullable = false)
+    private boolean isBanned = false; // Flag to block access if points >= 6
+
+
     @OneToOne(mappedBy = "user")
     private ForgotPassword forgotPassword;
 }

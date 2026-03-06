@@ -51,7 +51,8 @@ public class AdminController {
         return ResponseEntity.ok(Map.of(
                 "token", token,
                 "username", admin.getUsername(),
-                "role", "ADMIN"
+                "role", "ADMIN",
+                "adminId", admin.getId()
         ));
     }
 }

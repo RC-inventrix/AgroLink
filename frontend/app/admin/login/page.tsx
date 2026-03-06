@@ -40,11 +40,12 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     if (response.status === 200) {
       // 1. Check if the field is 'token' or 'accessToken' or 'jwt'
-      const token = response.data.token || response.data.jwt; 
+      const token = response.data.token;
       
       if (token) {
         // 2. Use sessionStorage so ReportsSummary can find it
         sessionStorage.setItem("token", token);
+        sessionStorage.setItem("userId", response.data.adminId);
         router.push("/admin/dashboard");
       } else {
         setError("Login successful, but no token was received.");
