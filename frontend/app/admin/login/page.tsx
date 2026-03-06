@@ -145,7 +145,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Signing in...
                 </>
               ) : (
-                "Sign In to Dashboard"
+                "Sign In"
               )}
             </button>
           </form>

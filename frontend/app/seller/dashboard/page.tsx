@@ -7,8 +7,9 @@ import SockJS from 'sockjs-client';
 import Link from "next/link";
 import { 
     Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, 
-    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone 
+    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone, Megaphone, X
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -17,7 +18,11 @@ import Footer from "@/components/footer/Footer";
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
-    const [isBanned, setIsBanned] = useState<boolean>(false); // Ban state
+    const [isBanned, setIsBanned] = useState<boolean>(false);
+    
+    // Announcement States
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [showAnnouncements, setShowAnnouncements] = useState(true);
     
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
@@ -37,37 +42,33 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
+                const headers = { "Authorization": `Bearer ${token}` };
+
                 // A. Fetch User Data and check for Ban Status
-                const userRes = await fetch(`${baseUrl}/auth/me`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                const userRes = await fetch(`${baseUrl}/auth/me`, { headers });
                 
                 if (userRes.ok) {
                     const userData = await userRes.json();
-                    
-                    // Check the isBanned flag from the User model
                     if (userData.isBanned) {
                         setIsBanned(true);
-                        return; // Halt further data fetching for security
+                        return;
                     }
-
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // B. Fetch Analytics
-                const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                // --- NEW: Fetch Announcements specifically for FARMER ---
+                const annRes = await fetch(`${baseUrl}/api/v1/announcements/my-announcements?role=FARMER`, { headers });
+                if (annRes.ok) {
+                    const annData = await annRes.json();
+                    setAnnouncements(annData);
+                }
 
-                // C. Fetch Orders
-                const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                // D. Fetch Products
-                const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                // B, C, D: Fetch Stats, Orders, and Products
+                const [statsRes, ordersRes, productsRes] = await Promise.all([
+                    fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, { headers }),
+                    fetch(`${baseUrl}/api/seller/orders/${myId}`, { headers }),
+                    fetch(`${baseUrl}/products/farmer/${myId}`, { headers })
+                ]);
 
                 if (statsRes.ok && ordersRes.ok && productsRes.ok) {
                     const statsData = await statsRes.json();
@@ -126,22 +127,20 @@ export default function SellerDashboard() {
         return () => { void client.deactivate(); };
     }, []);
 
-    // --- RENDER BANNED VIEW IF NECESSARY ---
     if (isBanned) {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl overflow-hidden border border-red-100">
+                <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl overflow-hidden border border-red-100 text-center">
                     <div className="bg-red-600 p-6 flex justify-center">
                         <AlertCircle size={64} className="text-white animate-pulse" />
                     </div>
-                    <div className="p-8 text-center">
+                    <div className="p-8">
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Restricted</h2>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-gray-600 mb-6 text-sm">
                             Your account has been <strong>banned</strong> for policy violation. Please contact customer service for more information.
                         </p>
-                        
                         <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3 text-left border border-gray-100">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Support Contact</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Support Contact</p>
                             <div className="flex items-center gap-3 text-gray-700">
                                 <Mail size={18} className="text-red-500" />
                                 <span className="text-sm font-medium">agrolinkcustomerservice@gmail.com</span>
@@ -151,12 +150,8 @@ export default function SellerDashboard() {
                                 <span className="text-sm font-medium">+94 11 234 5678</span>
                             </div>
                         </div>
-
                         <button 
-                            onClick={() => {
-                                sessionStorage.clear();
-                                window.location.href = "/login";
-                            }}
+                            onClick={() => { sessionStorage.clear(); window.location.href = "/login"; }}
                             className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
                         >
                             <LogOut size={18} /> Logout from System
@@ -189,32 +184,71 @@ export default function SellerDashboard() {
                         </Link>
                     </header>
 
+                    {/* --- SWIPEABLE ANNOUNCEMENTS SECTION (SINGLE VIEW) --- */}
+{showAnnouncements && announcements.length > 0 && (
+    <div className="relative mb-8 max-w-full overflow-hidden">
+        <div className="flex items-center justify-between mb-3 px-2">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <Megaphone size={14} /> System Announcements ({announcements.length})
+            </h3>
+            <button 
+                onClick={() => setShowAnnouncements(false)} 
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+            >
+                <X size={18} />
+            </button>
+        </div>
+        
+        {/* Horizontal Scroll Container: Snap-mandatory ensures locking to one item */}
+        <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory w-full">
+            {announcements.map((ann) => (
+                <div 
+                    key={ann.id} 
+                    className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
+                        ann.priority === 'URGENT' 
+                        ? 'bg-red-50 border-red-500' 
+                        : 'bg-[#dedede] border-[#03230F]'
+                    }`}
+                >
+                    <div className="flex items-start gap-4">
+                        <div className={`p-2.5 rounded-xl flex-shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
+                            <Bell size={22} className={ann.priority === 'URGENT' ? 'text-red-600' : 'text-[#03230F]'} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                                <h4 className={`font-bold text-base truncate ${ann.priority === 'URGENT' ? 'text-red-700' : 'text-[#03230F]'}`}>
+                                    {ann.title}
+                                </h4>
+                                <Badge variant="outline" className="text-[10px] bg-white/50 border-transparent whitespace-nowrap">
+                                    {new Date(ann.createdAt).toLocaleDateString()}
+                                </Badge>
+                            </div>
+                            <p className="text-sm text-[#03230F]/80 line-clamp-2 leading-relaxed">
+                                {ann.message}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+
+        {/* Pagination Dots Indicator */}
+        {announcements.length > 1 && (
+            <div className="flex justify-center gap-1.5 mt-4">
+                {announcements.map((_, i) => (
+                    <div key={i} className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                ))}
+            </div>
+        )}
+    </div>
+)}
+
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <StatCard
-                            label="Total Revenue"
-                            value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`}
-                            Icon={Wallet}
-                            color="text-green-600"
-                        />
-                        <StatCard
-                            label="Pending Orders"
-                            value={analytics.totalPendingOrders}
-                            Icon={Package}
-                            highlight
-                        />
-                        <StatCard
-                            label="Active Listed Products"
-                            value={analytics.activeListingsCount}
-                            Icon={Carrot}
-                            color="text-orange-500"
-                        />
-                        <StatCard
-                            label="Total Sold"
-                            value={analytics.totalCompletedOrders}
-                            Icon={TrendingUp}
-                            color="text-blue-500"
-                        />
+                        <StatCard label="Total Revenue" value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`} Icon={Wallet} color="text-green-600" />
+                        <StatCard label="Pending Orders" value={analytics.totalPendingOrders} Icon={Package} highlight />
+                        <StatCard label="Active Listed Products" value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
+                        <StatCard label="Total Sold" value={analytics.totalCompletedOrders} Icon={TrendingUp} color="text-blue-500" />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -240,15 +274,12 @@ export default function SellerDashboard() {
                                         View All Orders <ChevronRight size={16} />
                                     </Link>
                                 </div>
-                                
                                 <div className="space-y-4">
                                     {pendingOrders.length > 0 ? (
                                         pendingOrders.slice(0, 5).map((order) => (
                                             <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-md transition-all">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50">
-                                                        <Package className="text-[#03230F]" size={20} />
-                                                    </div>
+                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50"><Package className="text-[#03230F]" size={20} /></div>
                                                     <div>
                                                         <p className="font-bold text-gray-800 text-sm">Order #{order.id}</p>
                                                         <p className="text-xs text-gray-500">{order.customerName || 'Standard Order'}</p>
@@ -256,9 +287,7 @@ export default function SellerDashboard() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-[#03230F] text-sm">Rs. {(order.amount / 100).toLocaleString()}</p>
-                                                    <span className="text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold uppercase tracking-wider">
-                                                        {order.status}
-                                                    </span>
+                                                    <span className="text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold uppercase tracking-wider">{order.status}</span>
                                                 </div>
                                             </div>
                                         ))
@@ -274,10 +303,7 @@ export default function SellerDashboard() {
 
                         <div className="space-y-8">
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <Bell className="text-gray-400" size={20} />
-                                    <h3 className="font-bold text-gray-800">Notifications</h3>
-                                </div>
+                                <div className="flex items-center gap-2 mb-6"><Bell className="text-gray-400" size={20} /><h3 className="font-bold text-gray-800">Notifications</h3></div>
                                 <div className="space-y-4">
                                     <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
                                         <p className="text-sm font-medium text-gray-800">New question on 'Fresh Carrots'</p>

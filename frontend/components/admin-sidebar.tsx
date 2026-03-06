@@ -16,6 +16,11 @@ export function AdminSidebar({ activeSection, setActiveSection, open }: AdminSid
     { id: "communications", label: "Communications", icon: MessageSquare },
   ]
 
+  const logout = () => {
+    sessionStorage.clear() // Clear session storage on logout
+    window.location.href = "/admin/login" // Redirect to login page
+  }
+
   return (
     <aside
       className={`${
@@ -60,16 +65,11 @@ export function AdminSidebar({ activeSection, setActiveSection, open }: AdminSid
 
       {/* Footer */}
       <div className="space-y-2 px-3 py-4 border-t border-sidebar-border">
-        <button
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/10 transition-all"
-          title={!open ? "Settings" : undefined}
-        >
-          <Settings className="h-5 w-5 flex-shrink-0" />
-          {open && <span className="text-sm font-medium">Settings</span>}
-        </button>
+        
         <button
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:text-red-400 transition-all"
           title={!open ? "Logout" : undefined}
+          onClick={logout}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           {open && <span className="text-sm font-medium">Logout</span>}
