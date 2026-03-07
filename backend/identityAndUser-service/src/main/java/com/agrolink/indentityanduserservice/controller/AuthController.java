@@ -5,12 +5,14 @@ import com.agrolink.indentityanduserservice.dto.LoginRequest;
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
 import com.agrolink.indentityanduserservice.dto.UserUpdateDTO;
 import com.agrolink.indentityanduserservice.model.User;
+import com.agrolink.indentityanduserservice.repository.UserRepository;
 import com.agrolink.indentityanduserservice.services.AuthService;
 import com.agrolink.indentityanduserservice.services.JwtService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -36,6 +39,9 @@ public class AuthController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping("/count/farmers")
     public ResponseEntity<Long> getFarmerCount() {
@@ -205,5 +211,9 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/count/banned")
+    public ResponseEntity<Long> countBannedUsers() {
+        return ResponseEntity.ok(userRepository.countByIsBannedTrue());
+    }
 
 }

@@ -222,21 +222,17 @@ export function UserManagement() {
                     {user.reports > 0 && <Badge className="bg-red-100 text-red-700">{user.reports} reports</Badge>}
                   </div>
                   <div className="ml-4 flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
+                    
                     {user.status === "banned" ? (
                       <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => triggerUnban(user.id)} title="Unban User">
-                        <CheckCircle className="h-4 w-4" />
+                        <CheckCircle className="h-4 w-4" />Unban user
                       </Button>
                     ) : (
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600 hover:bg-red-50" onClick={() => triggerBan(user.id)} title="Ban User">
-                        <Ban className="h-4 w-4" />
+                        <Ban className="h-4 w-4" /> Ban user
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
                   </div>
                 </div>
               ))
