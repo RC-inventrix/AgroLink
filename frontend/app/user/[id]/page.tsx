@@ -16,6 +16,7 @@ import BuyerHeader from "@/components/headers/BuyerHeader"
 
 // --- TYPES ---
 interface UserProfile {
+    AvatarUrl?: string; // Strictly string URL
     id: number;
     fullname: string;
     username: string;
@@ -46,19 +47,15 @@ export default function GenericProfilePage() {
     const searchParams = useSearchParams(); 
 
     const userId = params.id;
-    // The role of the PROFILE being viewed (e.g. ?role=SELLER)
     const profileRole = searchParams.get("role")?.toUpperCase() || "BUYER"; 
     
     const [user, setUser] = useState<UserProfile | null>(null);
     const [reviews, setReviews] = useState<Review[]>([]);
     const [stats, setStats] = useState<RatingStats>({ average: 0, count: 0 });
     const [loading, setLoading] = useState(true);
-    
-    // State to track who is VIEWING the page (to show correct header)
     const [viewerRole, setViewerRole] = useState<string | null>(null);
 
     useEffect(() => {
-        // 1. Determine Viewer Role for Header
         const currentRole = sessionStorage.getItem("role");
         setViewerRole(currentRole ? currentRole.toUpperCase() : null);
 
@@ -67,15 +64,24 @@ export default function GenericProfilePage() {
             if (!token || !userId) return;
             
             try {
-                // 2. Fetch User Basic Info
+                // 1. Fetch User Basic Info
                 const userRes = await fetch(`http://localhost:8080/auth/user/${userId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
+                
                 if (userRes.ok) {
-                    setUser(await userRes.json());
+                    const userData = await userRes.json();
+                    
+                   
+
+                    setUser({
+                        ...userData,
+                        // Ensure we catch both 'AvatarUrl' and 'avatarUrl' from backend
+                        AvatarUrl: userData.AvatarUrl || userData.avatarUrl 
+                    });
                 }
 
-                // 3. Fetch Rating Stats (Backend Calculation)
+                // 2. Fetch Rating Stats
                 const statsRes = await fetch(`http://localhost:8080/api/reviews/stats/user/${userId}?role=${profileRole}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -83,15 +89,13 @@ export default function GenericProfilePage() {
                     setStats(await statsRes.json());
                 }
 
-                // 4. Fetch Reviews List
+                // 3. Fetch Reviews List
                 const reviewRes = await fetch(`http://localhost:8080/api/reviews/user/${userId}?role=${profileRole}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
                 if (reviewRes.ok) {
                     const reviewData = await reviewRes.json();
-
-                    // 5. Fetch Reviewer Names Logic
                     const reviewerIds = reviewData.map((r: any) => r.reviewerId);
                     const uniqueIds = Array.from(new Set(reviewerIds)).filter(id => id != null);
                     
@@ -108,7 +112,6 @@ export default function GenericProfilePage() {
                         }
                     }
 
-                    // 6. Merge Names & Format Dates
                     const formattedReviews = reviewData.map((r: any) => ({
                         id: r.id,
                         rating: r.rating,
@@ -134,23 +137,23 @@ export default function GenericProfilePage() {
     if (loading) return <div className="flex justify-center items-center h-screen text-gray-400">Loading Profile...</div>;
     if (!user) return <div className="p-10 text-center">User not found</div>;
 
-    const isViewingBuyerProfile = profileRole === "BUYER";
+    const initials = user.fullname
+        ? user.fullname.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+        : "U";
 
     return (
         <div className="min-h-screen bg-gray-50/50">
-            {/* Header determined by who is logged in (viewer), not who is being viewed */}
             {viewerRole === "SELLER" ? <SellerHeader /> : <BuyerHeader />}
 
             <div className="p-6 md:p-12">
                 <div className="max-w-5xl mx-auto space-y-8">
                     
-                    {/* Back Button */}
                     <Button 
                         variant="ghost" 
                         onClick={() => router.back()} 
                         className="gap-2 text-gray-500 hover:text-[#03230F] pl-0 hover:bg-transparent"
                     >
-                        <ArrowLeft className="w-4 h-4" /> Back to Orders
+                        <ArrowLeft className="w-4 h-4" /> Back
                     </Button>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -159,18 +162,19 @@ export default function GenericProfilePage() {
                         <Card className="lg:col-span-1 p-8 border-none shadow-xl bg-white rounded-[30px] h-fit">
                             <div className="flex flex-col items-center text-center">
                                 <Avatar className="w-32 h-32 border-4 border-[#F0FDF4] shadow-sm mb-6">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.fullname}`} />
+                                    {/* Fix: Using user.AvatarUrl with object-cover for Cloudinary images */}
+                                    <AvatarImage src={user.AvatarUrl} alt={user.fullname} className="object-cover" />
                                     <AvatarFallback className="bg-[#03230F] text-[#EEC044] text-3xl font-bold">
-                                        {user.fullname.charAt(0)}
+                                        {initials}
                                     </AvatarFallback>
                                 </Avatar>
                                 
                                 <h1 className="text-2xl font-black text-[#03230F] mb-1">{user.fullname}</h1>
-                                <p className="text-sm font-medium text-gray-400 mb-6">@{user.username}</p>
+                                <p className="text-sm font-medium text-gray-400 mb-6">@{user.username || 'user'}</p>
 
                                 <div className="flex items-center gap-2 px-4 py-2 bg-[#F0FDF4] text-[#166534] rounded-full text-xs font-bold uppercase tracking-wider mb-8">
                                     <ShieldCheck className="w-4 h-4" /> 
-                                    {isViewingBuyerProfile ? "Verified Buyer" : "Verified Seller"}
+                                    {profileRole === "BUYER" ? "Verified Buyer" : "Verified Seller"}
                                 </div>
 
                                 <div className="w-full space-y-4 text-left">
@@ -198,8 +202,6 @@ export default function GenericProfilePage() {
 
                         {/* RIGHT COLUMN: STATS & REVIEWS */}
                         <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* STATS ROW (Now using Backend Data) */}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 <Card className="p-6 border-none shadow-md bg-white rounded-3xl flex flex-col items-center justify-center text-center gap-2">
                                     <Star className="w-8 h-8 text-yellow-400 fill-yellow-400" />
@@ -209,21 +211,17 @@ export default function GenericProfilePage() {
                                 <Card className="p-6 border-none shadow-md bg-white rounded-3xl flex flex-col items-center justify-center text-center gap-2">
                                     <ShoppingBag className="w-8 h-8 text-blue-500" />
                                     <h3 className="text-3xl font-black text-[#03230F]">{stats.count}</h3>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Orders Completed</p>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Orders</p>
                                 </Card>
                                 <Card className="p-6 border-none shadow-md bg-white rounded-3xl flex flex-col items-center justify-center text-center gap-2">
                                     <CheckCircle2 className="w-8 h-8 text-green-500" />
                                     <h3 className="text-3xl font-black text-[#03230F]">100%</h3>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Completion Rate</p>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Reliability</p>
                                 </Card>
                             </div>
 
-                            {/* REVIEWS SECTION */}
                             <div className="space-y-4">
-                                <h2 className="text-xl font-black text-[#03230F] uppercase tracking-wide">
-                                    Recent Feedback
-                                </h2>
-                                
+                                <h2 className="text-xl font-black text-[#03230F] uppercase tracking-wide">Feedback</h2>
                                 {reviews.length > 0 ? (
                                     reviews.map((review) => (
                                         <Card key={review.id} className="p-6 border-none shadow-sm bg-white rounded-2xl">

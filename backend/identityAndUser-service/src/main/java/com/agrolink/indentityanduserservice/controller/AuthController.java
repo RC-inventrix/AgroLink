@@ -158,7 +158,16 @@ public class AuthController {
 
     @PutMapping("/profile/update")
     public ResponseEntity<?> updateProfile(@RequestBody UserUpdateDTO updateDTO, HttpServletRequest request) {
-        Long userId = (Long) request.getAttribute("userId");
+        Object userIdAttr = request.getAttribute("userId");
+        Long userId = null;
+
+        if (userIdAttr instanceof Integer) {
+            userId = ((Integer) userIdAttr).longValue();
+        } else if (userIdAttr instanceof Long) {
+            userId = (Long) userIdAttr;
+        } else if (userIdAttr instanceof String) {
+            userId = Long.parseLong((String) userIdAttr);
+        }
         return ResponseEntity.ok(service.updateUserDetails(userId, updateDTO));
     }
 
