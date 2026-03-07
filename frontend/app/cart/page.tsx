@@ -85,7 +85,7 @@ export default function Cart() {
     const handleDeleteItem = async (id: string) => {
         setDeletingId(id);
         try {
-            const res = await fetch(`http://localhost:8080/cart/${id}`, {
+            const res = await fetch(`http://localhost:8080/cart/delete/${id}`, {
                 method: 'DELETE',
             });
 
