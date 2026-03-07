@@ -1,9 +1,11 @@
 package com.me.moderationservice.service;
 
 import com.me.moderationservice.dto.ReportRequest;
+import com.me.moderationservice.model.UserNotification;
 import com.me.moderationservice.model.UserReport;
 import com.me.moderationservice.model.User; // Ensure you have the shadow User entity in this project
 import com.me.moderationservice.repository.ReportRepository;
+import com.me.moderationservice.repository.UserNotificationRepository;
 import com.me.moderationservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import java.util.List;
 public class ReportService {
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
+    private final UserNotificationRepository notificationRepository;
 
     public UserReport saveReport(UserReport report) {
         return reportRepository.save(report);
@@ -69,6 +72,15 @@ public class ReportService {
             reportedUser.setBanned(true);
         }
 
+        if ("WARNING_ISSUED".equalsIgnoreCase(action)) {
+            UserNotification warning = new UserNotification();
+            warning.setUserId(report.getReportedId()); // The person who was reported
+            warning.setTitle("Account Warning");
+            warning.setMessage("Administration has issued a warning regarding: " + remarks);
+            warning.setType("WARNING");
+            notificationRepository.save(warning);
+        }
+
         // 5. Save both changes to the shared database
         userRepository.save(reportedUser);
         return reportRepository.save(report);
@@ -89,5 +101,17 @@ public class ReportService {
         report.setEvidenceUrls(request.getEvidenceUrls());
 
         return reportRepository.save(report);
+    }
+
+    public List<UserNotification> getNotificationsByUserId(Long userId) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    @Transactional
+    public void markNotificationRead(Long notificationId) {
+        notificationRepository.findById(notificationId).ifPresent(notification -> {
+            notification.setRead(true);
+            notificationRepository.save(notification);
+        });
     }
 }

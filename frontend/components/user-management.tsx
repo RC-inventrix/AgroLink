@@ -1,14 +1,76 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Trash2, Ban, MessageSquare, CheckCircle, Loader2 } from "lucide-react"
+import { Trash2, Ban, MessageSquare, CheckCircle, Loader2, AlertTriangle, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
+// --- Modal Component ---
+function ConfirmModal({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  variant = "danger" 
+}: { 
+  isOpen: boolean; 
+  title: string; 
+  message: string; 
+  onConfirm: () => void; 
+  onCancel: () => void;
+  variant?: "danger" | "success"
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <Card className="w-full max-w-md border-border bg-card shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl font-bold flex items-center gap-2">
+            <AlertTriangle className={variant === "danger" ? "text-red-500" : "text-green-500"} size={20} />
+            {title}
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={onCancel} className="h-8 w-8 rounded-full">
+            <X size={16} />
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <p className="text-muted-foreground text-sm leading-relaxed">{message}</p>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={onCancel}>Cancel</Button>
+            <Button 
+              className={variant === "danger" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-green-600 hover:bg-green-700 text-white"}
+              onClick={onConfirm}
+            >
+              Confirm
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function UserManagement() {
   const [users, setUsers] = useState<{ id: number; name: string; email: string; type: string; status: string; reports: number }[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Modal State
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: "danger" | "success";
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    variant: "danger",
+    onConfirm: () => {},
+  })
 
   useEffect(() => {
     fetchReportedUsers()
@@ -18,45 +80,26 @@ export function UserManagement() {
     try {
       setLoading(true)
       const token = sessionStorage.getItem("token")
-      if (!token) {
-        console.error("No authentication token found")
-        setLoading(false)
-        return
-      }
+      if (!token) return;
 
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-
-      // 1. Fetch reports from Moderation Service
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       const reportRes = await fetch('http://localhost:8080/api/v1/moderation/all', { headers })
       if (!reportRes.ok) throw new Error("Failed to fetch reports")
       const allReports = await reportRes.json()
 
-      // 2. Map counts using 'reportedId' (Matches UserReport.java)
       const reportMap = allReports.reduce((acc: any, report: any) => {
         const targetId = report.reportedId
-        if (targetId) {
-          acc[targetId] = (acc[targetId] || 0) + 1
-        }
+        if (targetId) acc[targetId] = (acc[targetId] || 0) + 1
         return acc
       }, {})
 
       const uniqueIds = Object.keys(reportMap)
-      if (uniqueIds.length === 0) {
-        setUsers([])
-        setLoading(false)
-        return
-      }
+      if (uniqueIds.length === 0) { setUsers([]); setLoading(false); return; }
 
-      // 3. Fetch user details from Identity Service
       const idsParam = uniqueIds.join(',')
       const namesRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${idsParam}`, { headers })
-      if (!namesRes.ok) throw new Error("Failed to fetch user names")
-      const namesMap = await namesRes.json()
+      const namesMap = namesRes.ok ? await namesRes.json() : {}
 
-      // 4. Build final list
       const formattedUsers = uniqueIds.map(id => ({
         id: parseInt(id),
         name: namesMap[id] || "Unknown User",
@@ -65,67 +108,62 @@ export function UserManagement() {
         status: "flagged",
         reports: reportMap[id]
       }))
-
       setUsers(formattedUsers)
-    } catch (error) {
-      console.error("Moderation Data Error:", error)
-    } finally {
-      setLoading(false)
-    }
+    } catch (error) { console.error("Moderation Data Error:", error) }
+    finally { setLoading(false) }
   }
 
-  const handleBanUser = async (userId: number) => {
-    if (window.confirm("Are you sure you want to ban this user?")) {
-      try {
-        const token = sessionStorage.getItem("token")
-        if (!token) {
-          alert("Authentication error. Please log in again.")
-          return
-        }
+  // --- Modal Logic Wrappers ---
 
-        // 1. Directly update User table in Identity Service
-        const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=true`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.ok) {
-          // 2. Update local state
-          setUsers(users.map((user) => 
-            user.id === userId ? { ...user, status: "banned" } : user
-          ))
-          alert("User has been successfully banned in the system.")
-        } else {
-          const errorData = await response.json()
-          alert(`Failed: ${errorData.message || 'Check permissions'}`)
-        }
-      } catch (error) {
-        alert("A network error occurred.")
-      }
-    }
+  const triggerBan = (userId: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Confirm User Ban",
+      message: "Are you sure you want to ban this user? They will lose all access to their dashboard immediately.",
+      variant: "danger",
+      onConfirm: () => executeBan(userId)
+    })
   }
 
-  const handleUnbanUser = async (userId: number) => {
-    if (window.confirm("Unban this user?")) {
-      try {
-        const token = sessionStorage.getItem("token")
-        const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=false`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+  const triggerUnban = (userId: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Restore Account",
+      message: "This will restore the user's access to the platform. Do you wish to proceed?",
+      variant: "success",
+      onConfirm: () => executeUnban(userId)
+    })
+  }
 
-        if (response.ok) {
-          setUsers(users.map((user) => 
-            user.id === userId ? { ...user, status: "active" } : user
-          ))
-        }
-      } catch (error) {
-        alert("Operation failed.")
+  // --- API Execution Logic ---
+
+  const executeBan = async (userId: number) => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }))
+    try {
+      const token = sessionStorage.getItem("token")
+      const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=true`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      })
+
+      if (response.ok) {
+        setUsers(users.map(u => u.id === userId ? { ...u, status: "banned" } : u))
       }
-    }
+    } catch (error) { console.error(error) }
+  }
+
+  const executeUnban = async (userId: number) => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }))
+    try {
+      const token = sessionStorage.getItem("token")
+      const response = await fetch(`http://localhost:8080/auth/user/${userId}/ban?status=false`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        setUsers(users.map(u => u.id === userId ? { ...u, status: "active" } : u))
+      }
+    } catch (error) { console.error(error) }
   }
 
   const getStatusColor = (status: string) => {
@@ -137,26 +175,26 @@ export function UserManagement() {
     }
   }
 
-  const getTypeColor = (type: string) => {
-    return type === "Farmer" ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-700"
-  }
+  const getTypeColor = (type: string) => type === "Farmer" ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-700"
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
 
   return (
     <div className="space-y-6">
+      {/* Custom Popup Modal */}
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        variant={modalConfig.variant}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>Reported Accounts Management</CardTitle>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Review and manage accounts that have been reported by users.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Review and manage accounts that have been reported by users.</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -188,11 +226,11 @@ export function UserManagement() {
                       <MessageSquare className="h-4 w-4" />
                     </Button>
                     {user.status === "banned" ? (
-                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUnbanUser(user.id)} title="Unban User">
+                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => triggerUnban(user.id)} title="Unban User">
                         <CheckCircle className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600 hover:bg-red-50" onClick={() => handleBanUser(user.id)} title="Ban User">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-600 hover:bg-red-50" onClick={() => triggerBan(user.id)} title="Ban User">
                         <Ban className="h-4 w-4" />
                       </Button>
                     )}

@@ -7,9 +7,10 @@ import SockJS from 'sockjs-client';
 import Link from "next/link";
 import { 
     Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, 
-    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone, Megaphone, X
+    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone, Megaphone, X, ShieldAlert
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -20,8 +21,9 @@ export default function SellerDashboard() {
     const [userName, setUserName] = useState<string | null>(null);
     const [isBanned, setIsBanned] = useState<boolean>(false);
     
-    // Announcement States
+    // States for Notices
     const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [warnings, setWarnings] = useState<any[]>([]);
     const [showAnnouncements, setShowAnnouncements] = useState(true);
     
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -44,9 +46,8 @@ export default function SellerDashboard() {
             try {
                 const headers = { "Authorization": `Bearer ${token}` };
 
-                // A. Fetch User Data and check for Ban Status
+                // 1. Fetch User Data / Ban Check
                 const userRes = await fetch(`${baseUrl}/auth/me`, { headers });
-                
                 if (userRes.ok) {
                     const userData = await userRes.json();
                     if (userData.isBanned) {
@@ -56,14 +57,22 @@ export default function SellerDashboard() {
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // --- NEW: Fetch Announcements specifically for FARMER ---
+                // 2. Fetch Private Warnings (Report System)
+                const warnRes = await fetch(`${baseUrl}/api/v1/moderation/user/notifications/${myId}`, { headers });
+                if (warnRes.ok) {
+                    const warnData = await warnRes.json();
+                    // Filter out already read warnings
+                    setWarnings(warnData.filter((w: any) => !w.read));
+                }
+
+                // 3. Fetch System Announcements (Communication System)
                 const annRes = await fetch(`${baseUrl}/api/v1/announcements/my-announcements?role=FARMER`, { headers });
                 if (annRes.ok) {
                     const annData = await annRes.json();
                     setAnnouncements(annData);
                 }
 
-                // B, C, D: Fetch Stats, Orders, and Products
+                // 4. Fetch Stats, Orders, and Products
                 const [statsRes, ordersRes, productsRes] = await Promise.all([
                     fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, { headers }),
                     fetch(`${baseUrl}/api/seller/orders/${myId}`, { headers }),
@@ -88,7 +97,7 @@ export default function SellerDashboard() {
                     });
                 }
             } catch (err) {
-                console.error("Dashboard data sync error:", err);
+                console.error("Dashboard primary sync error:", err);
             }
         };
 
@@ -113,6 +122,7 @@ export default function SellerDashboard() {
         fetchDashboardData();
         syncGlobalUnread();
 
+        // WebSocket for real-time chat badges
         const socket = new SockJS(`${chatUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -122,10 +132,25 @@ export default function SellerDashboard() {
                 });
             },
         });
-
         client.activate();
         return () => { void client.deactivate(); };
     }, []);
+
+    // Function to dismiss private warning
+    const handleDismissWarning = async (id: number) => {
+        const token = sessionStorage.getItem("token");
+        try {
+            const res = await fetch(`${baseUrl}/api/v1/moderation/notifications/mark-read/${id}`, {
+                method: "PATCH",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setWarnings(prev => prev.filter(w => w.id !== id));
+            }
+        } catch (error) {
+            console.error("Dismissal failed:", error);
+        }
+    };
 
     if (isBanned) {
         return (
@@ -140,7 +165,7 @@ export default function SellerDashboard() {
                             Your account has been <strong>banned</strong> for policy violation. Please contact customer service for more information.
                         </p>
                         <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3 text-left border border-gray-100">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Support Contact</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Support Contact</p>
                             <div className="flex items-center gap-3 text-gray-700">
                                 <Mail size={18} className="text-red-500" />
                                 <span className="text-sm font-medium">agrolinkcustomerservice@gmail.com</span>
@@ -168,7 +193,7 @@ export default function SellerDashboard() {
             <div className="flex">
                 <SellerSidebar unreadCount={navUnread} activePage="dashboard" />
 
-                <main className="flex-1 p-8">
+                <main className="flex-1 p-8 overflow-hidden">
                     {/* Welcome Header */}
                     <header className="bg-[#03230F] rounded-3xl p-8 mb-8 flex justify-between items-center shadow-lg">
                         <div>
@@ -184,75 +209,93 @@ export default function SellerDashboard() {
                         </Link>
                     </header>
 
-                    {/* --- SWIPEABLE ANNOUNCEMENTS SECTION (SINGLE VIEW) --- */}
-{showAnnouncements && announcements.length > 0 && (
-    <div className="relative mb-8 max-w-full overflow-hidden">
-        <div className="flex items-center justify-between mb-3 px-2">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Megaphone size={14} /> System Announcements ({announcements.length})
-            </h3>
-            <button 
-                onClick={() => setShowAnnouncements(false)} 
-                className="text-gray-400 hover:text-red-500 transition-colors p-1"
-            >
-                <X size={18} />
-            </button>
-        </div>
-        
-        {/* Horizontal Scroll Container: Snap-mandatory ensures locking to one item */}
-        <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory w-full">
-            {announcements.map((ann) => (
-                <div 
-                    key={ann.id} 
-                    className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
-                        ann.priority === 'URGENT' 
-                        ? 'bg-red-50 border-red-500' 
-                        : 'bg-[#dedede] border-[#03230F]'
-                    }`}
-                >
-                    <div className="flex items-start gap-4">
-                        <div className={`p-2.5 rounded-xl flex-shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
-                            <Bell size={22} className={ann.priority === 'URGENT' ? 'text-red-600' : 'text-[#03230F]'} />
+                    {/* --- 1. PRIVATE WARNINGS SECTION --- */}
+                    {warnings.length > 0 && (
+                        <div className="space-y-3 mb-8">
+                            {warnings.map((warn) => (
+                                <div key={warn.id} className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex justify-between items-center shadow-sm animate-in fade-in slide-in-from-left duration-300">
+                                    <div className="flex items-center gap-4 text-red-800">
+                                        <div className="bg-red-100 p-2 rounded-full">
+                                            <ShieldAlert size={24} className="text-red-600" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs uppercase tracking-widest">Administrative Warning</p>
+                                            <p className="text-sm font-medium">{warn.message}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-100" onClick={() => handleDismissWarning(warn.id)}>
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            ))}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-1 gap-2">
-                                <h4 className={`font-bold text-base truncate ${ann.priority === 'URGENT' ? 'text-red-700' : 'text-[#03230F]'}`}>
-                                    {ann.title}
-                                </h4>
-                                <Badge variant="outline" className="text-[10px] bg-white/50 border-transparent whitespace-nowrap">
-                                    {new Date(ann.createdAt).toLocaleDateString()}
-                                </Badge>
-                            </div>
-                            <p className="text-sm text-[#03230F]/80 line-clamp-2 leading-relaxed">
-                                {ann.message}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+                    )}
 
-        {/* Pagination Dots Indicator */}
-        {announcements.length > 1 && (
-            <div className="flex justify-center gap-1.5 mt-4">
-                {announcements.map((_, i) => (
-                    <div key={i} className="h-1.5 w-1.5 rounded-full bg-gray-300" />
-                ))}
-            </div>
-        )}
-    </div>
-)}
+                    {/* --- 2. SWIPEABLE SYSTEM ANNOUNCEMENTS (SINGLE VIEW) --- */}
+                    {showAnnouncements && announcements.length > 0 && (
+                        <div className="relative mb-8 max-w-full">
+                            <div className="flex items-center justify-between mb-3 px-2">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Megaphone size={14} /> System Announcements ({announcements.length})
+                                </h3>
+                                <button onClick={() => setShowAnnouncements(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            
+                            <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory w-full">
+                                {announcements.map((ann) => (
+                                    <div 
+                                        key={ann.id} 
+                                        className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
+                                            ann.priority === 'URGENT' 
+                                            ? 'bg-red-50 border-red-500' 
+                                            : 'bg-[#EEC044] border-[#03230F]'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
+                                                <Bell size={22} className={ann.priority === 'URGENT' ? 'text-red-600' : 'text-[#03230F]'} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start mb-1 gap-2">
+                                                    <h4 className={`font-bold text-base truncate ${ann.priority === 'URGENT' ? 'text-red-700' : 'text-[#03230F]'}`}>
+                                                        {ann.title}
+                                                    </h4>
+                                                    <Badge variant="outline" className="text-[10px] bg-white/40 border-transparent whitespace-nowrap">
+                                                        {new Date(ann.createdAt).toLocaleDateString()}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm text-[#03230F]/80 line-clamp-2 leading-relaxed">
+                                                    {ann.message}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {announcements.length > 1 && (
+                                <div className="flex justify-center gap-1.5 mt-4">
+                                    {announcements.map((_, i) => (
+                                        <div key={i} className="h-1 w-4 rounded-full bg-gray-300" />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         <StatCard label="Total Revenue" value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`} Icon={Wallet} color="text-green-600" />
                         <StatCard label="Pending Orders" value={analytics.totalPendingOrders} Icon={Package} highlight />
-                        <StatCard label="Active Listed Products" value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
+                        <StatCard label="Active Listings" value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
                         <StatCard label="Total Sold" value={analytics.totalCompletedOrders} Icon={TrendingUp} color="text-blue-500" />
                     </div>
 
+                    {/* Main Content Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-8">
+                            {/* AI Insights Card */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Sparkles className="text-[#EEC044]" size={20} />
@@ -267,6 +310,7 @@ export default function SellerDashboard() {
                                 </div>
                             </div>
 
+                            {/* Pending Orders List */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-gray-800 text-lg">Current Pending Orders</h3>
@@ -279,7 +323,9 @@ export default function SellerDashboard() {
                                         pendingOrders.slice(0, 5).map((order) => (
                                             <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-md transition-all">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50"><Package className="text-[#03230F]" size={20} /></div>
+                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50">
+                                                        <Package className="text-[#03230F]" size={20} />
+                                                    </div>
                                                     <div>
                                                         <p className="font-bold text-gray-800 text-sm">Order #{order.id}</p>
                                                         <p className="text-xs text-gray-500">{order.customerName || 'Standard Order'}</p>
@@ -287,12 +333,14 @@ export default function SellerDashboard() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-[#03230F] text-sm">Rs. {(order.amount / 100).toLocaleString()}</p>
-                                                    <span className="text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold uppercase tracking-wider">{order.status}</span>
+                                                    <Badge className="bg-yellow-100 text-yellow-700 text-[10px] uppercase font-bold border-none">
+                                                        {order.status}
+                                                    </Badge>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                                        <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-center">
                                             <Package size={48} className="mb-2 opacity-20" />
                                             <p>No pending orders to display</p>
                                         </div>
@@ -301,9 +349,13 @@ export default function SellerDashboard() {
                             </div>
                         </div>
 
+                        {/* Right Sidebar: Static Notifications */}
                         <div className="space-y-8">
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-6"><Bell className="text-gray-400" size={20} /><h3 className="font-bold text-gray-800">Notifications</h3></div>
+                                <div className="flex items-center gap-2 mb-6">
+                                    <Bell className="text-gray-400" size={20} />
+                                    <h3 className="font-bold text-gray-800">Quick Notifications</h3>
+                                </div>
                                 <div className="space-y-4">
                                     <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
                                         <p className="text-sm font-medium text-gray-800">New question on 'Fresh Carrots'</p>
