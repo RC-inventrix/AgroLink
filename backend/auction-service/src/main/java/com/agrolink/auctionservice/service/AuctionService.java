@@ -280,8 +280,34 @@ public class AuctionService {
     private void triggerAuctionWonFlow(Auction auction, Bid winningBid) {
         try {
             orderIntegrationService.createAuctionOrder(auction, winningBid);
+
+            // ✅ Mark as successfully transferred
+            auction.setIsOrderCreated(true);
+            auctionRepository.save(auction);
+            log.info("Successfully converted Auction {} to Order", auction.getId());
+
         } catch (Exception e) {
             log.error("Failed to create order for auction {}: {}", auction.getId(), e.getMessage());
+
+            // ✅ Mark as failed so the polling service catches it later
+            auction.setIsOrderCreated(false);
+            auctionRepository.save(auction);
+        }
+    }
+
+    /**
+     * ✅ NEW: Automated retry mechanism for network failures
+     */
+    @Transactional
+    public void retryFailedOrderTransfers() {
+        List<Auction> failedTransfers = auctionRepository.findCompletedAuctionsWithPendingOrders();
+
+        for (Auction auction : failedTransfers) {
+            log.info("Retrying order creation for completed Auction: {}", auction.getId());
+
+            bidRepository.findById(auction.getWinningBidId()).ifPresent(winningBid -> {
+                triggerAuctionWonFlow(auction, winningBid);
+            });
         }
     }
 
@@ -341,6 +367,7 @@ public class AuctionService {
                     .build();
         }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
     }
+
 
     private AuctionResponse mapToAuctionResponse(Auction auction, List<Bid> topBids, int totalBidCount) {
         List<BidResponse> bidResponses = IntStream.range(0, Math.min(topBids.size(), MAX_BIDS_PER_AUCTION))

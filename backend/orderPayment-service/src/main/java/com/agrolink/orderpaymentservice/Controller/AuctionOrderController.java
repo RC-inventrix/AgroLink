@@ -9,9 +9,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Controller for handling auction-originated orders.
- * These orders skip the standard cart/checkout flow since price and winner are already finalized.
  */
 @RestController
 @RequestMapping("/api/orders")
@@ -21,20 +23,27 @@ public class AuctionOrderController {
 
     private final OrderService orderService;
 
-    /**
-     * Create an order from an auction win.
-     * Called by the auction-service when an auction is completed.
-     */
     @PostMapping("/auction")
-    public ResponseEntity<Order> createAuctionOrder(@RequestBody AuctionOrderRequest request) {
+    public ResponseEntity<Map<String, Object>> createAuctionOrder(@RequestBody AuctionOrderRequest request) {
         log.info("Received auction order request for auction ID: {}", request.getAuctionId());
+        Map<String, Object> response = new HashMap<>();
 
         try {
             Order order = orderService.createAuctionOrder(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(order);
+
+            response.put("success", true);
+            response.put("message", "Auction successfully converted into an order");
+            response.put("data", order);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
         } catch (Exception e) {
             log.error("Failed to create auction order: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
+            response.put("success", false);
+            response.put("message", "Failed to convert auction to order: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }
