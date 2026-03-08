@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
 import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
 
-// Updated Interface to include Delivery Data
+// Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
     name: string
@@ -23,6 +23,8 @@ interface BargainItem {
     deliveryRequired: boolean
     buyerAddress: string
     deliveryFee: number
+    buyerLatitude: number | null
+    buyerLongitude: number | null
 }
 
 export default function BuyerBargainPage() {
@@ -67,10 +69,12 @@ export default function BuyerBargainPage() {
                         status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
                         vegetableId: item.vegetableId,
 
-                        // NEW LOGISTICS FIELDS MAPPED HERE
+                        // Logistics & Coordinates Mapped Here
                         deliveryRequired: item.deliveryRequired || false,
                         buyerAddress: item.buyerAddress || "Pickup at Farm",
-                        deliveryFee: item.deliveryFee || 0
+                        deliveryFee: item.deliveryFee || 0,
+                        buyerLatitude: item.buyerLatitude || null,
+                        buyerLongitude: item.buyerLongitude || null
                     }))
 
                     setItems(mappedData)
@@ -124,10 +128,24 @@ export default function BuyerBargainPage() {
             return
         }
 
+        if (item.deliveryRequired && (!item.buyerAddress || item.buyerAddress === "Pickup at Farm")) {
+            showNotification("Missing delivery information. Cannot add to cart.", "error")
+            return
+        }
+
         const bargainedPricePerKg = item.requestedPrice / item.requestedQuantityKg
 
+        // Safely parse the comma-separated address to extract City and Street
+        const addressParts = item.buyerAddress ? item.buyerAddress.split(',').map(s => s.trim()) : [];
+        const streetAddress = addressParts.length > 0 ? addressParts[0] : "N/A";
+        const city = addressParts.length > 1 ? addressParts[1] : "N/A";
+
         const cartPayload = {
+            // User Data
             userId: parseInt(currentUserId),
+            buyerName: sessionStorage.getItem("name") || "Buyer",
+
+            // Product Data
             productId: parseInt(item.vegetableId),
             productName: item.name,
             pricePerKg: bargainedPricePerKg,
@@ -135,10 +153,20 @@ export default function BuyerBargainPage() {
             imageUrl: item.image,
             sellerId: parseInt(item.seller),
             sellerName: "Farmer " + item.seller,
-            // Including new data to the cart if backend expects it
+
+            // Bargain Specific Data (NEW)
+            bargainId: parseInt(item.id),
+            agreedPrice: item.requestedPrice,
+            productPrice: item.requestedPrice, // For backward compatibility with existing calculations
+            totalPrice: item.requestedPrice + item.deliveryFee,
+
+            // Delivery Specific Data (NEW & UPDATED)
             deliveryFee: item.deliveryFee,
-            buyerAddress: item.buyerAddress,
-            totalPrice: item.requestedPrice + item.deliveryFee
+            buyerAddress: item.buyerAddress, // Raw full string
+            buyerStreetAddress: streetAddress,
+            buyerCity: city,
+            buyerLatitude: item.buyerLatitude,
+            buyerLongitude: item.buyerLongitude
         }
 
         try {
@@ -155,19 +183,18 @@ export default function BuyerBargainPage() {
                 const newAddedIds = [...addedToCartIds, item.id]
                 setAddedToCartIds(newAddedIds)
                 localStorage.setItem("addedToCartBargains", JSON.stringify(newAddedIds))
-                showNotification(`Successfully added ${item.name} to your cart!`, "success")
+                showNotification(`Item successfully added to cart`, "success")
             } else {
-                showNotification("Failed to add item to cart. Please try again.", "error")
+                showNotification("Failed to add item to cart", "error")
             }
         } catch (error) {
             console.error("Error adding to cart:", error)
-            showNotification("Network error. Could not add to cart.", "error")
+            showNotification("Server error. Could not add to cart.", "error")
         }
     }
 
     const handleBargainAgain = (item: BargainItem) => {
-        console.log("Bargain again", item.id);
-        router.push("/VegetableList"); // Redirect to listings to try again
+        router.push("/VegetableList");
     }
 
     if (isLoading) {
@@ -183,7 +210,6 @@ export default function BuyerBargainPage() {
 
     return (
         <main className="min-h-screen bg-gray-50 pb-12 font-sans">
-            {/* Themed Header */}
             <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
                 <div className="max-w-6xl mx-auto flex items-center gap-3">
                     <Leaf className="w-10 h-10 text-green-300" />
@@ -194,7 +220,6 @@ export default function BuyerBargainPage() {
                 </div>
             </div>
 
-            {/* Notification Banner */}
             {notification && (
                 <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-6 duration-300 ${
                     notification.type === 'success'
