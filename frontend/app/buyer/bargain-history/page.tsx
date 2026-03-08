@@ -4,9 +4,9 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
-import { Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
 
-// Interface matching the UI Component requirements
+// Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
     name: string
@@ -20,18 +20,21 @@ interface BargainItem {
     discount: number
     status: string
     vegetableId: string
+    deliveryRequired: boolean
+    buyerAddress: string
+    deliveryFee: number
+    buyerLatitude: number | null
+    buyerLongitude: number | null
 }
 
 export default function BuyerBargainPage() {
     const [items, setItems] = useState<BargainItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [addedToCartIds, setAddedToCartIds] = useState<string[]>([])
-    // New state for beautiful notifications
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
 
     const router = useRouter()
 
-    // 1. Fetch Buyer's Requests
     useEffect(() => {
         const currentUserId = sessionStorage.getItem("id")
         const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
@@ -64,7 +67,14 @@ export default function BuyerBargainPage() {
                             ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
                             : 0,
                         status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
-                        vegetableId: item.vegetableId
+                        vegetableId: item.vegetableId,
+
+                        // Logistics & Coordinates Mapped Here
+                        deliveryRequired: item.deliveryRequired || false,
+                        buyerAddress: item.buyerAddress || "Pickup at Farm",
+                        deliveryFee: item.deliveryFee || 0,
+                        buyerLatitude: item.buyerLatitude || null,
+                        buyerLongitude: item.buyerLongitude || null
                     }))
 
                     setItems(mappedData)
@@ -79,30 +89,21 @@ export default function BuyerBargainPage() {
         fetchBargains()
     }, [router])
 
-    // --- Helper for Notifications ---
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type })
-        // Auto-hide after 3 seconds
         setTimeout(() => setNotification(null), 3000)
     }
 
-    // --- Filter Logic ---
     const pendingItems = items.filter((item) => item.status === "in-progress")
     const rejectedItems = items.filter((item) => item.status === "rejected")
-
-    // Logic: Accepted items that are NOT in the "Added to Cart" list
     const acceptedItems = items.filter((item) => item.status === "accepted" && !addedToCartIds.includes(item.id))
-
-    // Logic: Accepted items that ARE in the "Added to Cart" list
     const addedToCartItems = items.filter((item) => item.status === "accepted" && addedToCartIds.includes(item.id))
 
-    // Helper to determine status for "All" tab
     const getEffectiveStatus = (item: BargainItem) => {
         if (addedToCartIds.includes(item.id)) return "added-to-cart";
         return item.status as "in-progress" | "accepted" | "rejected";
     }
 
-    // --- Handlers ---
     const handleRemoveFromUI = async (id: string) => {
         try {
             const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
@@ -127,17 +128,45 @@ export default function BuyerBargainPage() {
             return
         }
 
+        if (item.deliveryRequired && (!item.buyerAddress || item.buyerAddress === "Pickup at Farm")) {
+            showNotification("Missing delivery information. Cannot add to cart.", "error")
+            return
+        }
+
         const bargainedPricePerKg = item.requestedPrice / item.requestedQuantityKg
 
+        // Safely parse the comma-separated address to extract City and Street
+        const addressParts = item.buyerAddress ? item.buyerAddress.split(',').map(s => s.trim()) : [];
+        const streetAddress = addressParts.length > 0 ? addressParts[0] : "N/A";
+        const city = addressParts.length > 1 ? addressParts[1] : "N/A";
+
         const cartPayload = {
+            // User Data
             userId: parseInt(currentUserId),
+            buyerName: sessionStorage.getItem("name") || "Buyer",
+
+            // Product Data
             productId: parseInt(item.vegetableId),
             productName: item.name,
             pricePerKg: bargainedPricePerKg,
             quantity: item.requestedQuantityKg,
             imageUrl: item.image,
             sellerId: parseInt(item.seller),
-            sellerName: "Farmer " + item.seller
+            sellerName: "Farmer " + item.seller,
+
+            // Bargain Specific Data (NEW)
+            bargainId: parseInt(item.id),
+            agreedPrice: item.requestedPrice,
+            productPrice: item.requestedPrice, // For backward compatibility with existing calculations
+            totalPrice: item.requestedPrice + item.deliveryFee,
+
+            // Delivery Specific Data (NEW & UPDATED)
+            deliveryFee: item.deliveryFee,
+            buyerAddress: item.buyerAddress, // Raw full string
+            buyerStreetAddress: streetAddress,
+            buyerCity: city,
+            buyerLatitude: item.buyerLatitude,
+            buyerLongitude: item.buyerLongitude
         }
 
         try {
@@ -151,74 +180,75 @@ export default function BuyerBargainPage() {
             })
 
             if (res.ok) {
-                // 1. Update Local Storage
                 const newAddedIds = [...addedToCartIds, item.id]
                 setAddedToCartIds(newAddedIds)
                 localStorage.setItem("addedToCartBargains", JSON.stringify(newAddedIds))
-
-                // 2. Show Success Notification (No Redirect)
-                showNotification(`Successfully added ${item.name} to your cart!`, "success")
+                showNotification(`Item successfully added to cart`, "success")
             } else {
-                showNotification("Failed to add item to cart. Please try again.", "error")
+                showNotification("Failed to add item to cart", "error")
             }
         } catch (error) {
             console.error("Error adding to cart:", error)
-            showNotification("Network error. Could not add to cart.", "error")
+            showNotification("Server error. Could not add to cart.", "error")
         }
     }
 
     const handleBargainAgain = (item: BargainItem) => {
-        console.log("Bargain again", item.id);
-        // Implement logic to reopen dialog or redirect to product page
+        router.push("/VegetableList");
     }
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="text-green-800 flex items-center gap-3 font-semibold text-lg">
+                    <Loader2 className="h-6 w-6 animate-spin text-green-700" />
+                    Harvesting your requests...
+                </div>
             </div>
         )
     }
 
     return (
-        <main className="min-h-screen bg-background pb-12">
-            <div className="px-6 py-8 border-b border-border bg-card">
-                <div className="max-w-6xl mx-auto">
-                    <h1 className="text-4xl font-bold text-foreground mb-2">My Bargain Requests</h1>
-                    <p className="text-muted-foreground">Manage your negotiations and deals</p>
+        <main className="min-h-screen bg-gray-50 pb-12 font-sans">
+            <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
+                <div className="max-w-6xl mx-auto flex items-center gap-3">
+                    <Leaf className="w-10 h-10 text-green-300" />
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight mb-1">My Bargain Requests</h1>
+                        <p className="text-green-100/80 font-medium">Manage your farm-fresh negotiations and deals</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Notification Banner */}
             {notification && (
-                <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+                <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-6 duration-300 ${
                     notification.type === 'success'
-                        ? 'bg-[#2d5016] text-white'
-                        : 'bg-red-600 text-white'
+                        ? 'bg-green-800 text-white border border-green-700'
+                        : 'bg-red-700 text-white border border-red-600'
                 }`}>
                     {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5"/> : <XCircle className="w-5 h-5"/>}
-                    <span className="font-medium">{notification.message}</span>
+                    <span className="font-medium tracking-wide">{notification.message}</span>
                 </div>
             )}
 
             <Tabs defaultValue="all" className="w-full">
-                <div className="w-full bg-accent/10 border-b border-border">
+                <div className="w-full bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                     <div className="max-w-6xl mx-auto px-6">
-                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-0 overflow-x-auto">
-                            <TabsTrigger value="all" className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1 whitespace-nowrap">
+                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar">
+                            <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap">
                                 All Requests
                             </TabsTrigger>
-                            <TabsTrigger value="in-progress" className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1 whitespace-nowrap">
+                            <TabsTrigger value="in-progress" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap">
                                 Pending ({pendingItems.length})
                             </TabsTrigger>
-                            <TabsTrigger value="accepted" className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1 whitespace-nowrap">
+                            <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap">
                                 Accepted ({acceptedItems.length})
                             </TabsTrigger>
-                            <TabsTrigger value="rejected" className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1 whitespace-nowrap">
+                            <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap">
                                 Rejected ({rejectedItems.length})
                             </TabsTrigger>
-                            <TabsTrigger value="added-to-cart" className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1 whitespace-nowrap">
-                                Added to Cart ({addedToCartItems.length})
+                            <TabsTrigger value="added-to-cart" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-700 text-gray-500 font-semibold hover:text-blue-600 transition-colors whitespace-nowrap">
+                                Cart ({addedToCartItems.length})
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -226,24 +256,22 @@ export default function BuyerBargainPage() {
 
                 <div className="p-6">
                     <div className="max-w-6xl mx-auto">
-                        {/* ALL REQUESTS TAB - Shows items with Status Badge but NO Actions */}
-                        <TabsContent value="all" className="space-y-4 mt-6">
-                            {items.length === 0 ? <p className="text-center text-muted-foreground py-10">No history found.</p> :
+
+                        <TabsContent value="all" className="space-y-6 mt-4">
+                            {items.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No bargain history found.</p> :
                                 items.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
-                                        // Pass the computed status so "Added to Cart" badge shows up
                                         status={getEffectiveStatus(item)}
-                                        // Explicitly hide action buttons in this view
                                         hideActions={true}
                                     />
                                 ))
                             }
                         </TabsContent>
 
-                        <TabsContent value="in-progress" className="space-y-4 mt-6">
-                            {pendingItems.length === 0 ? <p className="text-center text-muted-foreground py-10">No active negotiations.</p> :
+                        <TabsContent value="in-progress" className="space-y-6 mt-4">
+                            {pendingItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No active negotiations.</p> :
                                 pendingItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
@@ -255,8 +283,8 @@ export default function BuyerBargainPage() {
                             }
                         </TabsContent>
 
-                        <TabsContent value="accepted" className="space-y-4 mt-6">
-                            {acceptedItems.length === 0 ? <p className="text-center text-muted-foreground py-10">No new accepted offers.</p> :
+                        <TabsContent value="accepted" className="space-y-6 mt-4">
+                            {acceptedItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No new accepted offers.</p> :
                                 acceptedItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
@@ -269,8 +297,8 @@ export default function BuyerBargainPage() {
                             }
                         </TabsContent>
 
-                        <TabsContent value="rejected" className="space-y-4 mt-6">
-                            {rejectedItems.length === 0 ? <p className="text-center text-muted-foreground py-10">No rejected requests.</p> :
+                        <TabsContent value="rejected" className="space-y-6 mt-4">
+                            {rejectedItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No rejected requests.</p> :
                                 rejectedItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
@@ -283,18 +311,18 @@ export default function BuyerBargainPage() {
                             }
                         </TabsContent>
 
-                        <TabsContent value="added-to-cart" className="space-y-4 mt-6">
-                            {addedToCartItems.length === 0 ? <p className="text-center text-muted-foreground py-10">No items added to cart yet.</p> :
+                        <TabsContent value="added-to-cart" className="space-y-6 mt-4">
+                            {addedToCartItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No items added to cart yet.</p> :
                                 addedToCartItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
                                         status="added-to-cart"
-                                        // Usually no actions here as it's done
                                     />
                                 ))
                             }
                         </TabsContent>
+
                     </div>
                 </div>
             </Tabs>

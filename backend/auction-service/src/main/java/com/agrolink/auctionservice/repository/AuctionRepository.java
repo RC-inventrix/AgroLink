@@ -18,7 +18,14 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByFarmerIdAndStatus(Long farmerId, AuctionStatus status);
 
     List<Auction> findByStatus(AuctionStatus status);
+   // List<Auction> findByStatusAndStartTimeBefore(AuctionStatus status, LocalDateTime now);
 
+    /**
+     * ✅ NEW: Finds completed auctions that failed to transfer to the order service.
+     * This powers the automated retry mechanism.
+     */
+    @Query("SELECT a FROM Auction a WHERE a.status = 'COMPLETED' AND a.winningBidId IS NOT NULL AND (a.isOrderCreated IS NULL OR a.isOrderCreated = false)")
+    List<Auction> findCompletedAuctionsWithPendingOrders();
     /**
      * Find all active auctions that have expired (end time has passed).
      */

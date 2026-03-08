@@ -45,6 +45,21 @@ public class Bargain {
 
     private Double originalPricePerKg; // To calculate discount/actual price
 
+    // --- NEW LOGISTICS & DELIVERY FIELDS ---
+    private Boolean deliveryRequired;
+
+    private String buyerAddress;
+
+    private Double buyerLatitude;
+
+    private Double buyerLongitude;
+
+    private Double deliveryFee;
+
+    private Double distance;
+
+    private Double finalTotal;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BargainStatus status;
