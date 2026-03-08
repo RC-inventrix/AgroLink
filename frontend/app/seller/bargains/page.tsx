@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
-import { Loader2 } from "lucide-react"
+import { Loader2, Leaf } from "lucide-react"
 
-// Interface matching the UI Component requirements
+// Updated Interface to include logistics and map data
 interface BargainRequestUI {
     id: string
     name: string
@@ -14,29 +14,38 @@ interface BargainRequestUI {
     pricePerHundredG: number
     pricePerKg: number
     requestedQuantityKg: number
-    actualPrice: number // Total Original Price
-    offeredPrice: number // Total Offered Price
+    actualPrice: number
+    offeredPrice: number
     discount: number
     status: string
+    deliveryRequired: boolean
+    buyerAddress: string
+    deliveryFee: number
+    buyerLatitude: number | null
+    buyerLongitude: number | null
 }
 
 export default function BargainPage() {
     const [requests, setRequests] = useState<BargainRequestUI[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // This should come from your Auth Context. Hardcoded for testing as per instruction.
-
-
     // Fetch Requests from Backend
     useEffect(() => {
         const currentSellerId = sessionStorage.getItem("id")
+
+        if (!currentSellerId) {
+            console.error("No seller ID found.")
+            setIsLoading(false)
+            return
+        }
+
         const fetchBargains = async () => {
             try {
                 const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
                 if (response.ok) {
                     const data = await response.json()
 
-                    // Map Backend Entity to UI Interface
+                    // Map Backend Entity to UI Interface including new fields
                     const mappedData: BargainRequestUI[] = data.map((item: any) => {
                         const originalTotal = item.originalPricePerKg * item.quantity;
                         const discountAmount = originalTotal - item.suggestedPrice;
@@ -53,7 +62,14 @@ export default function BargainPage() {
                             actualPrice: originalTotal,
                             offeredPrice: item.suggestedPrice,
                             discount: Math.round(discountPercent),
-                            status: item.status // PENDING, ACCEPTED, REJECTED
+                            status: item.status, // PENDING, ACCEPTED, REJECTED
+
+                            // NEW LOGISTICS FIELDS
+                            deliveryRequired: item.deliveryRequired || false,
+                            buyerAddress: item.buyerAddress || "Pickup at Farm",
+                            deliveryFee: item.deliveryFee || 0,
+                            buyerLatitude: item.buyerLatitude || null,
+                            buyerLongitude: item.buyerLongitude || null
                         };
                     });
                     setRequests(mappedData)
@@ -78,7 +94,6 @@ export default function BargainPage() {
             });
 
             if (response.ok) {
-                // Update local state to move item to Accepted tab
                 setRequests(prev => prev.map(item =>
                     item.id === id ? { ...item, status: "ACCEPTED" } : item
                 ));
@@ -98,7 +113,6 @@ export default function BargainPage() {
             });
 
             if (response.ok) {
-                // Update local state to move item to Rejected tab
                 setRequests(prev => prev.map(item =>
                     item.id === id ? { ...item, status: "REJECTED" } : item
                 ));
@@ -109,7 +123,6 @@ export default function BargainPage() {
     }
 
     // Handle Remove (UI Only)
-    // This removes the item from the current view list, but does not delete from DB
     const handleRemoveFromUI = (id: string) => {
         setRequests(prev => prev.filter(item => item.id !== id));
     }
@@ -121,47 +134,53 @@ export default function BargainPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+                <div className="text-green-800 flex items-center gap-3 font-semibold text-lg">
+                    <Loader2 className="h-6 w-6 animate-spin text-green-700" />
+                    Loading farmer dashboard...
+                </div>
             </div>
         )
     }
 
     return (
-        <main className="min-h-screen bg-background">
-            {/* Header */}
-            <div className="px-6 py-8 border-b border-border">
-                <div className="max-w-6xl mx-auto">
-                    <h1 className="text-4xl font-bold text-foreground mb-2">Bargain Requests from Buyers</h1>
-                    <p className="text-muted-foreground">Accept or negotiate price offers on your fresh vegetables</p>
+        <main className="min-h-screen bg-gray-50 pb-12 font-sans">
+            {/* Themed Agricultural Header */}
+            <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
+                <div className="max-w-6xl mx-auto flex items-center gap-3">
+                    <Leaf className="w-10 h-10 text-green-300" />
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight mb-1">Incoming Requests</h1>
+                        <p className="text-green-100/80 font-medium">Review buyer offers, accept deals, and manage deliveries</p>
+                    </div>
                 </div>
             </div>
 
             <Tabs defaultValue="all" className="w-full">
-                <div className="w-full bg-accent/10 border-b border-border">
+                <div className="w-full bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                     <div className="max-w-6xl mx-auto px-6">
-                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-0">
+                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar">
                             <TabsTrigger
                                 value="all"
-                                className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
+                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap"
                             >
                                 All Requests ({requests.length})
                             </TabsTrigger>
                             <TabsTrigger
                                 value="pending"
-                                className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
+                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap"
                             >
                                 Pending ({pendingItems.length})
                             </TabsTrigger>
                             <TabsTrigger
                                 value="accepted"
-                                className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
+                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap"
                             >
                                 Accepted ({acceptedItems.length})
                             </TabsTrigger>
                             <TabsTrigger
                                 value="rejected"
-                                className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-colors flex-1"
+                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap"
                             >
                                 Rejected ({rejectedItems.length})
                             </TabsTrigger>
@@ -172,19 +191,16 @@ export default function BargainPage() {
                 {/* Tab Content */}
                 <div className="p-6">
                     <div className="max-w-6xl mx-auto">
-                        {/* Tab Content - All Requests */}
-                        <TabsContent value="all" className="space-y-4 mt-6">
+
+                        <TabsContent value="all" className="space-y-6 mt-4">
                             {requests.length === 0 ? (
-                                <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No bargaining requests found</p>
-                                </div>
+                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No bargaining requests found.</p>
                             ) : (
                                 requests.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
                                         item={item}
-                                        status="all"
-                                        // For "All" tab, allow actions if pending, or remove if resolved
+                                        status={item.status.toLowerCase() as any}
                                         onAccept={() => item.status === 'PENDING' && handleAcceptDeal(item.id)}
                                         onReject={() => item.status === 'PENDING' && handleRejectRequest(item.id)}
                                         onDelete={() => handleRemoveFromUI(item.id)}
@@ -193,12 +209,9 @@ export default function BargainPage() {
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Pending */}
-                        <TabsContent value="pending" className="space-y-4 mt-6">
+                        <TabsContent value="pending" className="space-y-6 mt-4">
                             {pendingItems.length === 0 ? (
-                                <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No pending bargaining requests</p>
-                                </div>
+                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No pending bargaining requests.</p>
                             ) : (
                                 pendingItems.map((item) => (
                                     <HorizontalBargainCard
@@ -213,12 +226,9 @@ export default function BargainPage() {
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Accepted */}
-                        <TabsContent value="accepted" className="space-y-4 mt-6">
+                        <TabsContent value="accepted" className="space-y-6 mt-4">
                             {acceptedItems.length === 0 ? (
-                                <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No accepted bargaining requests</p>
-                                </div>
+                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No accepted deals yet.</p>
                             ) : (
                                 acceptedItems.map((item) => (
                                     <HorizontalBargainCard
@@ -231,12 +241,9 @@ export default function BargainPage() {
                             )}
                         </TabsContent>
 
-                        {/* Tab Content - Rejected */}
-                        <TabsContent value="rejected" className="space-y-4 mt-6">
+                        <TabsContent value="rejected" className="space-y-6 mt-4">
                             {rejectedItems.length === 0 ? (
-                                <div className="text-center py-12 bg-muted/20 rounded-lg">
-                                    <p className="text-muted-foreground">No rejected bargaining requests</p>
-                                </div>
+                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No rejected bargaining requests.</p>
                             ) : (
                                 rejectedItems.map((item) => (
                                     <HorizontalBargainCard

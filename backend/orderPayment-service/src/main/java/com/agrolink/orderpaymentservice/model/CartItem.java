@@ -18,7 +18,7 @@ public class CartItem {
     private Long id;
 
     private Long userId;
-    private String buyerName; // Added buyer name
+    private String buyerName;
 
     private Long productId;
 
@@ -30,11 +30,23 @@ public class CartItem {
     private String sellerName;
     private Long sellerId;
 
-    // --- NEW FIELDS FOR DELIVERY & PRICING ---
+    // --- NEW FIELDS FOR BARGAIN DETAILS ---
+    private Long bargainId;       // Link to the specific accepted bargain
+    private Double agreedPrice;   // Final customer offered price
+
+    // --- NEW & EXISTING FIELDS FOR DELIVERY & PRICING ---
     private String farmerAddress;
     private String buyerAddress;
 
-    private Double deliveryFee;   // Calculated delivery charge
-    private Double productPrice;  // Quantity * PricePerKg
-    private Double totalPrice;    // ProductPrice + DeliveryFee
+    // Parsed address data
+    private String buyerCity;
+    private String buyerStreetAddress;
+
+    // Precise coordinates
+    private Double buyerLatitude;
+    private Double buyerLongitude;
+
+    private Double deliveryFee;
+    private Double productPrice;
+    private Double totalPrice;
 }

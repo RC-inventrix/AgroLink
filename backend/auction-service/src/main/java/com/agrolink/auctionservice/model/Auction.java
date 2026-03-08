@@ -101,7 +101,9 @@ public class Auction {
     @JsonManagedReference
     @Builder.Default
     private List<Bid> bids = new ArrayList<>();
-
+    @Column(name = "is_order_created")
+    @Builder.Default
+    private Boolean isOrderCreated = false;
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

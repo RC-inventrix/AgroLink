@@ -10,7 +10,7 @@
 <button id="checkout-button">Pay Now</button>
 
 <script>
-    const stripe = Stripe("***REMOVED***"); // Replace with your Stripe publishable key
+    const stripe = Stripe("pk_test_51SciI1Jhk5DMuYs0sLJzumgLUD4k3WGoFKZEU0KziigsTfediDqgxdRejvQhC3rorFiH483BacZv93pJOuZxIpF500zsCs0SY9"); // Replace with your Stripe publishable key
 
     document.getElementById("checkout-button").addEventListener("click", () => {
         fetch("http://localhost:8075/api/payment/create-checkout-session?userId=123", {
