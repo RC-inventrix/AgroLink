@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Trash2, ShoppingCart, RotateCcw, MapPin, Truck, Store } from "lucide-react"
 
-// Updated Interface to include Delivery Data
+// Updated Interface to include new Coordinate Types
 interface BargainItem {
     id: string
     name: string
@@ -19,6 +19,8 @@ interface BargainItem {
     deliveryRequired: boolean
     buyerAddress: string
     deliveryFee: number
+    buyerLatitude: number | null
+    buyerLongitude: number | null
 }
 
 interface HorizontalBargainCardProps {
@@ -143,7 +145,7 @@ export function HorizontalBargainCard({
                         </div>
                     </div>
 
-                    {/* NEW: Logistics & Delivery Block */}
+                    {/* Logistics & Delivery Block */}
                     <div className={`p-4 rounded-xl border space-y-3 ${deliveryRequired ? 'bg-blue-50/30 border-blue-100' : 'bg-orange-50/50 border-orange-100'}`}>
                         <h4 className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
                             {deliveryRequired ? <Truck className="w-3.5 h-3.5 text-blue-600"/> : <Store className="w-3.5 h-3.5 text-orange-600"/>}
