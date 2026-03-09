@@ -13,16 +13,19 @@ const nextConfig: NextConfig = {
         ],
     },
     reactStrictMode: false,
-    // 2. Your existing API redirects
+    // 2. Enable standalone output for Docker deployment
+    output: 'standalone',
+    // 3. Your existing API redirects
     async rewrites() {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://localhost:8080/:path*',
+                destination: `${apiUrl}/:path*`,
             },
             {
                 source: '/auth/:path*',
-                destination: 'http://localhost:8080/auth/:path*',
+                destination: `${apiUrl}/auth/:path*`,
             },
         ];
     },

@@ -1,0 +1,389 @@
+# AgroLink Production Docker Compose
+# Uses environment variables from .env file
+# All services use resource limits suitable for an 8GB VM
+version: "3.9"
+
+services:
+  # --- INFRASTRUCTURE LAYER ---
+
+  postgres:
+    image: postgres:15
+    container_name: agro_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  service-discovery:
+    image: ghcr.io/${GITHUB_REPOSITORY}/service-discovery:latest
+    container_name: agro_discovery
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_HOST: service-discovery
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  config-server:
+    image: ghcr.io/${GITHUB_REPOSITORY}/config-server:latest
+    container_name: agro_config
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      EUREKA_HOST: service-discovery
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  # --- MICROSERVICES LAYER ---
+
+  identity-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/identity-service:latest
+    container_name: agro_identity
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      JWT_SECRET: ${JWT_SECRET}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      DDL_AUTO: ${DDL_AUTO:validate}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  product-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/product-service:latest
+    container_name: agro_products
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+      DDL_AUTO: ${DDL_AUTO:validate}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  order-payment-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/order-payment-service:latest
+    container_name: agro_orders
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
+      CLIENT_BASE_URL: ${CLIENT_BASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      DDL_AUTO: ${DDL_AUTO:validate}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8075/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  chat-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/chat-service:latest
+    container_name: agro_chat
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      JWT_KEY: ${JWT_KEY}
+      CHAT_AES_KEY: ${CHAT_AES_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      DDL_AUTO: ${DDL_AUTO:validate}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  moderation-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/moderation-service:latest
+    container_name: agro_moderation
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      JWT_SECRET: ${JWT_SECRET}
+      DDL_AUTO: ${DDL_AUTO:validate}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  chatbot-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/chatbot-service:latest
+    container_name: agro_chatbot
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      EUREKA_HOST: service-discovery
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  auction-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/auction-service:latest
+    container_name: agro_auction
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_HOST: service-discovery
+      DDL_AUTO: ${DDL_AUTO:validate}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  crop-recommendation-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/crop-recommendation-service:latest
+    container_name: agro_crop_recommendation
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  api-gateway:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api-gateway:latest
+    container_name: agro_gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_HOST: service-discovery
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
+    container_name: agro_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - agro-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+# --- VOLUMES & NETWORKS ---
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  agro-net:
+    driver: bridge

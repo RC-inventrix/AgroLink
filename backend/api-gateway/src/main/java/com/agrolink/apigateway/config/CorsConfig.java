@@ -1,5 +1,6 @@
 package com.agrolink.apigateway.config; // Adjust package name to match your Gateway
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -7,17 +8,20 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 
 @Configuration
 public class CorsConfig {
+
+    @Value("${ALLOWED_ORIGINS:http://localhost:3000}")
+    private String allowedOrigins;
 
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
         // 1. Allow your Frontend URL specifically
-        corsConfig.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
+        corsConfig.setAllowedOrigins(List.of(allowedOrigins.split(",")));
 
         // 2. Allow all standard HTTP methods
         corsConfig.setMaxAge(3600L); // Cache this config for 1 hour

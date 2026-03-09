@@ -23,8 +23,44 @@
 hs_err_pid*
 replay_pid*
 
+# Environment files (never commit secrets)
 .env
+.env.*
+!.env.example
 
 # Maven build artifacts
 target/
 **/target/
+
+# IDE files
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+.vscode/
+**/.vscode/
+*.swp
+*.swo
+
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# OS files
+.DS_Store
+Thumbs.db
