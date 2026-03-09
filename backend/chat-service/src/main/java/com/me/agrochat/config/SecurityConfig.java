@@ -40,7 +40,11 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.List.of(allowedOrigins.split(","))); // Allow frontend via env var
+        configuration.setAllowedOrigins(
+            java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .toList()
+        );
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Allow methods
         configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type")); // Allow JWT header
         configuration.setAllowCredentials(true); // Required for sessions/cookies if used

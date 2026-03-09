@@ -8,7 +8,6 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 public class CorsConfig {
@@ -21,7 +20,11 @@ public class CorsConfig {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
         // 1. Allow your Frontend URL specifically
-        corsConfig.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        corsConfig.setAllowedOrigins(
+            java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .toList()
+        );
 
         // 2. Allow all standard HTTP methods
         corsConfig.setMaxAge(3600L); // Cache this config for 1 hour

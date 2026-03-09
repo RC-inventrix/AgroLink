@@ -34,6 +34,10 @@ crop_map = {
     22: "Coffee"
 }
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "UP"}), 200
+
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.json
