@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,39 +20,65 @@ public class BargainController {
     @Autowired
     private BargainRepository bargainRepository;
 
-    // ... Existing createBargain method ...
     @PostMapping("/create")
-    public ResponseEntity<Bargain> createBargain(@RequestBody BargainRequest request,
-                                                 @RequestHeader(value = "X-User-Id", required = false) Long buyerId) {
-        Long actualBuyerId = (buyerId != null) ? buyerId : 1L;
-        Bargain bargain = Bargain.builder()
-                .vegetableId(request.getVegetableId())
-                .vegetableName(request.getVegetableName())
-                .vegetableImage(request.getVegetableImage())
-                .sellerId(request.getSellerId())
-                .buyerId(actualBuyerId)
-                .buyerName(request.getBuyerName() != null ? request.getBuyerName() : "Unknown Buyer")
-                .quantity(request.getQuantity())
-                .suggestedPrice(request.getSuggestedPrice())
-                .originalPricePerKg(request.getOriginalPricePerKg())
-                .status(BargainStatus.PENDING)
-                .build();
-        return ResponseEntity.ok(bargainRepository.save(bargain));
+    public ResponseEntity<Map<String, Object>> createBargain(@RequestBody BargainRequest request,
+                                                             @RequestHeader(value = "X-User-Id", required = false) Long buyerId) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Long actualBuyerId = (buyerId != null) ? buyerId : 1L;
+
+            Bargain bargain = Bargain.builder()
+                    .vegetableId(request.getVegetableId())
+                    .vegetableName(request.getVegetableName())
+                    .vegetableImage(request.getVegetableImage())
+                    .sellerId(request.getSellerId())
+                    .buyerId(actualBuyerId)
+                    .buyerName(request.getBuyerName() != null ? request.getBuyerName() : "Unknown Buyer")
+                    .quantity(request.getQuantity())
+                    .suggestedPrice(request.getSuggestedPrice())
+                    .originalPricePerKg(request.getOriginalPricePerKg())
+
+                    // NEW: Appending the new delivery & cost properties to the builder
+                    .deliveryRequired(request.getDeliveryRequired())
+                    .buyerAddress(request.getBuyerAddress())
+                    .buyerLatitude(request.getBuyerLatitude())
+                    .buyerLongitude(request.getBuyerLongitude())
+                    .deliveryFee(request.getDeliveryFee())
+                    .distance(request.getDistance())
+                    .finalTotal(request.getFinalTotal())
+
+                    .status(BargainStatus.PENDING)
+                    .build();
+
+            Bargain savedBargain = bargainRepository.save(bargain);
+
+            // Clean, structured success response
+            response.put("success", true);
+            response.put("message", "Bargain request submitted successfully");
+            response.put("data", savedBargain);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            // Clean, structured error response
+            response.put("success", false);
+            response.put("message", "Failed to submit bargain request: " + e.getMessage());
+
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
-    // ... Existing getBargainsBySeller method ...
     @GetMapping("/seller/{sellerId}")
     public ResponseEntity<List<Bargain>> getBargainsBySeller(@PathVariable String sellerId) {
         return ResponseEntity.ok(bargainRepository.findBySellerId(sellerId));
     }
 
-    // NEW: Get Bargains for a specific Buyer
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<List<Bargain>> getBargainsByBuyer(@PathVariable Long buyerId) {
         return ResponseEntity.ok(bargainRepository.findByBuyerId(buyerId));
     }
 
-    // ... Existing updateBargainStatus method ...
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateBargainStatus(@PathVariable Long id, @RequestBody Map<String, String> statusUpdate) {
         return bargainRepository.findById(id).map(bargain -> {
@@ -66,7 +93,6 @@ public class BargainController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // NEW: Delete a Bargain Request
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBargain(@PathVariable Long id) {
         if (bargainRepository.existsById(id)) {

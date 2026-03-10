@@ -15,10 +15,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entity representing an auction in the system.
- * Uses optimistic locking (@Version) for concurrency control.
- */
 @Entity
 @Table(name = "auctions")
 @Data
@@ -31,10 +27,6 @@ public class Auction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Version field for optimistic locking.
-     * Automatically incremented by JPA on each update.
-     */
     @Version
     private Long version;
 
@@ -47,7 +39,6 @@ public class Auction {
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
-    // Cached product details for quick access
     @Column(name = "product_name")
     private String productName;
 
@@ -78,16 +69,16 @@ public class Auction {
     @Column(name = "starting_price", precision = 10, scale = 2)
     private BigDecimal startingPrice;
 
-    /**
-     * Current highest bid amount - stored directly for quick read access.
-     */
     @Column(name = "current_highest_bid_amount", precision = 10, scale = 2)
     private BigDecimal currentHighestBidAmount;
+
+    // ✅ NEW FIELD: Directly tracks the user who holds the highest bid
+    @Column(name = "highest_bidder_id")
+    private Long highestBidderId;
 
     @Column(name = "winning_bid_id")
     private Long winningBidId;
 
-    // Delivery configuration
     @Column(name = "is_delivery_available")
     private Boolean isDeliveryAvailable;
 
@@ -97,7 +88,6 @@ public class Auction {
     @Column(name = "extra_fee_per_3km", precision = 10, scale = 2)
     private BigDecimal extraFeePer3Km;
 
-    // Pickup location (farmer's location)
     @Column(name = "pickup_address")
     private String pickupAddress;
 
@@ -111,7 +101,9 @@ public class Auction {
     @JsonManagedReference
     @Builder.Default
     private List<Bid> bids = new ArrayList<>();
-
+    @Column(name = "is_order_created")
+    @Builder.Default
+    private Boolean isOrderCreated = false;
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

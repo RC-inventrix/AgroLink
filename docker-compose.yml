@@ -224,6 +224,23 @@ services:
     networks:
       - agro-net
 
+  # 11. Chatbot Service (AI Customer Support via Gemini)
+  chatbot-service:
+    build: backend/chatbot-service
+    container_name: agro_chatbot
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env
+    environment:
+      EUREKA_HOST: service-discovery
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+    networks:
+      - agro-net
+
 # --- VOLUMES & NETWORKS ---
 volumes:
   postgres_data:

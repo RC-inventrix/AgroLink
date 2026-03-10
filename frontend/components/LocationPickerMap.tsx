@@ -1,14 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import citiesData from "@/data/srilanka-cities.json"
 import { isWithinCityRadius } from "@/lib/geo-utils"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 
-// --- Interfaces ---
+// --- TYPES ---
 interface LocationData {
     province: string
     district: string
@@ -27,39 +27,27 @@ interface LocationPickerProps {
     label?: string
 }
 
-interface City {
-    name: string
-    lat: number
-    lng: number
-}
-
-interface District {
-    name: string
-    cities: City[]
-}
-
-interface Province {
-    name: string
-    districts: District[]
-}
-
-// --- Helper Components ---
-function MapController({ center }: { center: [number, number] }) {
+// --- INTERNAL COMPONENT: MAP CONTROLLER ---
+// Handles programmatic map movement (FlyTo)
+function MapController({ center }: { center: [number, number] | null }) {
     const map = useMap()
     useEffect(() => {
-        if (center[0] && center[1]) {
-            map.setView(center, 13)
+        if (center) {
+            map.setView(center, 13, { animate: true })
+            map.invalidateSize()
         }
     }, [center, map])
     return null
 }
 
-function LocationMarker({
-                            position,
-                            onPositionChange,
-                            onError,
-                            cityCenter,
-                        }: {
+// --- INTERNAL COMPONENT: INTERACTIVE MARKER ---
+// Handles clicks and drags
+function InteractiveMarker({
+                               position,
+                               onPositionChange,
+                               onError,
+                               cityCenter,
+                           }: {
     position: [number, number] | null
     onPositionChange: (pos: [number, number]) => void
     onError: (msg: string) => void
@@ -68,15 +56,11 @@ function LocationMarker({
     useMapEvents({
         click(e: LeafletMouseEvent) {
             const newPos: [number, number] = [e.latlng.lat, e.latlng.lng]
-            if (cityCenter) {
-                if (isWithinCityRadius(e.latlng.lat, e.latlng.lng, cityCenter.lat, cityCenter.lng, 15)) {
-                    onPositionChange(newPos)
-                    onError("")
-                } else {
-                    onError("Location is outside the selected city area.")
-                }
+            if (cityCenter && !isWithinCityRadius(e.latlng.lat, e.latlng.lng, cityCenter.lat, cityCenter.lng, 15)) {
+                onError("Location is outside the selected city area.")
             } else {
                 onPositionChange(newPos)
+                onError("")
             }
         },
     })
@@ -89,16 +73,11 @@ function LocationMarker({
                 dragend: (e: DragEndEvent) => {
                     const marker = e.target
                     const pos = marker.getLatLng()
-                    const newPos: [number, number] = [pos.lat, pos.lng]
-                    if (cityCenter) {
-                        if (isWithinCityRadius(pos.lat, pos.lng, cityCenter.lat, cityCenter.lng, 15)) {
-                            onPositionChange(newPos)
-                            onError("")
-                        } else {
-                            onError("Location is outside the selected city area.")
-                        }
+                    if (cityCenter && !isWithinCityRadius(pos.lat, pos.lng, cityCenter.lat, cityCenter.lng, 15)) {
+                        onError("Location is outside the selected city area.")
                     } else {
-                        onPositionChange(newPos)
+                        onPositionChange([pos.lat, pos.lng])
+                        onError("")
                     }
                 },
             }}
@@ -106,7 +85,74 @@ function LocationMarker({
     ) : null
 }
 
-// --- Main Component ---
+// --- INTERNAL COMPONENT: ATOMIC MAP INSTANCE ---
+// This component is mounted/unmounted purely based on keys.
+// It contains the specific strict-mode guard.
+const LeafletMapInstance = ({
+                                center,
+                                markerPosition,
+                                targetCenter,
+                                cityCenter,
+                                onPositionChange,
+                                onError
+                            }: any) => {
+
+    // STRICT MODE GUARD:
+    // We manually assign an ID to the container div and clean it up
+    // before the MapContainer initializes.
+    const containerId = `map-container-${Math.random().toString(36).substr(2, 9)}`;
+
+    useEffect(() => {
+        // Fix Icons globally
+        // @ts-ignore
+        if (typeof window !== "undefined" && !L.Icon.Default.prototype._getIconUrl_Original) {
+            // @ts-ignore
+            L.Icon.Default.prototype._getIconUrl_Original = L.Icon.Default.prototype._getIconUrl;
+            // @ts-ignore
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+                iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+            });
+        }
+
+        // AGGRESSIVE CLEANUP
+        // If this component unmounts, we find the DOM element and manually strip the Leaflet ID.
+        // This prevents the "already initialized" error if React reuses the node.
+        return () => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                // @ts-ignore
+                container._leaflet_id = null;
+            }
+        };
+    }, [containerId]);
+
+    return (
+        <MapContainer
+            id={containerId}
+            center={center}
+            zoom={13}
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true}
+        >
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapController center={targetCenter} />
+            <InteractiveMarker
+                position={markerPosition}
+                onPositionChange={onPositionChange}
+                onError={onError}
+                cityCenter={cityCenter}
+            />
+        </MapContainer>
+    );
+};
+
+// --- MAIN COMPONENT ---
 export default function LocationPickerMap({
                                               value,
                                               onChange,
@@ -116,114 +162,89 @@ export default function LocationPickerMap({
                                               label = "Location",
                                           }: LocationPickerProps) {
 
-    // --- Fix for Leaflet Icons ---
-    useEffect(() => {
-        // @ts-ignore
-        if (!L.Icon.Default.prototype._getIconUrl_Original) {
-            // @ts-ignore
-            L.Icon.Default.prototype._getIconUrl_Original = L.Icon.Default.prototype._getIconUrl;
-            // @ts-ignore
-            delete L.Icon.Default.prototype._getIconUrl
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-                iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-            })
-        }
-    }, []);
+    // Data State
+    const [provinces] = useState<any[]>(citiesData.provinces);
+    const [districts, setDistricts] = useState<any[]>([]);
+    const [cities, setCities] = useState<any[]>([]);
 
-    const [provinces] = useState<Province[]>(citiesData.provinces as unknown as Province[])
-    const [districts, setDistricts] = useState<District[]>([])
-    const [cities, setCities] = useState<City[]>([])
-    const [mapCenter, setMapCenter] = useState<[number, number]>([7.8731, 80.7718])
+    // Map Logic State
+    const [targetCenter, setTargetCenter] = useState<[number, number] | null>(null);
+    const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
         value.latitude && value.longitude ? [value.latitude, value.longitude] : null
-    )
-    const [boundaryError, setBoundaryError] = useState("")
-    const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null)
+    );
+    const [boundaryError, setBoundaryError] = useState("");
 
-    // 1. Update districts
+    // Initial Center (Sri Lanka)
+    const initialCenter: [number, number] = [7.8731, 80.7718];
+
+    // --- CASCADING DROPDOWNS ---
     useEffect(() => {
         if (value.province) {
-            const province = provinces.find((p) => p.name === value.province)
-            if (province) setDistricts(province.districts)
+            const p = provinces.find((p) => p.name === value.province);
+            setDistricts(p ? p.districts : []);
         } else {
-            setDistricts([])
-            setCities([])
+            setDistricts([]);
+            setCities([]);
         }
-    }, [value.province, provinces])
+    }, [value.province, provinces]);
 
-    // 2. Update cities
     useEffect(() => {
         if (value.district) {
-            const district = districts.find((d) => d.name === value.district)
-            if (district) setCities(district.cities)
+            const d = districts.find((d) => d.name === value.district);
+            setCities(d ? d.cities : []);
         } else {
-            setCities([])
+            setCities([]);
         }
-    }, [value.district, districts])
+    }, [value.district, districts]);
 
-    // 3. Update map center
     useEffect(() => {
         if (value.city) {
-            const city = cities.find((c) => c.name === value.city)
-            if (city) {
-                setMapCenter([city.lat, city.lng])
-                setSelectedCityCenter({ lat: city.lat, lng: city.lng })
+            const c = cities.find((c) => c.name === value.city);
+            if (c) {
+                setTargetCenter([c.lat, c.lng]);
+                setSelectedCityCenter({ lat: c.lat, lng: c.lng });
                 if (!markerPosition) {
-                    setMarkerPosition([city.lat, city.lng])
-                    onChange({ ...value, latitude: city.lat, longitude: city.lng })
+                    const newPos: [number, number] = [c.lat, c.lng];
+                    setMarkerPosition(newPos);
+                    onChange({ ...value, latitude: c.lat, longitude: c.lng });
                 }
             }
         }
-    }, [value.city, cities])
+    }, [value.city, cities]);
 
-    // Handlers
+    // --- HANDLERS ---
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onChange({
-            province: e.target.value,
-            district: "",
-            city: "",
-            streetAddress: value.streetAddress,
-            latitude: null,
-            longitude: null,
-        })
-        setMarkerPosition(null)
-        setSelectedCityCenter(null)
-        setBoundaryError("")
-    }
+        onChange({ ...value, province: e.target.value, district: "", city: "", latitude: null, longitude: null });
+        setMarkerPosition(null);
+        setBoundaryError("");
+    };
 
     const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onChange({ ...value, district: e.target.value, city: "", latitude: null, longitude: null })
-        setMarkerPosition(null)
-        setSelectedCityCenter(null)
-        setBoundaryError("")
-    }
+        onChange({ ...value, district: e.target.value, city: "", latitude: null, longitude: null });
+        setMarkerPosition(null);
+        setBoundaryError("");
+    };
 
     const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onChange({ ...value, city: e.target.value, latitude: null, longitude: null })
-        setMarkerPosition(null)
-        setBoundaryError("")
-    }
+        onChange({ ...value, city: e.target.value, latitude: null, longitude: null });
+        setMarkerPosition(null);
+        setBoundaryError("");
+    };
 
-    const handleStreetAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({ ...value, streetAddress: e.target.value })
-    }
+    const handlePosChange = (pos: [number, number]) => {
+        setMarkerPosition(pos);
+        onChange({ ...value, latitude: pos[0], longitude: pos[1] });
+    };
 
-    const handleMarkerPositionChange = (pos: [number, number]) => {
-        setMarkerPosition(pos)
-        onChange({ ...value, latitude: pos[0], longitude: pos[1] })
-    }
-
-    // Styles
-    const isDark = variant === "dark"
+    // Styling
+    const isDark = variant === "dark";
     const inputClasses = isDark
         ? "w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
-        : "w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-
+        : "w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all";
     const labelClasses = isDark
         ? "text-white/70 text-xs font-semibold ml-1 mb-1 block"
-        : "text-muted-foreground text-sm font-semibold mb-1 block"
+        : "text-muted-foreground text-sm font-semibold mb-1 block";
 
     return (
         <div className="space-y-4">
@@ -231,22 +252,21 @@ export default function LocationPickerMap({
                 {label}
             </h3>
 
-            {/* Dropdowns */}
+            {/* FORM SECTION */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelClasses}>Province {required && <span className="text-red-500">*</span>}</label>
                     <select value={value.province} onChange={handleProvinceChange} required={required} className={inputClasses}>
                         <option value="">Select Province</option>
-                        {provinces.map((p) => (<option key={p.name} value={p.name} className={isDark ? "bg-[#03230F] text-white" : ""}>{p.name}</option>))}
+                        {provinces.map((p) => <option key={p.name} value={p.name} className="text-black">{p.name}</option>)}
                     </select>
                 </div>
-
                 {value.province && (
                     <div className="animate-in fade-in">
                         <label className={labelClasses}>District {required && <span className="text-red-500">*</span>}</label>
                         <select value={value.district} onChange={handleDistrictChange} required={required} className={inputClasses}>
                             <option value="">Select District</option>
-                            {districts.map((d) => (<option key={d.name} value={d.name} className={isDark ? "bg-[#03230F] text-white" : ""}>{d.name}</option>))}
+                            {districts.map((d) => <option key={d.name} value={d.name} className="text-black">{d.name}</option>)}
                         </select>
                     </div>
                 )}
@@ -257,7 +277,7 @@ export default function LocationPickerMap({
                     <label className={labelClasses}>City {required && <span className="text-red-500">*</span>}</label>
                     <select value={value.city} onChange={handleCityChange} required={required} className={inputClasses}>
                         <option value="">Select City</option>
-                        {cities.map((c) => (<option key={c.name} value={c.name} className={isDark ? "bg-[#03230F] text-white" : ""}>{c.name}</option>))}
+                        {cities.map((c) => <option key={c.name} value={c.name} className="text-black">{c.name}</option>)}
                     </select>
                 </div>
             )}
@@ -265,39 +285,41 @@ export default function LocationPickerMap({
             {showStreetAddress && (
                 <div>
                     <label className={labelClasses}>Street Address {required && <span className="text-red-500">*</span>}</label>
-                    <input type="text" value={value.streetAddress} onChange={handleStreetAddressChange} placeholder="Enter street address" required={required} className={inputClasses} />
+                    <input
+                        type="text"
+                        value={value.streetAddress}
+                        onChange={(e) => onChange({ ...value, streetAddress: e.target.value })}
+                        placeholder="Enter street address"
+                        required={required}
+                        className={inputClasses}
+                    />
                 </div>
             )}
 
-            {/* Map Section */}
+            {/* MAP SECTION */}
             {value.city && (
-                <div className="animate-in fade-in duration-300 mt-4">
+                <div className="mt-4 animate-in fade-in duration-300">
                     <label className={labelClasses}>Pin Your Exact Location</label>
                     <p className={isDark ? "text-white/50 text-xs mb-2" : "text-muted-foreground text-xs mb-2"}>
                         Click on the map or drag the marker.
                     </p>
 
-                    {/* Key ensures a new map instance when city changes */}
-                    <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0">
-                        <MapContainer
-                            key={value.city}
-                            center={mapCenter}
-                            zoom={13}
-                            style={{ height: "100%", width: "100%" }}
-                            scrollWheelZoom={true}
-                        >
-                            <TileLayer
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <MapController center={mapCenter} />
-                            <LocationMarker
-                                position={markerPosition}
-                                onPositionChange={handleMarkerPositionChange}
-                                onError={setBoundaryError}
-                                cityCenter={selectedCityCenter}
-                            />
-                        </MapContainer>
+                    <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0 bg-muted/10 flex items-center justify-center">
+                        {/* ARCHITECTURAL FIX:
+                           We use `value.city` as part of the KEY.
+                           This guarantees that if the city changes, React destroys the old map
+                           and creates a brand new one.
+                           The internal LeafletMapInstance handles strict mode cleanup.
+                        */}
+                        <LeafletMapInstance
+                            key={`map-${value.province}-${value.district}-${value.city}`}
+                            center={initialCenter}
+                            targetCenter={targetCenter}
+                            markerPosition={markerPosition}
+                            cityCenter={selectedCityCenter}
+                            onPositionChange={handlePosChange}
+                            onError={setBoundaryError}
+                        />
                     </div>
 
                     {boundaryError && (
