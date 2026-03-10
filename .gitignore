@@ -28,3 +28,9 @@ replay_pid*
 # Maven build artifacts
 target/
 **/target/
+
+node_modules/
+.idea/
+dist/
+build/
+

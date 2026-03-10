@@ -314,7 +314,9 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
 
 
                                 <ReportProblemModalBuyer
-                                    orderId={order.displayOrderId}
+                                    orderId={Number(order.displayOrderId)}
+                                    reporterId={Number(sessionStorage.getItem("id"))}
+                                    reportedId={Number(order.sellerId)}
                                     isOpen={showReportModal}
                                     onClose={() => setShowReportModal(false)}
                                 />

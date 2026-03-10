@@ -11,44 +11,48 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder; // Import PasswordEncoder
 import org.springframework.web.bind.annotation.*;
 
+// Add these imports at the top
+import com.agrolink.indentityanduserservice.services.JwtService;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AdminController {
 
     @Autowired
     private AdminService adminService;
 
     @Autowired
-    private AdminRepository adminRepository; // Inject Repository
+    private AdminRepository adminRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // Inject PasswordEncoder
+    private PasswordEncoder passwordEncoder;
 
-    // Register Endpoint
-    @PostMapping("/register")
-    public ResponseEntity<Admin> registerAdmin(@RequestBody Admin admin) {
-        return ResponseEntity.ok(adminService.registerAdmin(admin));
-    }
+    @Autowired
+    private JwtService jwtService; // 1. Inject your JwtService
 
-    // --- NEW: Login Endpoint ---
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequestAdmin request) {
-        // 1. Find Admin (Handle Optional correctly using .orElse(null))
+        // 1. Find the Admin
         Admin admin = adminRepository.findByUsername(request.getUsername())
                 .orElse(null);
 
-        // 2. Check if Admin exists
-        if (admin == null) {
+        // 2. Validate Credentials
+        if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
 
-        // 3. Check if Password matches
-        if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
-        }
+        // 3. Generate Token
+        // IMPORTANT: If your JwtFilter expects an email to find the user,
+        // you must pass the admin's unique identifier here.
+        String token = jwtService.generateToken(admin.getUsername(), "ROLE_ADMIN", admin.getId());
 
-        // 4. Success
-        return ResponseEntity.ok("Login successful");
+        // 4. Return as a Map so frontend receives JSON
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "username", admin.getUsername(),
+                "role", "ADMIN",
+                "adminId", admin.getId()
+        ));
     }
 }

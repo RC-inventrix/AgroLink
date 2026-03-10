@@ -22,6 +22,7 @@ public class CorsConfig {
         // 2. Allow all standard HTTP methods
         corsConfig.setMaxAge(3600L); // Cache this config for 1 hour
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS" , "PATCH"));
 
         // 3. Allow all headers (Authorization, Content-Type, etc.)
         corsConfig.addAllowedHeader("*");

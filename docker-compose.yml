@@ -205,7 +205,7 @@ services:
     build: ./backend/moderation-service # Path to your new Spring Boot project
     container_name: agro_moderation
     ports:
-      - "8084:8084"
+      - "8086:8086"
     env_file:
       - .env
     environment:

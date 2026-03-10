@@ -73,7 +73,11 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     useEffect(() => {
         const fetchBuyerName = async () => {
             try {
-                const res = await fetch(`http://localhost:8080/auth/user/${order.userId}`);
+                const res = await fetch(`http://localhost:8080/auth/user/${order.userId}`, {
+    headers: {
+        "Authorization": `Bearer ${token}`
+    }
+});
                 if (res.ok) {
                     const userData = await res.json();
                     setBuyerName(userData.fullname || userData.username);
