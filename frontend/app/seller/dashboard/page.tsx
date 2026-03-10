@@ -50,10 +50,6 @@ export default function SellerDashboard() {
 
                 // 1. Fetch User Data / Ban Check
                 const userRes = await fetch(`${baseUrl}/auth/me`, { headers });
-                // Fetch User Data
-                const userRes = await fetch(`${baseUrl}/auth/me`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
                 if (userRes.ok) {
                     const userData = await userRes.json();
                     if (userData.isBanned) {
@@ -63,10 +59,6 @@ export default function SellerDashboard() {
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // Fetch Order Analytics
-                const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
                 // 2. Fetch Private Warnings (Report System)
                 const warnRes = await fetch(`${baseUrl}/api/v1/moderation/user/notifications/${myId}`, { headers });
                 if (warnRes.ok) {
@@ -81,15 +73,6 @@ export default function SellerDashboard() {
                     const annData = await annRes.json();
                     setAnnouncements(annData);
                 }
-                // Fetch All Orders
-                const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                // Fetch Active Products Count
-                const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
                 // 4. Fetch Stats, Orders, and Products
                 const [statsRes, ordersRes, productsRes] = await Promise.all([
                     fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, { headers }),
