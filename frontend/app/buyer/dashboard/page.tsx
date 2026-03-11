@@ -133,37 +133,58 @@ export default function BuyerDashboard() {
             finally { setIsLoadingOrders(false); }
         };
 
-        const syncDashboardData = async () => {
-            try {
-                const res = await fetch(`http://localhost:8083/api/chat/contacts`, { headers });
-                if (res.ok) {
-                    const ids: number[] = await res.json();
-                    if (ids.length === 0) {
-                        setIsLoadingChats(false);
-                        return;
-                    }
+        // Inside your syncDashboardData function within useEffect
+const syncDashboardData = async () => {
+    try {
+        // 1. Get all active chat contacts
+        const res = await fetch(`http://localhost:8083/api/chat/contacts`, { headers });
+        if (res.ok) {
+            const ids: number[] = await res.json();
+            if (ids.length === 0) {
+                setIsLoadingChats(false);
+                setNavUnread(0); // Reset count if no contacts
+                return;
+            }
 
-                    const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${ids.join(',')}`, { headers });
-                    const fullNameMap = nameRes.ok ? await nameRes.json() : {};
+            // 2. Fetch full names and individual unread counts
+            const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${ids.join(',')}`, { headers });
+            const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
-                    const data = await Promise.all(ids.map(async (senderId) => {
-                        const countRes = await fetch(`http://localhost:8083/api/chat/unread-count/${senderId}`, { headers });
-                        const count = countRes.ok ? await countRes.json() : 0;
-                        return { id: senderId, name: fullNameMap[senderId] || `Farmer ${senderId}`, count };
-                    }));
+            const data = await Promise.all(ids.map(async (senderId) => {
+                const countRes = await fetch(`http://localhost:8083/api/chat/unread-count/${senderId}`, { headers });
+                const count = countRes.ok ? await countRes.json() : 0;
+                
+                // Fetch avatar from Auth service user details
+                const userRes = await fetch(`${gatewayUrl}/auth/user/${senderId}`, { headers });
+                const userData = userRes.ok ? await userRes.json() : null;
 
-                    setNavUnread(data.reduce((acc, curr) => acc + curr.count, 0));
-                    setLiveChats(data.slice(0, 3).map(chat => ({
-                        id: chat.id.toString(),
-                        farmer: chat.name,
-                        avatar: "/buyer-dashboard/farmer-portrait.png",
-                        lastMessage: "Open chat to view messages",
-                        unread: chat.count
-                    })));
-                }
-            } catch (err) { console.error("Dashboard sync failed:", err); }
-            finally { setIsLoadingChats(false); }
-        };
+                return { 
+                    id: senderId, 
+                    name: fullNameMap[senderId] || `User ${senderId}`, 
+                    count,
+                    avatar: userData?.AvatarUrl || userData?.avatarUrl || "/buyer-dashboard/farmer-portrait.png"
+                };
+            }));
+
+            // 3. Update the global state that feeds the Dashboard Sidebar
+            const total = data.reduce((acc, curr) => acc + curr.count, 0);
+            setNavUnread(total); 
+
+            // 4. Update the "Recent Chats" card on the dashboard
+            setLiveChats(data.slice(0, 3).map(chat => ({
+                id: chat.id.toString(),
+                farmer: chat.name,
+                avatar: chat.avatar,
+                lastMessage: "Open chat to view messages",
+                unread: chat.count
+            })));
+        }
+    } catch (err) { 
+        console.error("Dashboard sync failed:", err); 
+    } finally { 
+        setIsLoadingChats(false); 
+    }
+};
 
         fetchUserDataAndStatus();
         fetchCartItems();
@@ -174,7 +195,7 @@ export default function BuyerDashboard() {
             syncDashboardData();
             fetchCartItems();
             fetchPendingOrders();
-        }, 60000);
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 

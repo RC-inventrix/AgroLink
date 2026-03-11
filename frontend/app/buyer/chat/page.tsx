@@ -53,6 +53,36 @@ function ChatContent() {
         }
     }, [CHAT_SERVICE_URL]);
 
+
+    const handleDeleteConversation = async (id: string) => {
+    const token = sessionStorage.getItem("token");
+    
+    // 1. Update UI immediately (Optimistic Update)
+    setConversations(prev => prev.filter(conv => conv.id !== id));
+    
+    // 2. Clear view if the currently selected chat was deleted
+    if (selectedConversationId === id) {
+        setSelectedConversationId("");
+        setMessages([]);
+    }
+
+    // 3. Sync with Backend
+    try {
+        // Replace this URL with your specific chat deletion endpoint
+        const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/conversation/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+            console.error("Failed to delete conversation from server");
+            // Optional: Re-fetch contacts if server delete fails to revert UI
+        }
+    } catch (err) {
+        console.error("Error calling delete API:", err);
+    }
+};
+
     // Clear unread counts locally and in DB when chat is opened
     useEffect(() => {
         if (selectedConversationId) {
@@ -80,28 +110,30 @@ function ChatContent() {
     }, [searchParams, isLoading, conversations.length]);
 
     const resolveAndAddContact = async (id: string) => {
-        const token = sessionStorage.getItem("token");
-        try {
-            const res = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${id}`, {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const nameMap = await res.json();
-                const newConv: Conversation = {
-                    id: id,
-                    name: nameMap[id] || "New Contact",
-                    lastMessage: "Start a conversation!",
-                    avatar: "/buyer-dashboard/farmer-portrait.png",
-                    online: false,
-                    timestamp: new Date().toISOString(),
-                    unread: false, 
-                    unreadCount: 0, 
-                    starred: false,
-                };
-                setConversations(prev => prev.some(c => c.id === id) ? prev : [newConv, ...prev]);
-            }
-        } catch (err) { console.error("Failed to resolve contact:", err); }
-    };
+    const token = sessionStorage.getItem("token");
+    try {
+        // Updated to fetch full user object which contains AvatarUrl
+        const res = await fetch(`${AUTH_SERVICE_URL}/auth/user/${id}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const userData = await res.json();
+            const newConv: Conversation = {
+                id: id,
+                name: userData.fullname || "New Contact",
+                lastMessage: "Start a conversation!",
+                // Map the database AvatarUrl to the local avatar_url key
+                avatar_url: userData.AvatarUrl || userData.avatarUrl || "", 
+                online: false,
+                timestamp: new Date().toISOString(),
+                unread: false, 
+                unreadCount: 0, 
+                starred: false,
+            };
+            setConversations(prev => prev.some(c => c.id === id) ? prev : [newConv, ...prev]);
+        }
+    } catch (err) { console.error("Failed to resolve contact:", err); }
+};
 
     // --- 3. WEBSOCKET LOGIC ---
     useEffect(() => {
@@ -155,33 +187,45 @@ function ChatContent() {
 
     // --- 4. FETCH CONTACTS WITH PERSISTED UNREAD COUNTS ---
     useEffect(() => {
-        const fetchContacts = async () => {
-            const token = sessionStorage.getItem("token"); 
-            if (!token) return;
-            try {
-                const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
-                if (res.ok) {
-                    const ids: number[] = await res.json();
-                    const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
-                    const nameMap = nameRes.ok ? await nameRes.json() : {};
+    const fetchContacts = async () => {
+        const token = sessionStorage.getItem("token"); 
+        if (!token) return;
+        try {
+            const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { 
+                headers: { "Authorization": `Bearer ${token}` } 
+            });
+            if (res.ok) {
+                const ids: number[] = await res.json();
+                
+                // Fetch full user objects for all contact IDs
+                const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
+                    const [userRes, unreadRes] = await Promise.all([
+                        fetch(`${AUTH_SERVICE_URL}/auth/user/${id}`, { headers: { "Authorization": `Bearer ${token}` } }),
+                        fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } })
+                    ]);
 
-                    // Logic from seller side: Fetch unread count for each contact from DB
-                    const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
-                        const unreadRes = await fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
-                        const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
-                        return {
-                            id: id.toString(), name: nameMap[id] || `User ${id}`,
-                            lastMessage: "Click to chat", avatar: "/buyer-dashboard/farmer-portrait.png",
-                            online: false, timestamp: new Date().toISOString(), 
-                            unread: dbCount > 0, unreadCount: dbCount, starred: false
-                        };
-                    }));
-                    setConversations(mapped.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-                }
-            } finally { setIsLoading(false); }
-        };
-        fetchContacts();
-    }, [CHAT_SERVICE_URL, AUTH_SERVICE_URL]);
+                    const userData = userRes.ok ? await userRes.json() : null;
+                    const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
+
+                    return {
+                        id: id.toString(),
+                        name: userData?.fullname || `User ${id}`,
+                        lastMessage: "Click to chat",
+                        // Map the Cloudinary URL from the DB
+                        avatar_url: userData?.AvatarUrl || userData?.avatarUrl || "", 
+                        online: false,
+                        timestamp: new Date().toISOString(),
+                        unread: dbCount > 0,
+                        unreadCount: dbCount,
+                        starred: false
+                    };
+                }));
+                setConversations(mapped.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+            }
+        } finally { setIsLoading(false); }
+    };
+    fetchContacts();
+}, [CHAT_SERVICE_URL, AUTH_SERVICE_URL]);
 
     useEffect(() => {
         if (!selectedConversationId) return;
@@ -230,7 +274,7 @@ function ChatContent() {
                 </div>
             ) : (
                 <>
-                    <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={() => {}} />
+                    <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={handleDeleteConversation} />
                     <div className="flex-1 flex flex-col relative bg-white">
                         {activeConversation ? (
                             <div className="flex-1 flex flex-col overflow-y-auto p-4">

@@ -35,7 +35,6 @@ function ChatContent() {
         scrollToBottom();
     }, [messages]);
 
-    // --- 1. SYNC READ STATUS ---
     const syncReadStatus = useCallback(async (senderId: string) => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
@@ -62,37 +61,35 @@ function ChatContent() {
         }
     }, [selectedConversationId, messages.length, syncReadStatus]);
 
-    // --- 2. FIXED: HANDLE URL PARAMETER ---
-    // Changed "userId" to "receiverId" to match your ItemRequestsPage redirect
-    useEffect(() => {
-        const receiverIdFromUrl = searchParams.get("receiverId"); 
-        
-        if (receiverIdFromUrl) {
-            setSelectedConversationId(receiverIdFromUrl);
-            
-            // Check if this contact already exists in the sidebar
-            const exists = conversations.some(conv => conv.id === receiverIdFromUrl);
-            
-            // If they don't exist and we've finished the initial load, add them
-            if (!exists && !isLoading) {
-                resolveAndAddContact(receiverIdFromUrl);
-            }
+    // --- DELETE HANDLER ---
+    const handleDeleteConversation = async (id: string) => {
+        const token = sessionStorage.getItem("token");
+        setConversations(prev => prev.filter(conv => conv.id !== id));
+        if (selectedConversationId === id) {
+            setSelectedConversationId("");
+            setMessages([]);
         }
-    }, [searchParams, isLoading, conversations.length]);
+        try {
+            await fetch(`${CHAT_SERVICE_URL}/api/chat/conversation/${id}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+        } catch (err) { console.error("Soft delete failed:", err); }
+    };
 
     const resolveAndAddContact = async (id: string) => {
         const token = sessionStorage.getItem("token");
         try {
-            const res = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${id}`, {
+            const res = await fetch(`${AUTH_SERVICE_URL}/auth/user/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {
-                const nameMap = await res.json();
+                const userData = await res.json();
                 const newConv: Conversation = {
                     id: id,
-                    name: nameMap[id] || "New Contact",
+                    name: userData.fullname || "New Contact",
                     lastMessage: "Start a conversation!",
-                    avatar: "/buyer-dashboard/farmer-portrait.png",
+                    avatar_url: userData.AvatarUrl || userData.avatarUrl || "",
                     online: false,
                     timestamp: new Date().toISOString(),
                     unread: false, 
@@ -104,7 +101,7 @@ function ChatContent() {
         } catch (err) { console.error("Failed to resolve contact:", err); }
     };
 
-    // --- 3. WEBSOCKET LOGIC ---
+    // WebSocket and Fetch logic remains the same...
     useEffect(() => {
         const socket = new SockJS(`${CHAT_SERVICE_URL}/ws`); 
         const client = new Client({
@@ -116,7 +113,6 @@ function ChatContent() {
                         const newMessage = JSON.parse(message.body);
                         const senderIdStr = newMessage.senderId.toString();
                         const currentActiveId = selectedIdRef.current;
-
                         if (senderIdStr === currentActiveId) {
                             setMessages((prev) => [...prev, { 
                                 id: Date.now().toString(), senderId: newMessage.senderId,
@@ -125,20 +121,15 @@ function ChatContent() {
                             }]);
                             syncReadStatus(senderIdStr); 
                         }
-
                         setConversations((prev) => {
                             const exists = prev.some(c => c.id === senderIdStr);
                             if (!exists) { resolveAndAddContact(senderIdStr); return prev; }
-
                             const updated = prev.map(conv => {
                                 if (conv.id === senderIdStr) {
                                     const isNotOpen = currentActiveId !== senderIdStr;
                                     return { 
-                                        ...conv, 
-                                        lastMessage: newMessage.content, 
-                                        timestamp: newMessage.timestamp,
-                                        unread: isNotOpen,
-                                        unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
+                                        ...conv, lastMessage: newMessage.content, timestamp: newMessage.timestamp,
+                                        unread: isNotOpen, unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
                                     };
                                 }
                                 return conv;
@@ -154,7 +145,6 @@ function ChatContent() {
         return () => { void client.deactivate(); };
     }, [CHAT_SERVICE_URL, syncReadStatus]);
 
-    // --- 4. FETCH CONTACTS & HISTORY ---
     useEffect(() => {
         const fetchContacts = async () => {
             const token = sessionStorage.getItem("token"); 
@@ -163,15 +153,16 @@ function ChatContent() {
                 const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
                 if (res.ok) {
                     const ids: number[] = await res.json();
-                    const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
-                    const nameMap = nameRes.ok ? await nameRes.json() : {};
-
                     const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
-                        const unreadRes = await fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
+                        const [userRes, unreadRes] = await Promise.all([
+                            fetch(`${AUTH_SERVICE_URL}/auth/user/${id}`, { headers: { "Authorization": `Bearer ${token}` } }),
+                            fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } })
+                        ]);
+                        const userData = userRes.ok ? await userRes.json() : null;
                         const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
                         return {
-                            id: id.toString(), name: nameMap[id] || `User ${id}`,
-                            lastMessage: "Click to chat", avatar: "/buyer-dashboard/farmer-portrait.png",
+                            id: id.toString(), name: userData?.fullname || `User ${id}`,
+                            lastMessage: "Click to chat", avatar_url: userData?.AvatarUrl || userData?.avatarUrl || "",
                             online: false, timestamp: new Date().toISOString(), unread: dbCount > 0, unreadCount: dbCount, starred: false
                         };
                     }));
@@ -199,7 +190,6 @@ function ChatContent() {
         fetchHistory();
     }, [selectedConversationId, CHAT_SERVICE_URL]);
 
-    // --- 5. SEND MESSAGE ---
     const handleSendMessage = (content: string) => {
         if (stompClient?.connected && selectedConversationId) {
             const myId = sessionStorage.getItem("id");
@@ -214,10 +204,7 @@ function ChatContent() {
         }
     };
 
-    const activeConversation = conversations.find((conv) => conv.id === selectedConversationId) || (selectedConversationId ? {
-        id: selectedConversationId, name: "Loading...", avatar: "/buyer-dashboard/farmer-portrait.png",
-        unreadCount: 0, lastMessage: "", timestamp: new Date().toISOString(), unread: false, online: false, starred: false
-    } : null);
+    const activeConversation = conversations.find((conv) => conv.id === selectedConversationId);
 
     return (
         <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
@@ -227,7 +214,12 @@ function ChatContent() {
                 </div>
             ) : (
                 <>
-                    <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={() => {}} />
+                    <ConversationList 
+                        conversations={conversations} 
+                        selectedId={selectedConversationId} 
+                        onSelect={setSelectedConversationId} 
+                        onDelete={handleDeleteConversation} // UPDATED
+                    />
                     <div className="flex-1 flex flex-col relative bg-white">
                         {activeConversation ? (
                             <div className="flex-1 flex flex-col overflow-y-auto p-4">

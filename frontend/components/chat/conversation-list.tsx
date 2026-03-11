@@ -25,7 +25,7 @@ export interface Conversation {
   unreadCount: number
   id: string
   name: string
-  avatar?: string
+  avatar_url?: string
   lastMessage: string
   timestamp: string
   unread: boolean
@@ -77,7 +77,7 @@ export function ConversationList({ conversations, selectedId, onSelect, onDelete
                 <div className="relative flex-shrink-0">
                   <div className="h-12 w-12 overflow-hidden rounded-full border shadow-sm bg-muted">
                     <img
-                      src={conv.avatar || "/buyer-dashboard/farmer-portrait.png"}
+                      src={conv.avatar_url || "/buyer-dashboard/farmer-portrait.png"}
                       alt={conv.name}
                       className="h-full w-full object-cover"
                     />
@@ -132,15 +132,15 @@ export function ConversationList({ conversations, selectedId, onSelect, onDelete
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteId(conv.id);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Conversation
-                          </DropdownMenuItem>
+  className="text-destructive focus:text-destructive cursor-pointer"
+  onClick={(e) => {
+    e.stopPropagation(); // Prevents selecting the chat while trying to delete it
+    setDeleteId(conv.id); // Triggers the AlertDialog
+  }}
+>
+  <Trash2 className="mr-2 h-4 w-4" />
+  Delete Conversation
+</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

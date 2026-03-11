@@ -358,24 +358,45 @@ export default function SellerDashboard() {
                         </div>
 
                         {/* Right Column: Notifications */}
-                        <div className="space-y-8">
-                            <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <Bell className="text-gray-400" size={20} />
-                                    <h3 className="font-bold text-gray-800">Notifications</h3>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                                        <p className="text-sm font-medium text-gray-800">New question on 'Fresh Carrots'</p>
-                                        <span className="text-[11px] text-gray-400">2 mins ago</span>
-                                    </div>
-                                    <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                                        <p className="text-sm font-medium text-gray-800">Order #0026 was paid</p>
-                                        <span className="text-[11px] text-gray-400">1 hour ago</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+<div className="space-y-8">
+    <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+                <Bell className="text-gray-400" size={20} />
+                <h3 className="font-bold text-gray-800">Notifications</h3>
+            </div>
+            
+            {/* --- DYNAMIC UNREAD BADGE --- */}
+            {navUnread > 0 && (
+                <Badge className="bg-red-500 text-white border-none rounded-full px-2 py-0.5 text-[10px] animate-pulse">
+                    {navUnread} New
+                </Badge>
+            )}
+        </div>
+
+        <div className="space-y-4">
+            {/* If there are no unread messages and no other notifications, show a fallback */}
+            {navUnread === 0 ? (
+                <div className="py-6 text-center text-gray-400">
+                    <p className="text-sm italic">No new notifications</p>
+                </div>
+            ) : (
+                <>
+                    {/* You can map your specific notification data here */}
+                    <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                        <p className="text-sm font-medium text-gray-800">You have {navUnread} unread message{navUnread > 1 ? 's' : ''}</p>
+                        <span className="text-[11px] text-gray-400">Just now</span>
+                        <Link href="/seller/chat">
+                            <Button variant="link" className="p-0 h-auto text-xs text-[#03230F] mt-1">View Messages</Button>
+                        </Link>
+                    </div>
+                </>
+            )}
+            
+            
+        </div>
+    </div>
+</div>
                     </div>
                 </main>
             </div>

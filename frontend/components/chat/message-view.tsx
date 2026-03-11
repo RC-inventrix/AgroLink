@@ -63,7 +63,7 @@ const initials = (conversation.name || "??")
         <div className="flex items-center gap-3">
           <div className="relative">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={conversation.avatar || "/placeholder.svg"} />
+              <AvatarImage src={conversation.avatar_url || "/placeholder.svg"} />
               <AvatarFallback className="bg-[#2d5016] text-white">{initials}</AvatarFallback>
             </Avatar>
             {conversation.online && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />}

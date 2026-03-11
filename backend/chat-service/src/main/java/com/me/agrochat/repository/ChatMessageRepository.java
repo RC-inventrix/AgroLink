@@ -19,7 +19,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     // 2. Fetch unique users the current user has conversations with
     @Query("SELECT DISTINCT CASE WHEN m.senderId = :userId THEN m.recipientId ELSE m.senderId END " +
-            "FROM ChatMessage m WHERE m.senderId = :userId OR m.recipientId = :userId")
+            "FROM ChatMessage m WHERE " +
+            "(m.senderId = :userId AND m.deletedBySender = false) OR " +
+            "(m.recipientId = :userId AND m.deletedByRecipient = false)")
     List<Long> findDistinctConversationPartners(@Param("userId") Long userId);
 
     // 3. Mark messages as read
