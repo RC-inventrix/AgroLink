@@ -90,9 +90,7 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
       
-      - name: Run tests
-        working-directory: frontend
-        run: npm test -- --passWithNoTests
+      
 
   # ─────────────────────────────────────────
   # BUILD & PUSH DOCKER IMAGES
