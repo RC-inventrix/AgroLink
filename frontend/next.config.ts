@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    output: 'standalone',
     // 1. Allow images from AWS S3
     images: {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'agrolink-dev-images.s3.ap-south-1.amazonaws.com',
+                hostname: process.env.NEXT_PUBLIC_S3_HOSTNAME || 'agrolink-dev-images.s3.ap-south-1.amazonaws.com',
                 port: '',
                 pathname: '/**',
             },
@@ -18,11 +19,11 @@ const nextConfig: NextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://localhost:8080/:path*',
+                destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/:path*`,
             },
             {
                 source: '/auth/:path*',
-                destination: 'http://localhost:8080/auth/:path*',
+                destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/auth/:path*`,
             },
         ];
     },
