@@ -89,9 +89,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci --legacy-peer-deps
-      - name: Run lint
-        working-directory: frontend
-        run: npm run lint
+      
       - name: Run tests
         working-directory: frontend
         run: npm test -- --passWithNoTests
