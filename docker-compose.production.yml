@@ -45,7 +45,7 @@ services:
     build:
       context: ./backend/service-discovery
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/service-discovery:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/service-discovery:${IMAGE_TAG}
     container_name: agro_discovery
     restart: unless-stopped
     ports:
@@ -68,7 +68,7 @@ services:
     build:
       context: ./backend/config-server
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/config-server:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/config-server:${IMAGE_TAG}
     container_name: agro_config
     restart: unless-stopped
     ports:
@@ -95,7 +95,7 @@ services:
     build:
       context: ./backend/identityAndUser-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/identity-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/identity-service:${IMAGE_TAG}
     container_name: agro_identity
     restart: unless-stopped
     ports:
@@ -136,7 +136,7 @@ services:
     build:
       context: ./backend/productCatalog-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/product-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/product-service:${IMAGE_TAG}
     container_name: agro_products
     restart: unless-stopped
     ports:
@@ -179,7 +179,7 @@ services:
     build:
       context: ./backend/orderPayment-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/order-payment-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/order-payment-service:${IMAGE_TAG}
     container_name: agro_orders
     restart: unless-stopped
     ports:
@@ -221,7 +221,7 @@ services:
     build:
       context: ./backend/chat-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/chat-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/chat-service:${IMAGE_TAG}
     container_name: agro_chat
     restart: unless-stopped
     ports:
@@ -259,7 +259,7 @@ services:
     build:
       context: ./backend/auction-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/auction-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/auction-service:${IMAGE_TAG}
     container_name: agro_auction
     restart: unless-stopped
     ports:
@@ -295,7 +295,7 @@ services:
     build:
       context: ./backend/moderation-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/moderation-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/moderation-service:${IMAGE_TAG}
     container_name: agro_moderation
     restart: unless-stopped
     ports:
@@ -332,7 +332,7 @@ services:
     build:
       context: ./backend/chatbot-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/chatbot-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/chatbot-service:${IMAGE_TAG}
     container_name: agro_chatbot
     restart: unless-stopped
     ports:
@@ -361,7 +361,7 @@ services:
     build:
       context: ./backend/crop-recommendation-service
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/crop-recommendation-service:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/crop-recommendation-service:${IMAGE_TAG}
     container_name: agro_crop_recommendation
     restart: unless-stopped
     ports:
@@ -384,7 +384,7 @@ services:
     build:
       context: ./backend/api-gateway
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/api-gateway:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/api-gateway:${IMAGE_TAG}
     container_name: agro_gateway
     restart: unless-stopped
     ports:
@@ -417,7 +417,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-agrolink/agrolink}/frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG}
     container_name: agro_frontend
     restart: unless-stopped
     ports:
