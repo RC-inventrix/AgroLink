@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export default function OrderSuccessPage() {
+// 1. We move the logic into a separate "inner" component
+function OrderSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -41,41 +42,52 @@ export default function OrderSuccessPage() {
   }
 
   return (
+    <div className="w-full max-w-md">
+      <div className="bg-card rounded-lg shadow-lg p-8 text-center border">
+        {/* Success icon */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-green-100 rounded-full opacity-50 animate-pulse"></div>
+            <CheckCircle className="w-20 h-20 text-[#03230F] relative z-10" strokeWidth={1.5} />
+          </div>
+        </div>
+
+        {/* Success heading */}
+        <h2 className="text-3xl font-bold text-foreground mb-3">Order Confirmed!</h2>
+
+        {/* Description */}
+        <p className="text-muted-foreground mb-8 text-base leading-relaxed">
+          Thank you for your purchase. Your order has been successfully logged and sent to the farmers for processing.
+        </p>
+
+        {/* Dashboard button */}
+        <Button
+          onClick={handleGoToDashboard}
+          className="w-full bg-[#03230F] hover:bg-[#03230F]/90 text-white font-semibold py-6 rounded-lg transition-all"
+          size="lg"
+        >
+          Go to Dashboard
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// 2. We export the main page, wrapping the inner component safely in Suspense
+export default function OrderSuccessPage() {
+  return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       {/* Dark header */}
       <div className="absolute top-0 left-0 right-0 h-16 bg-primary shadow-sm flex items-center px-6">
         <h1 className="text-2xl font-bold text-primary-foreground">AgroLink</h1>
       </div>
 
-      {/* Success card */}
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-lg shadow-lg p-8 text-center border">
-          {/* Success icon */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-green-100 rounded-full opacity-50 animate-pulse"></div>
-              <CheckCircle className="w-20 h-20 text-[#03230F] relative z-10" strokeWidth={1.5} />
-            </div>
-          </div>
-
-          {/* Success heading */}
-          <h2 className="text-3xl font-bold text-foreground mb-3">Order Confirmed!</h2>
-
-          {/* Description */}
-          <p className="text-muted-foreground mb-8 text-base leading-relaxed">
-            Thank you for your purchase. Your order has been successfully logged and sent to the farmers for processing.
-          </p>
-
-          {/* Dashboard button */}
-          <Button
-            onClick={handleGoToDashboard}
-            className="w-full bg-[#03230F] hover:bg-[#03230F]/90 text-white font-semibold py-6 rounded-lg transition-all"
-            size="lg"
-          >
-            Go to Dashboard
-          </Button>
-        </div>
-      </div>
+      {/* This is what Next.js demands! We wrap the component that uses searchParams 
+        in a Suspense boundary so the build process doesn't crash.
+      */}
+      <Suspense fallback={<div className="text-center font-medium">Loading order details...</div>}>
+        <OrderSuccessContent />
+      </Suspense>
     </div>
   )
 }
