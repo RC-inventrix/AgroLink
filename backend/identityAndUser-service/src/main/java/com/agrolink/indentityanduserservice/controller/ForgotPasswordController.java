@@ -7,6 +7,7 @@ import com.agrolink.indentityanduserservice.repository.ForgotPasswordRepository;
 import com.agrolink.indentityanduserservice.repository.UserRepository;
 import com.agrolink.indentityanduserservice.services.EmailService;
 import com.agrolink.indentityanduserservice.utils.ChangePassword;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -36,6 +37,7 @@ public class ForgotPasswordController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    @Transactional
     @PostMapping("/verifyMail/{email}")
     public ResponseEntity<String> verifyEmail(@PathVariable String email) {
         try {
@@ -67,7 +69,7 @@ public class ForgotPasswordController {
             // Returns a clean string error instead of raw JSON
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while sending email.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while sending email." + e.getMessage());
         }
     }
 

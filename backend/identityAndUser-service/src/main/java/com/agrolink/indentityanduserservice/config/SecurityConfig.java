@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(
+                                "/forgotPassword/**",
                                 "/auth/register",
                                 "/auth/login",
                                 "/auth/count/**",
@@ -40,6 +41,7 @@ public class SecurityConfig {
                                 "/api/admin/register",
                                 "/api/admin/login",
                                 "/h2-console/**"
+
                         ).permitAll()
 
                         // Protected endpoints (Requires Token)

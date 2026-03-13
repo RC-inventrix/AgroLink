@@ -10,21 +10,23 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 
-@NoArgsConstructor(force = true)
+
 @Service
 public class EmailService {
 
 
-    @Value("${spring.mail.username}")
+
     private final String email;
 
-    @Autowired
+
     private final JavaMailSender javaMailSender;
 
-    public EmailService(String email, JavaMailSender javaMailSender) {
+    public EmailService(@Value("${spring.mail.username}") String email, JavaMailSender javaMailSender) {
         this.email = email;
         this.javaMailSender = javaMailSender;
     }
+
+
 
     public void sendSimpleMessage(MailBody mailBody){
         SimpleMailMessage message = new SimpleMailMessage();
@@ -33,7 +35,6 @@ public class EmailService {
         message.setSubject(mailBody.subject());
         message.setText(mailBody.text());
 
-        assert javaMailSender != null;
         javaMailSender.send(message);
 
 

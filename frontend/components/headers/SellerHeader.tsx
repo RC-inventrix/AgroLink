@@ -129,7 +129,7 @@ export default function SellerHeader() {
             )}
 
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <Link href="/seller/dashboard">
                         <Image src={logo} alt="AgroLink Logo" priority className="w-auto h-12" />
                     </Link>
