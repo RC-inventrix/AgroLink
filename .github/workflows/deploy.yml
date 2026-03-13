@@ -203,13 +203,16 @@ jobs:
             # Securely log into GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            # Pull latest images and restart services
+            # Convert GitHub repository name to strictly lowercase for Docker
+            REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+            # Pull latest images and restart services using the lowercase name
             IMAGE_TAG="${{ github.sha }}" \
-            GITHUB_REPOSITORY="${{ github.repository }}" \
+            GITHUB_REPOSITORY="${REPO_LOWER}" \
             docker compose -f docker-compose.production.yml pull
 
             IMAGE_TAG="${{ github.sha }}" \
-            GITHUB_REPOSITORY="${{ github.repository }}" \
+            GITHUB_REPOSITORY="${REPO_LOWER}" \
             docker compose -f docker-compose.production.yml up -d --remove-orphans
 
             # Clean up old images to save space
