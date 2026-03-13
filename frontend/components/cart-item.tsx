@@ -34,7 +34,8 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                     id={`item-${item.id}`}
                     checked={item.selected}
                     onCheckedChange={() => onToggle(item.id)}
-                    className="mt-1"
+                    className="mt-1 border-gray-500"
+                     
                 />
             </div>
 

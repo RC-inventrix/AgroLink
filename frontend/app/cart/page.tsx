@@ -169,6 +169,7 @@ export default function Cart() {
                                     id="select-all"
                                     checked={items.length > 0 && selectedItems.length === items.length}
                                     onCheckedChange={handleSelectAll}
+                                    className="border-gray-500"
                                 />
                                 <label htmlFor="select-all" className="cursor-pointer font-bold text-gray-700 text-sm uppercase tracking-wider">
                                     Select All Items ({items.length})

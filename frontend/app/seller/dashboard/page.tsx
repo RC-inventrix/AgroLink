@@ -299,19 +299,7 @@ export default function SellerDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-8">
                             {/* AI Insights Card */}
-                            <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Sparkles className="text-[#EEC044]" size={20} />
-                                    <h3 className="font-bold text-gray-800">AI Smart Insight</h3>
-                                </div>
-                                <div className="flex items-center gap-6 bg-green-50 p-4 rounded-2xl">
-                                    <div className="text-4xl">🌱</div>
-                                    <div>
-                                        <h4 className="font-bold text-[#03230F]">Best to grow: Red Onions</h4>
-                                        <p className="text-sm text-gray-600">Based on upcoming rainy weather patterns in your region.</p>
-                                    </div>
-                                </div>
-                            </div>
+                            
 
                             {/* Pending Orders List */}
                             {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
