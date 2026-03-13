@@ -25,7 +25,7 @@ const navItems = [
 export function Sidebar() {
   const [navUnread, setNavUnread] = useState(0);
   const pathname = usePathname();
-  const baseUrl = "http://localhost:8083";
+  const baseUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
   const pathnameRef = useRef(pathname);
 
   useEffect(() => {

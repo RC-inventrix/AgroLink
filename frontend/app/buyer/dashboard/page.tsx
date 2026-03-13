@@ -45,7 +45,7 @@ export default function BuyerDashboard() {
     const [pendingOrders, setPendingOrders] = useState<any[]>([])
     const [isLoadingOrders, setIsLoadingOrders] = useState(true)
 
-    const gatewayUrl = "http://localhost:8080"
+    const gatewayUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -129,7 +129,7 @@ export default function BuyerDashboard() {
 
         const syncDashboardData = async () => {
             try {
-                const res = await fetch(`http://localhost:8083/api/chat/contacts`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"}/api/chat/contacts`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -146,7 +146,7 @@ export default function BuyerDashboard() {
                     const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
                     const data = await Promise.all(ids.map(async (senderId) => {
-                        const countRes = await fetch(`http://localhost:8083/api/chat/unread-count/${senderId}`, {
+                        const countRes = await fetch(`${process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"}/api/chat/unread-count/${senderId}`, {
                             headers: { "Authorization": `Bearer ${token}` }
                         });
                         const count = countRes.ok ? await countRes.json() : 0;

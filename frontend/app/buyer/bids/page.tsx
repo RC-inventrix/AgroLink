@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { toast, Toaster } from 'sonner';
 import BuyerHeader from '@/components/headers/BuyerHeader';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // --- Types (Matched with Backend DTO) ---
 
 interface DeliveryAddress {
@@ -209,7 +211,7 @@ const BidAgainModal = ({
                 return;
             }
 
-            const res = await fetch(`http://localhost:8080/api/auctions/${auction.auctionId}/bids`, {
+            const res = await fetch(`${API_URL}/api/auctions/${auction.auctionId}/bids`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -525,7 +527,7 @@ export default function MyBidsDashboard() {
             // Set for child components to use
             setCurrentUserId(parseInt(buyerId, 10));
 
-            const response = await fetch(`http://localhost:8080/api/auctions/buyer/${buyerId}`, {
+            const response = await fetch(`${API_URL}/api/auctions/buyer/${buyerId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 

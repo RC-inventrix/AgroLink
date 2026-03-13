@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import SellerHeader from "@/components/headers/SellerHeader"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // --- TYPES ---
 interface UserProfile {
     id: number;
@@ -68,7 +70,7 @@ export default function GenericProfilePage() {
             
             try {
                 // 2. Fetch User Basic Info
-                const userRes = await fetch(`http://localhost:8080/auth/user/${userId}`, {
+                const userRes = await fetch(`${API_URL}/auth/user/${userId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (userRes.ok) {
@@ -76,7 +78,7 @@ export default function GenericProfilePage() {
                 }
 
                 // 3. Fetch Rating Stats (Backend Calculation)
-                const statsRes = await fetch(`http://localhost:8080/api/reviews/stats/user/${userId}?role=${profileRole}`, {
+                const statsRes = await fetch(`${API_URL}/api/reviews/stats/user/${userId}?role=${profileRole}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (statsRes.ok) {
@@ -84,7 +86,7 @@ export default function GenericProfilePage() {
                 }
 
                 // 4. Fetch Reviews List
-                const reviewRes = await fetch(`http://localhost:8080/api/reviews/user/${userId}?role=${profileRole}`, {
+                const reviewRes = await fetch(`${API_URL}/api/reviews/user/${userId}?role=${profileRole}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -99,7 +101,7 @@ export default function GenericProfilePage() {
 
                     if (uniqueIds.length > 0) {
                         const namesQuery = uniqueIds.join(",");
-                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${namesQuery}`, {
+                        const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${namesQuery}`, {
                             headers: { "Authorization": `Bearer ${token}` }
                         });
                         

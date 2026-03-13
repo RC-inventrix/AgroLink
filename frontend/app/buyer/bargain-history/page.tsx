@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
 import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
@@ -48,7 +50,7 @@ export default function BuyerBargainPage() {
 
         const fetchBargains = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
+                const response = await fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`)
 
                 if (response.ok) {
                     const data = await response.json()
@@ -106,7 +108,7 @@ export default function BuyerBargainPage() {
 
     const handleRemoveFromUI = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
+            const res = await fetch(`${API_URL}/api/bargains/${id}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -170,7 +172,7 @@ export default function BuyerBargainPage() {
         }
 
         try {
-            const res = await fetch("http://localhost:8080/cart/add", {
+            const res = await fetch(`${API_URL}/cart/add`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

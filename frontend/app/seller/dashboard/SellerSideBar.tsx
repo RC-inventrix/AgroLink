@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare, Book, Timer } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface SellerSidebarProps {
     unreadCount: number;
     orderCount?: number;
@@ -27,12 +29,12 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
 
             try {
                 // 1. Fetch Open Requirements
-                const reqRes = await fetch(`http://localhost:8080/api/requirements/status/OPEN`, {
+                const reqRes = await fetch(`${API_URL}/api/requirements/status/OPEN`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
                 // 2. Fetch Seller's existing offers
-                const offerRes = await fetch(`http://localhost:8080/api/offers/seller/${sellerId}`, {
+                const offerRes = await fetch(`${API_URL}/api/offers/seller/${sellerId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 

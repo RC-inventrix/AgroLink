@@ -136,6 +136,9 @@ jobs:
             context: backend/api-gateway
           - name: frontend
             context: frontend
+            build_args: |
+              NEXT_PUBLIC_API_URL=https://api.getagrolink.me
+              NEXT_PUBLIC_CHAT_URL=https://chat.getagrolink.me
     steps:
       - uses: actions/checkout@v4
 
@@ -165,6 +168,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ matrix.service.build_args }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

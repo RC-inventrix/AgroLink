@@ -15,6 +15,8 @@ import {
 import { useRouter } from "next/navigation"
 import '../dashboard/SellerDashboard.css';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 
 interface Requirement {
     id: number;
@@ -61,15 +63,15 @@ const ItemRequestsPage = () => {
         try {
             // 1. Fetch BOTH OPEN and FULFILLED requirements to ensure accepted deals show up
             const [openRes, fulfilledRes] = await Promise.all([
-                fetch(`http://localhost:8080/api/requirements/status/OPEN`, { 
+                fetch(`${API_URL}/api/requirements/status/OPEN`, { 
                     headers: { "Authorization": `Bearer ${token}` } 
                 }),
-                fetch(`http://localhost:8080/api/requirements/status/FULFILLED`, { 
+                fetch(`${API_URL}/api/requirements/status/FULFILLED`, { 
                     headers: { "Authorization": `Bearer ${token}` } 
                 })
             ]);
             
-            const offerRes = await fetch(`http://localhost:8080/api/offers/seller/${sellerId}`, {
+            const offerRes = await fetch(`${API_URL}/api/offers/seller/${sellerId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
 
@@ -94,7 +96,7 @@ const ItemRequestsPage = () => {
 
                 const uniqueBuyerIds = Array.from(new Set(combinedReqs.map(r => r.buyerId)));
                 if (uniqueBuyerIds.length > 0) {
-                    const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueBuyerIds.join(',')}`, {
+                    const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${uniqueBuyerIds.join(',')}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (nameRes.ok) {
@@ -153,7 +155,7 @@ const ItemRequestsPage = () => {
         };
 
         try {
-            const res = await fetch(`http://localhost:8080/api/offers/create`, {
+            const res = await fetch(`${API_URL}/api/offers/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify(payload)

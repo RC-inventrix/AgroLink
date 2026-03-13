@@ -21,7 +21,7 @@ import SockJS from 'sockjs-client'
 export function DashboardHeader() {
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0); // Dynamic unread message count
-  const chatBaseUrl = "http://localhost:8083";
+  const chatBaseUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
   // 1. WebSocket & Initial Fetch Logic
   useEffect(() => {

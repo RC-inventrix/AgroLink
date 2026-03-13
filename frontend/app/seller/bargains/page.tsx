@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
 import { Loader2, Leaf } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // Updated Interface to include logistics and map data
 interface BargainRequestUI {
     id: string
@@ -41,7 +43,7 @@ export default function BargainPage() {
 
         const fetchBargains = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
+                const response = await fetch(`${API_URL}/api/bargains/seller/${currentSellerId}`)
                 if (response.ok) {
                     const data = await response.json()
 
@@ -87,7 +89,7 @@ export default function BargainPage() {
     // Handle Accept
     const handleAcceptDeal = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
+            const response = await fetch(`${API_URL}/api/bargains/${id}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: "ACCEPTED" })
@@ -106,7 +108,7 @@ export default function BargainPage() {
     // Handle Reject
     const handleRejectRequest = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
+            const response = await fetch(`${API_URL}/api/bargains/${id}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: "REJECTED" })
