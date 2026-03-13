@@ -10,6 +10,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
+RUN npm install axios date-fns react-markdown tailwindcss-animate --legacy-peer-deps
 COPY . .
 
 # Build the Next.js application (standalone output configured in next.config.ts)
