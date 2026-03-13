@@ -205,13 +205,16 @@ jobs:
 
             # Convert GitHub repository name to strictly lowercase for Docker
             REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            
+            # Trim the 40-character commit ID down to 7 characters to match the Docker tags
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
-            # Pull latest images and restart services using the lowercase name
-            IMAGE_TAG="${{ github.sha }}" \
+            # Pull latest images and restart services using the short tag
+            IMAGE_TAG="${SHORT_SHA}" \
             GITHUB_REPOSITORY="${REPO_LOWER}" \
             docker compose -f docker-compose.production.yml pull
 
-            IMAGE_TAG="${{ github.sha }}" \
+            IMAGE_TAG="${SHORT_SHA}" \
             GITHUB_REPOSITORY="${REPO_LOWER}" \
             docker compose -f docker-compose.production.yml up -d --remove-orphans
 
