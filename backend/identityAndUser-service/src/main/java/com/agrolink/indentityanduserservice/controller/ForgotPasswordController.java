@@ -46,13 +46,10 @@ public class ForgotPasswordController {
 
             // Clear old OTPs to prevent duplicate key errors
             forgotPasswordRepository.deleteByUser(user);
+            forgotPasswordRepository.flush();
 
             int otp = otpGenerator();
-            MailBody mailBody = MailBody.builder()
-                    .to(email)
-                    .text("This is the OTP for password reset : " + otp)
-                    .subject("Otp for password reset")
-                    .build();
+            emailService.sendHtmlOtpMessage(email, "AgroLink: Password Reset OTP", otp);
 
             ForgotPassword fp = ForgotPassword.builder()
                     .otp(otp)
@@ -61,7 +58,7 @@ public class ForgotPasswordController {
                     .user(user)
                     .build();
 
-            emailService.sendSimpleMessage(mailBody);
+
             forgotPasswordRepository.save(fp);
 
             return ResponseEntity.ok("Email sent for verification");
