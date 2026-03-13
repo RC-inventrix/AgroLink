@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export function CheckoutPage() {
     const [cartItems, setCartItems] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
@@ -39,7 +41,7 @@ export function CheckoutPage() {
 
             try {
                 // Adjust this URL to match your identity service's endpoint
-                const response = await fetch(`http://localhost:8080/auth/user/${userId}`, {
+                const response = await fetch(`${API_URL}/auth/user/${userId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -94,7 +96,7 @@ export function CheckoutPage() {
             if (paymentMethod === "cash") {
                 const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
-                const response = await fetch(`http://localhost:8080/api/payment/cod?userId=${userId}`, {
+                const response = await fetch(`${API_URL}/api/payment/cod?userId=${userId}`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -116,7 +118,7 @@ export function CheckoutPage() {
             }
 
             // STRIPE OPTION
-            const response = await fetch(`http://localhost:8080/api/payment/create-checkout-session?userId=${userId}`, {
+            const response = await fetch(`${API_URL}/api/payment/create-checkout-session?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
             })

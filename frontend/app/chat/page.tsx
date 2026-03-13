@@ -44,7 +44,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [stompClient, setStompClient] = useState<any>(null)
 
-  const baseUrl = "http://localhost:8083"
+  const baseUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"
   const selectedIdRef = useRef(selectedConversationId);
   
   // Ref for Auto-Scrolling
@@ -160,7 +160,7 @@ export default function ChatPage() {
         
         if (res.ok) {
           const ids: number[] = await res.json();
-          const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${ids.join(',')}`, {
+          const nameRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/auth/fullnames?ids=${ids.join(',')}`, {
             method: "GET", headers: { "Authorization": `Bearer ${token}` }
           });
           const fullNameMap = nameRes.ok ? await nameRes.json() : {};

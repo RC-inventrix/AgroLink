@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +12,8 @@ import { toast, Toaster } from "sonner"
 import BuyerHeader from "./headers/BuyerHeader"
 import Link from "next/link"
 import ReportProblemModalBuyer from "./buyers/reportProblemModelBuyer"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // --- HELPER COMPONENT: STAR RATING ---
 function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
@@ -41,7 +44,7 @@ function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
         const fetchReason = async () => {
             try {
                 const token = sessionStorage.getItem("token");
-                const res = await fetch(`http://localhost:8080/api/buyer/orders/cancellation-detail/${orderId}`, {
+                const res = await fetch(`${API_URL}/api/buyer/orders/cancellation-detail/${orderId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -91,7 +94,7 @@ interface OrderItem {
 export function OrderHistoryClient() {
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
-    const gatewayUrl = "http://localhost:8080"
+    const gatewayUrl = API_URL
 
     useEffect(() => {
         fetchOrders()
@@ -239,7 +242,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
         const token = sessionStorage.getItem("token");
 
         try {
-            const res = await fetch(`http://localhost:8080/api/reviews/${order.displayOrderId}?userId=${userId}`, {
+            const res = await fetch(`${gatewayUrl}/api/reviews/${order.displayOrderId}?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ rating, comment })

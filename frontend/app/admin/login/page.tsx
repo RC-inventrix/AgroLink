@@ -6,6 +6,8 @@ import Image from "next/image"
 import axios from "axios"
 import { Eye, EyeOff, Lock, User } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function AdminLogin() {
   const router = useRouter()
   
@@ -30,7 +32,7 @@ export default function AdminLogin() {
 
     try {
       // Backend URL එක (Port 8081)
-      const response = await axios.post("http://localhost:8081/api/admin/login", {
+      const response = await axios.post(`${API_URL}/api/admin/login`, {
         username: formData.username,
         password: formData.password,
       })

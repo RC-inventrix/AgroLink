@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { XCircle, Upload, AlertTriangle, X } from "lucide-react"
 import { toast } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 const ISSUE_TYPES = [
   { id: "FAKE_OR_MISLEADING_PRODUCE", label: "Fake or Misleading Produce" },
   { id: "INCORRECT_WEIGHT_OR_QUANTITY", label: "Incorrect Weight/Quantity" },
@@ -66,7 +68,7 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
       const uploadPromises = files.map(file => uploadToCloudinary(file));
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      const response = await fetch("http://localhost:8080/api/v1/moderation/user/report", {
+      const response = await fetch(`${API_URL}/api/v1/moderation/user/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

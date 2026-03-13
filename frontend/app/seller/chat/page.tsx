@@ -18,8 +18,8 @@ function ChatContent() {
     const [isLoading, setIsLoading] = useState(true)
     const [stompClient, setStompClient] = useState<any>(null)
 
-    const AUTH_SERVICE_URL = "http://localhost:8080"; 
-    const CHAT_SERVICE_URL = "http://localhost:8083"; 
+    const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"; 
+    const CHAT_SERVICE_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"; 
     
     const selectedIdRef = useRef("");
     useEffect(() => {

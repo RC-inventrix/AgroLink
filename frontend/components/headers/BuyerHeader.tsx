@@ -25,8 +25,8 @@ export default function DashboardHeader() {
     const dropdownRef = useRef<HTMLDivElement>(null)
     const notifRef = useRef<HTMLDivElement>(null)
 
-    const chatBaseUrl = "http://localhost:8083"
-    const orderBaseUrl = "http://localhost:8080" 
+    const chatBaseUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"
+    const orderBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080" 
     const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
 
     // --- NEW: Handle Notification Click ---

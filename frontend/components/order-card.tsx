@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // --- HELPER COMPONENT: STAR RATING ---
 function StarRating({ rating, setRating, interactive = false }: { rating: number, setRating?: (r: number) => void, interactive?: boolean }) {
     return (
@@ -73,7 +75,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     useEffect(() => {
         const fetchBuyerName = async () => {
             try {
-                const res = await fetch(`http://localhost:8080/auth/user/${order.userId}`);
+                const res = await fetch(`${API_URL}/auth/user/${order.userId}`);
                 if (res.ok) {
                     const userData = await res.json();
                     setBuyerName(userData.fullname || userData.username);
@@ -96,8 +98,8 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         setIsVerifying(true);
         try {
             const endpoint = isOfferOrder
-                ? `http://localhost:8080/api/offers/${order.id}/verify-otp`
-                : `http://localhost:8080/api/seller/orders/${order.id}/verify-otp`;
+                ? `${API_URL}/api/offers/${order.id}/verify-otp`
+                : `${API_URL}/api/seller/orders/${order.id}/verify-otp`;
 
             const res = await fetch(endpoint, {
                 method: "POST",
@@ -126,7 +128,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         }
         setIsCancelling(true);
         try {
-            const res = await fetch(`http://localhost:8080/api/seller/orders/${order.id}/cancel`, {
+            const res = await fetch(`${API_URL}/api/seller/orders/${order.id}/cancel`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ reason: cancelReason })
@@ -146,7 +148,7 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
         setIsSubmittingReview(true);
         try {
             const userId = sessionStorage.getItem("id");
-            const res = await fetch(`http://localhost:8080/api/reviews/${order.id}?userId=${userId}`, {
+            const res = await fetch(`${API_URL}/api/reviews/${order.id}?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ rating: reviewRating, comment: reviewComment })

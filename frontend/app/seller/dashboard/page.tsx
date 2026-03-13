@@ -24,8 +24,8 @@ export default function SellerDashboard() {
         activeListingsCount: 0
     });
 
-    const baseUrl = "http://localhost:8080";
-    const chatUrl = "http://localhost:8083";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -277,7 +277,7 @@ function CropRecommendationCard() {
         setError(null);
 
         try {
-            const response = await fetch("http://localhost:8080/api/crop/recommend", {
+            const response = await fetch(`${baseUrl}/api/crop/recommend`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

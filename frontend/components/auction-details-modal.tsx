@@ -14,6 +14,8 @@ import { AlertCircle, Clock, TrendingUp, MapPin, Truck, Calendar, Hourglass, Pla
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface AuctionDetailsModalProps {
     isOpen: boolean
     auction: any | null
@@ -52,7 +54,7 @@ export function AuctionDetailsModal({
             setFetchedDetails(null);
             const fetchFullDetails = async () => {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/auctions/${auction.id}`, {
+                    const res = await fetch(`${API_URL}/api/auctions/${auction.id}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (res.ok) {
@@ -180,7 +182,7 @@ export function AuctionDetailsModal({
         setIsStartingNow(true);
         setError(null);
         try {
-            const res = await fetch(`http://localhost:8080/api/auctions/${displayData.id}/start-now`, {
+            const res = await fetch(`${API_URL}/api/auctions/${displayData.id}/start-now`, {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${token}` }
             });
@@ -218,7 +220,7 @@ export function AuctionDetailsModal({
         }
 
         try {
-            const res = await fetch(`http://localhost:8080/api/auctions/${displayData.id}/time`, {
+            const res = await fetch(`${API_URL}/api/auctions/${displayData.id}/time`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
@@ -253,7 +255,7 @@ export function AuctionDetailsModal({
         setError(null)
         try {
             const res = await fetch(
-                `http://localhost:8080/api/auctions/${displayData.id}/reserve-price`,
+                `${API_URL}/api/auctions/${displayData.id}/reserve-price`,
                 {
                     method: "PATCH",
                     headers: {
@@ -283,7 +285,7 @@ export function AuctionDetailsModal({
         setError(null)
         try {
             const res = await fetch(
-                `http://localhost:8080/api/auctions/${displayData.id}/end-early`,
+                `${API_URL}/api/auctions/${displayData.id}/end-early`,
                 {
                     method: "POST",
                     headers: { Authorization: `Bearer ${token}` },
@@ -310,7 +312,7 @@ export function AuctionDetailsModal({
         setError(null)
         try {
             const res = await fetch(
-                `http://localhost:8080/api/auctions/${displayData.id}/cancel`,
+                `${API_URL}/api/auctions/${displayData.id}/cancel`,
                 {
                     method: "POST",
                     headers: { Authorization: `Bearer ${token}` },

@@ -8,13 +8,15 @@ import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner" // 1. Import Toaster
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function Home() {
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch("http://localhost:8080/api/seller/orders")
+            const res = await fetch(`${API_URL}/api/seller/orders`)
             if (res.ok) {
                 const data = await res.json()
                 setOrders(data)

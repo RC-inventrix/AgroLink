@@ -9,6 +9,8 @@ import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface CartItemData {
     id: number
     productId: number
@@ -47,7 +49,7 @@ export default function Cart() {
         const fetchCart = async () => {
             const userId = sessionStorage.getItem("id") || "1"
             try {
-                const res = await fetch(`http://localhost:8080/cart/${userId}`)
+                const res = await fetch(`${API_URL}/cart/${userId}`)
                 if (res.ok) {
                     const data = await res.json()
                     const mappedItems = data.map((item: any) => ({
@@ -85,7 +87,7 @@ export default function Cart() {
     const handleDeleteItem = async (id: string) => {
         setDeletingId(id);
         try {
-            const res = await fetch(`http://localhost:8080/cart/delete/${id}`, {
+            const res = await fetch(`${API_URL}/cart/delete/${id}`, {
                 method: 'DELETE',
             });
 

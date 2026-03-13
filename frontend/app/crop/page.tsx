@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function CropRecommendationSystem() {
     const [temperature, setTemperature] = useState("")
     const [humidity, setHumidity] = useState("")
@@ -20,7 +22,7 @@ export default function CropRecommendationSystem() {
         setError(null)
 
         try {
-            const response = await fetch("http://localhost:8080/api/crop/recommend", {
+            const response = await fetch(`${API_URL}/api/crop/recommend`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

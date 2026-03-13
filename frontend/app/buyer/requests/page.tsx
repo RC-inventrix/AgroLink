@@ -15,6 +15,8 @@ import { useRouter } from "next/navigation"
 import { DashboardNav } from "@/components/dashboard-nav"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface Requirement {
     id: number;
     cropName: string;
@@ -65,7 +67,7 @@ export default function MyRequirementsPage() {
 
     const fetchOffersForRequirement = useCallback(async (reqId: number, currentToken: string) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/offers/requirement/${reqId}`, {
+            const res = await fetch(`${API_URL}/api/offers/requirement/${reqId}`, {
                 headers: { "Authorization": `Bearer ${currentToken}` }
             });
             
@@ -73,7 +75,7 @@ export default function MyRequirementsPage() {
                 const offerData: Offer[] = await res.json();
                 if (offerData.length > 0) {
                     const sellerIds = Array.from(new Set(offerData.map(o => o.sellerId))).join(',');
-                    const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${sellerIds}`, {
+                    const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${sellerIds}`, {
                         headers: { "Authorization": `Bearer ${currentToken}` }
                     });
                     
@@ -94,7 +96,7 @@ export default function MyRequirementsPage() {
         if (!userId || !token) return;
         try {
             setLoading(true);
-            const res = await fetch(`http://localhost:8080/api/requirements/buyer/${userId}`, {
+            const res = await fetch(`${API_URL}/api/requirements/buyer/${userId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {
@@ -122,7 +124,7 @@ export default function MyRequirementsPage() {
 
         try {
             // 1. Update the Specific Offer to "ACCEPTED"
-            const offerRes = await fetch(`http://localhost:8080/api/offers/${offerId}/status`, {
+            const offerRes = await fetch(`${API_URL}/api/offers/${offerId}/status`, {
                 method: "PUT",
                 headers: { 
                     "Content-Type": "application/json",
@@ -135,7 +137,7 @@ export default function MyRequirementsPage() {
 
             // 2. Update the Requirement to "CLOSED"
             const reqPayload = { ...reqToUpdate, status: "CLOSED" };
-            const reqRes = await fetch(`http://localhost:8080/api/requirements/${reqId}`, {
+            const reqRes = await fetch(`${API_URL}/api/requirements/${reqId}`, {
                 method: "PUT",
                 headers: { 
                     "Content-Type": "application/json",
@@ -158,7 +160,7 @@ export default function MyRequirementsPage() {
         if (!token) return;
         try {
             const payload = { ...editData, id, quantity: Number(editData.quantity), expectedUnitPrice: Number(editData.expectedUnitPrice) };
-            const res = await fetch(`http://localhost:8080/api/requirements/${id}`, {
+            const res = await fetch(`${API_URL}/api/requirements/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify(payload)
@@ -171,7 +173,7 @@ export default function MyRequirementsPage() {
         if (!itemToDelete || !token) return;
         setIsDeleting(true);
         try {
-            const res = await fetch(`http://localhost:8080/api/requirements/${itemToDelete}`, {
+            const res = await fetch(`${API_URL}/api/requirements/${itemToDelete}`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${token}` }
             });

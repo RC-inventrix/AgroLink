@@ -19,6 +19,8 @@ import {
 import { useRouter } from "next/navigation"
 import DashboardHeader from "@/components/header"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function RequirementForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export default function RequirementForm() {
         const token = sessionStorage.getItem("token");
 
         try {
-            const res = await fetch("http://localhost:8080/api/requirements/create", {
+            const res = await fetch(`${API_URL}/api/requirements/create`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
