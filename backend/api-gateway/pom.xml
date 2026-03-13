@@ -6,8 +6,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
+        <relativePath/> </parent>
     <groupId>com.agroLink</groupId>
     <artifactId>api-gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -42,7 +41,6 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
-            <version>4.1.5</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -52,7 +50,6 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -83,7 +80,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.36</version>  </path>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
@@ -95,7 +92,6 @@
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-
                         </exclude>
                     </excludes>
                 </configuration>

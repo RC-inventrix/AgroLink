@@ -174,12 +174,6 @@ export default function LoginForm() {
                         {isLoading ? "Signing in..." : "Login"}
                     </button>
 
-                    <div className="relative my-6">
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="px-2 text-gray-400">New to AgroLink?</span>
-                        </div>
-                    </div>
-
                     <div className="text-center">
                         <p className="text-sm text-gray-300">
                             Don't have an account?{" "}
