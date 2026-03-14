@@ -30,11 +30,11 @@ export default function AdminLogin() {
 
     try {
       // Backend URL එක (Port 8081)
-      const response = await axios.post("http://localhost:8081/api/admin/login", {
+      const response = await axios.post("http://localhost:8080/api/admin/login", {
         username: formData.username,
         password: formData.password,
       })
-
+      
       if (response.status === 200) {
         router.push("/admin/dashboard") 
       }
