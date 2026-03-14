@@ -1,6 +1,7 @@
 package com.me.moderationservice.controller;
 
 import com.me.moderationservice.model.IssueType;
+import com.me.moderationservice.model.UserNotification;
 import com.me.moderationservice.model.UserReport;
 import com.me.moderationservice.service.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -38,13 +39,14 @@ public class ReportController {
         return ResponseEntity.ok(reportService.saveReport(report));
     }
 
-    // 2. Resolve a report (Used by Admins)
+
     @PatchMapping("/resolve/{id}")
     public ResponseEntity<UserReport> resolveReport(
             @PathVariable Long id,
             @RequestParam Long adminId,
-            @RequestParam(required = false) String remarks) {
-        return ResponseEntity.ok(reportService.resolveReport(id, adminId, remarks));
+            @RequestParam(required = false) String remarks,
+            @RequestParam String action) { // <-- Added 'action' parameter
+        return ResponseEntity.ok(reportService.resolveReport(id, adminId, remarks, action));
     }
 
     // 3. Get all reports for the Admin Dashboard
@@ -65,4 +67,18 @@ public class ReportController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(issues);
     }
+
+    // Add these to your existing ReportController.java
+
+    @GetMapping("/user/notifications/{userId}")
+    public ResponseEntity<List<UserNotification>> getUserNotifications(@PathVariable Long userId) {
+        return ResponseEntity.ok(reportService.getNotificationsByUserId(userId));
+    }
+
+    @PatchMapping("/notifications/mark-read/{notificationId}")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long notificationId) {
+        reportService.markNotificationRead(notificationId);
+        return ResponseEntity.ok().build();
+    }
+
 }
