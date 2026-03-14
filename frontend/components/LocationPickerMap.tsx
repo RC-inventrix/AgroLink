@@ -98,9 +98,8 @@ const LeafletMapInstance = ({
                             }: any) => {
 
     // STRICT MODE GUARD:
-    // We manually assign an ID to the container div and clean it up
-    // before the MapContainer initializes.
-    const containerId = `map-container-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate a stable ID across re-renders to prevent "Map container is being reused" errors.
+    const containerId = React.useMemo(() => `map-container-${Math.random().toString(36).substr(2, 9)}`, []);
 
     useEffect(() => {
         // Fix Icons globally

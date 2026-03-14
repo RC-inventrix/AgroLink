@@ -143,22 +143,28 @@ export default function BuyerRegistration() {
                 )}
 
                 <div className="h-screen flex">
-                    <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
+                    
+                    <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90 overflow-hidden">
+                        
                         {/* Scrollbar and Layout Container */}
                         <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
-                            <div className="mb-6">
-                                <h1 className="text-4xl font-bold text-white mb-2">Buyer Registration</h1>
-                                <p className="text-[#EEC044] text-sm font-medium">Step 2: Finish Profile</p>
+                            
+                            <div className="mb-4 mt-auto">
+                                <h1 className="text-3xl md:text-4xl font-bold text-white mb-1 leading-tight">Buyer Registration</h1>
+                                <p className="text-[#EEC044] text-sm font-medium tracking-wide">Step 2: Finish Profile</p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">
-                                <div className="space-y-1">
-                                    <label className="text-white text-xs font-semibold ml-1">Business Name</label>
+                            
+                            <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-full mb-auto">
+                                
+                                {/* Business Name Field */}
+                                <div className="flex flex-col space-y-1">
+                                    <label className="text-white/90 text-sm font-medium ml-1">Business Name</label>
                                     <input
                                         name="businessName"
                                         placeholder="Company Name (Optional)"
                                         onChange={handleInputChange}
-                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
+                                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm"
                                     />
                                 </div>
 
@@ -172,21 +178,23 @@ export default function BuyerRegistration() {
                                     label="Delivery Address"
                                 />
 
-                                <div className="space-y-1">
-                                    <label className="text-white text-xs font-semibold ml-1">Zip Code</label>
+                                {/* Zip Code Field */}
+                                <div className="flex flex-col space-y-1">
+                                    <label className="text-white/90 text-sm font-medium ml-1">Zip Code</label>
                                     <input
                                         name="zipCode"
                                         placeholder="12345"
                                         onChange={handleInputChange}
-                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
+                                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm"
                                         required
                                     />
                                 </div>
 
+                                {/* Submit Button */}
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full py-3 px-6 mt-6 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-2.5 px-6 mt-2 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? (
                                         <span className="flex items-center justify-center gap-2">

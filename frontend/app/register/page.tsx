@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Mail, Linkedin, Twitter, X, Check, AlertCircle } from "lucide-react"
+import { Check, AlertCircle, X } from "lucide-react"
 
 export default function RegistrationStep1() {
     const router = useRouter()
@@ -91,7 +91,6 @@ export default function RegistrationStep1() {
             }, 1000)
 
         } catch (err: any) {
-            // Display the "Email already exists" error in your custom notification UI
             setNotification({ 
                 message: err.message || "An unexpected error occurred.", 
                 type: 'error' 
@@ -128,38 +127,65 @@ export default function RegistrationStep1() {
             )}
 
             <div className="h-screen flex">
-                <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
-                    <div className="relative z-10 flex flex-col px-8 pt-2 md:px-12 md:pt-3 max-w-md mx-auto w-full h-full justify-center">
-                        <div className="mb-6">
-                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 leading-tight">Registration</h1>
+            
+                <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90 overflow-hidden">
+                    <div className="relative z-10 flex flex-col px-8 md:px-12 max-w-md mx-auto w-full h-full justify-center">
+                        
+                    
+                        <div className="mb-4">
+                            <h1 className="text-3xl md:text-4xl font-bold text-white mb-1 leading-tight">Registration</h1>
                             <p className="text-[#EEC044] text-sm font-medium">Step 1: Create your account</p>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full">
-                            <input type="text" name="fullname" placeholder="Full Name" onChange={handleInputChange} className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            <input type="email" name="email" placeholder="Email" onChange={handleInputChange} className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            <input type="tel" name="phone" placeholder="Phone Number" onChange={handleInputChange} className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            <input type="password" name="password" placeholder="Password" onChange={handleInputChange} className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            <input type="password" name="repeatPassword" placeholder="Repeat Password" onChange={handleInputChange} className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                    
+                        <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-full">
+                            
+                            <div className="flex flex-col space-y-1">
+                                <label className="text-white/90 text-sm font-medium ml-1">Full Name</label>
+                                
+                                <input type="text" name="fullname" placeholder="John Doe" onChange={handleInputChange} className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm" required />
+                            </div>
 
+                            <div className="flex flex-col space-y-1">
+                                <label className="text-white/90 text-sm font-medium ml-1">Email</label>
+                                <input type="email" name="email" placeholder="example@email.com" onChange={handleInputChange} className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm" required />
+                            </div>
+
+                            <div className="flex flex-col space-y-1">
+                                <label className="text-white/90 text-sm font-medium ml-1">Phone Number</label>
+                                <input type="tel" name="phone" placeholder="07XXXXXXXX" onChange={handleInputChange} className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm" required />
+                            </div>
+
+                            <div className="flex flex-col space-y-1">
+                                <label className="text-white/90 text-sm font-medium ml-1">Password</label>
+                                <input type="password" name="password" placeholder="••••••••" onChange={handleInputChange} className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm" required />
+                            </div>
+
+                            <div className="flex flex-col space-y-1">
+                                <label className="text-white/90 text-sm font-medium ml-1">Repeat Password</label>
+                                <input type="password" name="repeatPassword" placeholder="••••••••" onChange={handleInputChange} className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all text-sm" required />
+                            </div>
+
+                            {/* Role Selection */}
                             <div className="pt-1">
-                                <label className="text-white font-semibold text-sm mb-2 block">Select Role</label>
+                                <label className="text-white font-semibold text-sm mb-1.5 block">Select Role</label>
                                 <div className="flex gap-6">
-                                    <label className="flex items-center cursor-pointer text-white">
-                                        <input type="radio" name="role" value="Farmer" checked={formData.role === "Farmer"} onChange={handleRoleChange} className="accent-[#EEC044] h-4 w-4 mr-2" /> Farmer
+                                    <label className="flex items-center cursor-pointer text-white text-sm">
+                                        <input type="radio" name="role" value="Farmer" checked={formData.role === "Farmer"} onChange={handleRoleChange} className="accent-[#EEC044] h-3.5 w-3.5 mr-2" /> Farmer
                                     </label>
-                                    <label className="flex items-center cursor-pointer text-white">
-                                        <input type="radio" name="role" value="Buyer" checked={formData.role === "Buyer"} onChange={handleRoleChange} className="accent-[#EEC044] h-4 w-4 mr-2" /> Buyer
+                                    <label className="flex items-center cursor-pointer text-white text-sm">
+                                        <input type="radio" name="role" value="Buyer" checked={formData.role === "Buyer"} onChange={handleRoleChange} className="accent-[#EEC044] h-3.5 w-3.5 mr-2" /> Buyer
                                     </label>
                                 </div>
                             </div>
 
-                            <button type="submit" disabled={isLoading} className="w-full py-3 px-6 mt-3 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 transition-all active:scale-[0.98] disabled:opacity-50">
+                        
+                            <button type="submit" disabled={isLoading} className="w-full py-2.5 px-6 mt-2 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 transition-all active:scale-[0.98] disabled:opacity-50">
                                 {isLoading ? "Processing..." : "Next Page"}
                             </button>
                         </form>
 
-                        <div className="mt-6 text-center">
+                        <div className="mt-4 text-center">
                             <span className="text-white/80 text-sm">
                                 Do you have an account? <Link href="/login" className="text-[#EEC044] font-semibold hover:underline">Login</Link>
                             </span>
