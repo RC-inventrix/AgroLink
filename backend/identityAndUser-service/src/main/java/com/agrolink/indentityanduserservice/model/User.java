@@ -1,13 +1,10 @@
 /* fileName: indentityanduserservice/model/User.java */
 package com.agrolink.indentityanduserservice.model;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -21,18 +18,18 @@ public class User {
 
     private String fullname;
 
-    @Column(unique = true,nullable = false)
+    @Column(unique = true, nullable = true)
     private String email;
 
     private String phone;
     private String password;
     private String address; // Stores Street Address
+
     @Enumerated(EnumType.STRING)
     private Role role;
+
     private String businessName;
     private String district;
-    private String zipcode;
-    private String nic;
     private String AvatarUrl;
 
     // --- NEW FIELDS FOR LOCATION MAPPING ---

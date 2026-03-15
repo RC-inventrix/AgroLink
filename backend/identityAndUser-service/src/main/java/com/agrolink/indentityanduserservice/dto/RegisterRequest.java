@@ -35,14 +35,10 @@ public class RegisterRequest {
     private String businessName;
     private String streetAddress; // Mapped to 'address' in DB
     private String district;
-    private String zipcode;
 
-    // New Location Fields
+    // Location Fields
     private String province;
     private String city;
     private Double latitude;
     private Double longitude;
-
-    // This handles the "Business Registration OR NIC" input
-    private String businessRegOrNic;
 }
