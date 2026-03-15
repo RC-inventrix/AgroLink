@@ -122,13 +122,13 @@ services:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 90s
+     retries: 5           # <--- Increased to give it more chances
+      start_period: 180s
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: "0.5"
+          cpus: "1.0"
 
   product-service:
     build:
