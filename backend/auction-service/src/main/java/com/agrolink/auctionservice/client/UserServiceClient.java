@@ -28,23 +28,22 @@ public class UserServiceClient {
     public UserResponseDto getUserById(Long userId) {
         String url = identityServiceUrl + "/auth/user/" + userId;
         try {
-            log.info("Calling Identity Service: {}", url);
-
-            // 1. Prepare headers to relay the JWT token
             HttpHeaders headers = new HttpHeaders();
-
-            // 2. Extract the current incoming HTTP request
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
-                // 3. Grab the Authorization header (Bearer token)
                 String authHeader = request.getHeader("Authorization");
-                if (authHeader != null) {
+                if (authHeader != null && !authHeader.isEmpty()) {
                     headers.set("Authorization", authHeader);
+                    log.info("Successfully extracted Authorization header to relay to Identity Service.");
+                } else {
+                    log.warn("WARNING: Authorization header is missing from the incoming request. Identity verification will fail.");
                 }
+            } else {
+                log.warn("WARNING: RequestContextHolder is null. Cannot extract headers.");
             }
 
-            // 4. Send the authenticated request using exchange() instead of getForObject()
             HttpEntity<String> entity = new HttpEntity<>(headers);
             ResponseEntity<UserResponseDto> response = restTemplate.exchange(
                     url,
@@ -56,7 +55,7 @@ public class UserServiceClient {
             return response.getBody();
 
         } catch (Exception e) {
-            log.error("Failed to call Identity Service at {}: {}", url, e.getMessage());
+            log.error("Failed to call Identity Service at {}. Exception: {}", url, e.getMessage());
             return null;
         }
     }
