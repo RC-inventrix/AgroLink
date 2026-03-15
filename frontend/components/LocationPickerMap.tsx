@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
+// @ts-ignore - Suppress TS error for non-module CSS import
 import "leaflet/dist/leaflet.css"
 import citiesData from "@/data/srilanka-cities.json"
 import { isWithinCityRadius } from "@/lib/geo-utils"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
 // --- TYPES ---
 interface LocationData {
@@ -28,7 +29,6 @@ interface LocationPickerProps {
 }
 
 // --- INTERNAL COMPONENT: MAP CONTROLLER ---
-// Handles programmatic map movement (FlyTo)
 function MapController({ center }: { center: [number, number] | null }) {
     const map = useMap()
     useEffect(() => {
@@ -41,7 +41,6 @@ function MapController({ center }: { center: [number, number] | null }) {
 }
 
 // --- INTERNAL COMPONENT: INTERACTIVE MARKER ---
-// Handles clicks and drags
 function InteractiveMarker({
                                position,
                                onPositionChange,
@@ -86,8 +85,6 @@ function InteractiveMarker({
 }
 
 // --- INTERNAL COMPONENT: ATOMIC MAP INSTANCE ---
-// This component is mounted/unmounted purely based on keys.
-// It contains the specific strict-mode guard.
 const LeafletMapInstance = ({
                                 center,
                                 markerPosition,
@@ -96,46 +93,43 @@ const LeafletMapInstance = ({
                                 onPositionChange,
                                 onError
                             }: any) => {
-
-    // STRICT MODE GUARD:
-    // We manually assign an ID to the container div and clean it up
-    // before the MapContainer initializes.
-    const containerId = `map-container-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const mapRef = useRef<L.Map | null>(null);
 
     useEffect(() => {
         // Fix Icons globally
-        // @ts-ignore
-        if (typeof window !== "undefined" && !L.Icon.Default.prototype._getIconUrl_Original) {
-            // @ts-ignore
-            L.Icon.Default.prototype._getIconUrl_Original = L.Icon.Default.prototype._getIconUrl;
-            // @ts-ignore
-            delete L.Icon.Default.prototype._getIconUrl;
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-                iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-            });
+        if (typeof window !== "undefined") {
+            // Cast prototype to any to allow custom properties without TS errors
+            const leafletDefaultIcon = L.Icon.Default.prototype as any;
+
+            if (!leafletDefaultIcon._getIconUrl_Original) {
+                leafletDefaultIcon._getIconUrl_Original = leafletDefaultIcon._getIconUrl;
+                delete leafletDefaultIcon._getIconUrl;
+                
+                L.Icon.Default.mergeOptions({
+                    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+                    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                });
+            }
         }
 
-        // AGGRESSIVE CLEANUP
-        // If this component unmounts, we find the DOM element and manually strip the Leaflet ID.
-        // This prevents the "already initialized" error if React reuses the node.
+        // CLEANUP: Destroy the map instance on unmount to prevent container reuse errors
         return () => {
-            const container = document.getElementById(containerId);
-            if (container) {
-                // @ts-ignore
-                container._leaflet_id = null;
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
             }
         };
-    }, [containerId]);
+    }, []);
 
     return (
         <MapContainer
-            id={containerId}
             center={center}
             zoom={13}
             style={{ height: "100%", width: "100%" }}
             scrollWheelZoom={true}
+            ref={mapRef} 
         >
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -162,12 +156,10 @@ export default function LocationPickerMap({
                                               label = "Location",
                                           }: LocationPickerProps) {
 
-    // Data State
     const [provinces] = useState<any[]>(citiesData.provinces);
     const [districts, setDistricts] = useState<any[]>([]);
     const [cities, setCities] = useState<any[]>([]);
 
-    // Map Logic State
     const [targetCenter, setTargetCenter] = useState<[number, number] | null>(null);
     const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
@@ -175,10 +167,8 @@ export default function LocationPickerMap({
     );
     const [boundaryError, setBoundaryError] = useState("");
 
-    // Initial Center (Sri Lanka)
     const initialCenter: [number, number] = [7.8731, 80.7718];
 
-    // --- CASCADING DROPDOWNS ---
     useEffect(() => {
         if (value.province) {
             const p = provinces.find((p) => p.name === value.province);
@@ -213,7 +203,6 @@ export default function LocationPickerMap({
         }
     }, [value.city, cities]);
 
-    // --- HANDLERS ---
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         onChange({ ...value, province: e.target.value, district: "", city: "", latitude: null, longitude: null });
         setMarkerPosition(null);
@@ -237,7 +226,6 @@ export default function LocationPickerMap({
         onChange({ ...value, latitude: pos[0], longitude: pos[1] });
     };
 
-    // Styling
     const isDark = variant === "dark";
     const inputClasses = isDark
         ? "w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
@@ -252,7 +240,6 @@ export default function LocationPickerMap({
                 {label}
             </h3>
 
-            {/* FORM SECTION */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelClasses}>Province {required && <span className="text-red-500">*</span>}</label>
@@ -296,7 +283,6 @@ export default function LocationPickerMap({
                 </div>
             )}
 
-            {/* MAP SECTION */}
             {value.city && (
                 <div className="mt-4 animate-in fade-in duration-300">
                     <label className={labelClasses}>Pin Your Exact Location</label>
@@ -305,12 +291,6 @@ export default function LocationPickerMap({
                     </p>
 
                     <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0 bg-muted/10 flex items-center justify-center">
-                        {/* ARCHITECTURAL FIX:
-                           We use `value.city` as part of the KEY.
-                           This guarantees that if the city changes, React destroys the old map
-                           and creates a brand new one.
-                           The internal LeafletMapInstance handles strict mode cleanup.
-                        */}
                         <LeafletMapInstance
                             key={`map-${value.province}-${value.district}-${value.city}`}
                             center={initialCenter}

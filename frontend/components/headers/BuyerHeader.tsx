@@ -4,16 +4,18 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"  
 import { useRouter } from "next/navigation"
-import { Bell, ShoppingCart, User, Menu, LogOut, Settings, X, Check, MessageSquare, AlertCircle } from "lucide-react"
+import { Bell, ShoppingCart, User, Menu, LogOut, Settings, X, Check, MessageSquare, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
-interface CancelledNotification {
+// Added a general Notification interface to handle both Cancelled and Accepted
+interface OrderNotification {
     id: number;
     orderId: number;
     message: string;
     read: boolean;
     createdAt: string;
+    type?: 'CANCELLED' | 'ACCEPTED'; // Optional helper to distinguish icons
 }
 
 export default function DashboardHeader() {
@@ -21,7 +23,8 @@ export default function DashboardHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
-    const [cancelledNotifs, setCancelledNotifs] = useState<CancelledNotification[]>([])
+    // Combined list for all order-related notifications
+    const [orderNotifs, setOrderNotifs] = useState<OrderNotification[]>([])
     const dropdownRef = useRef<HTMLDivElement>(null)
     const notifRef = useRef<HTMLDivElement>(null)
 
@@ -29,34 +32,29 @@ export default function DashboardHeader() {
     const orderBaseUrl = "http://localhost:8080" 
     const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
 
-    // --- NEW: Handle Notification Click ---
-    const handleNotifClick = async (notif: CancelledNotification) => {
+    const handleNotifClick = async (notif: OrderNotification) => {
         const token = sessionStorage.getItem("token");
-        
         try {
-            // 1. Mark as read in Backend if it's currently unread
             if (!notif.read) {
+                // Endpoint assumed to be generic for all buyer notifications
                 await fetch(`${orderBaseUrl}/api/buyer/orders/notifications/${notif.id}/read`, {
                     method: "PUT",
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 
-                // Update local state to remove the red dot immediately
-                setCancelledNotifs(prev => 
+                setOrderNotifs(prev => 
                     prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
                 );
             }
-
-            // 2. Close the notification dropdown
             setIsNotifOpen(false);
 
-            // 3. Redirect to order history with the 'cancelled' tab active
-            router.push("/buyer/order-history?tab=cancelled");
+            // If accepted, take them to processing; if cancelled, take them to cancelled tab
+            const tab = notif.message.toLowerCase().includes("accepted") ? "processing" : "cancelled";
+            router.push(`/buyer/order-history?tab=${tab}`);
 
         } catch (err) {
             console.error("Failed to mark notification as read:", err);
-            // Fallback: still redirect even if API fails
-            router.push("/buyer/order-history?tab=cancelled");
+            router.push("/buyer/order-history");
         }
     };
 
@@ -65,17 +63,35 @@ export default function DashboardHeader() {
         const myId = sessionStorage.getItem("id");
         if (!token || !myId) return;
 
+        const headers = { 
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        };
+
+        // --- FETCH LOGIC ---
+        const fetchAllNotifications = async () => {
+            try {
+                // Fetch existing notifications (Assuming the backend returns both Accepted and Cancelled)
+                const res = await fetch(`${orderBaseUrl}/api/buyer/orders/notifications/${myId}`, {
+                    method: "GET",
+                    headers
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setOrderNotifs(data);
+                }
+            } catch (err) { 
+                console.error("Notif fetch failed:", err); 
+            }
+        };
+
         const syncUnreadCount = async () => {
             try {
-                const contactsRes = await fetch(`${chatBaseUrl}/api/chat/contacts`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                const contactsRes = await fetch(`${chatBaseUrl}/api/chat/contacts`, { headers });
                 if (contactsRes.ok) {
                     const ids: number[] = await contactsRes.json();
                     const unreadCounts = await Promise.all(ids.map(async (senderId) => {
-                        const res = await fetch(`${chatBaseUrl}/api/chat/unread-count/${senderId}`, {
-                            headers: { "Authorization": `Bearer ${token}` }
-                        });
+                        const res = await fetch(`${chatBaseUrl}/api/chat/unread-count/${senderId}`, { headers });
                         return res.ok ? await res.json() : 0;
                     }));
                     setUnreadChatCount(unreadCounts.reduce((acc, count) => acc + count, 0));
@@ -83,25 +99,16 @@ export default function DashboardHeader() {
             } catch (err) { console.error("Chat sync failed:", err); }
         };
 
-        const fetchCancelledNotifs = async () => {
-            try {
-                const res = await fetch(`${orderBaseUrl}/api/buyer/orders/notifications/${myId}`, {
-                    method: "GET",
-                    headers: { 
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setCancelledNotifs(data);
-                }
-            } catch (err) { console.error("Notif fetch failed:", err); }
-        };
-
+        // Initial Calls
         syncUnreadCount();
-        fetchCancelledNotifs();
+        fetchAllNotifications();
 
+        // --- POLLING LOGIC (Every 3 Seconds) ---
+        const interval = setInterval(() => {
+            fetchAllNotifications();
+        }, 3000);
+
+        // --- WEBSOCKET FOR CHAT ---
         const socket = new SockJS(`${chatBaseUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -112,7 +119,11 @@ export default function DashboardHeader() {
             },
         });
         client.activate();
-        return () => { void client.deactivate(); };
+
+        return () => { 
+            clearInterval(interval);
+            void client.deactivate(); 
+        };
     }, []);
 
     useEffect(() => {
@@ -124,7 +135,7 @@ export default function DashboardHeader() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const totalUnread = unreadChatCount + cancelledNotifs.filter(n => !n.read).length;
+    const totalUnread = unreadChatCount + orderNotifs.filter(n => !n.read).length;
 
     const handleLogout = () => {
         sessionStorage.clear();
@@ -164,24 +175,28 @@ export default function DashboardHeader() {
                                 <div className="px-4 py-2 border-b font-bold text-xs text-gray-400 uppercase">Notifications</div>
                                 
                                 <div className="max-h-[400px] overflow-y-auto">
-                                    {/* --- UPDATED: Item Clickable with logic --- */}
-                                    {cancelledNotifs.map((notif) => (
-                                        <div 
-                                            key={notif.id} 
-                                            onClick={() => handleNotifClick(notif)}
-                                            className={`px-4 py-3 border-b border-gray-50 flex gap-3 items-start transition-colors cursor-pointer ${!notif.read ? 'bg-red-50/50 hover:bg-red-100/50' : 'hover:bg-gray-50'}`}
-                                        >
-                                            <div className="mt-1 p-1.5 bg-red-100 text-red-600 rounded-full">
-                                                <AlertCircle size={14} />
+                                    {orderNotifs.map((notif) => {
+                                        const isAccepted = notif.message.toLowerCase().includes("accepted");
+                                        return (
+                                            <div 
+                                                key={notif.id} 
+                                                onClick={() => handleNotifClick(notif)}
+                                                className={`px-4 py-3 border-b border-gray-50 flex gap-3 items-start transition-colors cursor-pointer ${!notif.read ? 'bg-blue-50/30 hover:bg-gray-100' : 'hover:bg-gray-50'}`}
+                                            >
+                                                <div className={`mt-1 p-1.5 rounded-full ${isAccepted ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                    {isAccepted ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-bold text-gray-900">
+                                                        {isAccepted ? "Order Accepted" : "Order Cancelled"}
+                                                    </p>
+                                                    <p className="text-[11px] text-gray-600 leading-tight mt-0.5">{notif.message}</p>
+                                                    <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleDateString()}</p>
+                                                </div>
+                                                {!notif.read && <div className={`w-2 h-2 rounded-full mt-2 ${isAccepted ? 'bg-green-500' : 'bg-red-500'}`} />}
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs font-bold text-gray-900">Order Cancelled</p>
-                                                <p className="text-[11px] text-gray-600 leading-tight mt-0.5">{notif.message}</p>
-                                                <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleDateString()}</p>
-                                            </div>
-                                            {!notif.read && <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {unreadChatCount > 0 && (
                                         <button onClick={() => { setIsNotifOpen(false); router.push("/buyer/chat"); }} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
@@ -204,7 +219,7 @@ export default function DashboardHeader() {
                             </div>
                         )}
                     </div>
-
+                    {/* ... (rest of the header items remain the same) */}
                     <button>
                         <Link href="/cart">
                             <ShoppingCart className="w-5 h-5 text-white" />

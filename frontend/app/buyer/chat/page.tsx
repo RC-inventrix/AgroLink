@@ -9,20 +9,26 @@ import { MessageView, type Message } from "@/components/chat/message-view"
 import { DashboardNav } from "@/components/dashboard-nav"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 
-function ChatContent() {
+function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: number) => void }) {
     const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [messages, setMessages] = useState<Message[]>([])
     const [selectedConversationId, setSelectedConversationId] = useState<string>("")
     const [isLoading, setIsLoading] = useState(true)
-    const [stompClient, setStompClient] = useState<any>(null)
+    const [stompClient, setStompClient] = useState<Client | null>(null)
 
     const AUTH_SERVICE_URL = "http://localhost:8080"; 
     const CHAT_SERVICE_URL = "http://localhost:8083"; 
     
     const selectedIdRef = useRef("");
 
-    // Keep ref in sync with state for WebSocket closures
+    // Sync total unread count to parent component
+    useEffect(() => {
+        const total = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+        onTotalUnreadChange(total);
+    }, [conversations, onTotalUnreadChange]);
+
+    // Keep ref in sync for WebSocket closures
     useEffect(() => {
         selectedIdRef.current = selectedConversationId;
     }, [selectedConversationId]);
@@ -36,8 +42,7 @@ function ChatContent() {
         scrollToBottom();
     }, [messages]);
 
-    // --- 1. SYNC READ STATUS WITH DATABASE ---
-    // Marks messages as read in the backend
+    // --- 1. SYNC READ STATUS ---
     const syncReadStatus = useCallback(async (senderId: string) => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
@@ -53,7 +58,7 @@ function ChatContent() {
         }
     }, [CHAT_SERVICE_URL]);
 
-    // Clear unread counts locally and in DB when chat is opened
+    // Handle opening a chat
     useEffect(() => {
         if (selectedConversationId) {
             setConversations(prev => prev.map(conv => 
@@ -63,21 +68,7 @@ function ChatContent() {
             ));
             syncReadStatus(selectedConversationId);
         }
-    }, [selectedConversationId, messages.length, syncReadStatus]);
-
-    // --- 2. HANDLE URL PARAMETER (e.g., Redirect from Product Page) ---
-    useEffect(() => {
-        const receiverIdFromUrl = searchParams.get("receiverId") || searchParams.get("userId"); 
-        
-        if (receiverIdFromUrl) {
-            setSelectedConversationId(receiverIdFromUrl);
-            
-            const exists = conversations.some(conv => conv.id === receiverIdFromUrl);
-            if (!exists && !isLoading) {
-                resolveAndAddContact(receiverIdFromUrl);
-            }
-        }
-    }, [searchParams, isLoading, conversations.length]);
+    }, [selectedConversationId, syncReadStatus]);
 
     const resolveAndAddContact = async (id: string) => {
         const token = sessionStorage.getItem("token");
@@ -103,57 +94,67 @@ function ChatContent() {
         } catch (err) { console.error("Failed to resolve contact:", err); }
     };
 
-    // --- 3. WEBSOCKET LOGIC ---
+    // --- 2. WEBSOCKET LOGIC (UPDATED FOR REAL-TIME) ---
     useEffect(() => {
+        const myId = sessionStorage.getItem("id");
+        if (!myId) return;
+
         const socket = new SockJS(`${CHAT_SERVICE_URL}/ws`); 
         const client = new Client({
             webSocketFactory: () => socket,
+            // CRITICAL: Matches UserInterceptor.java requirement
+            connectHeaders: {
+                user: myId 
+            },
             onConnect: () => {
-                const myId = sessionStorage.getItem("id");
-                if (myId) {
-                    client.subscribe(`/user/${myId}/queue/messages`, (message) => {
-                        const newMessage = JSON.parse(message.body);
-                        const senderIdStr = newMessage.senderId.toString();
-                        const currentActiveId = selectedIdRef.current;
+                client.subscribe(`/user/${myId}/queue/messages`, (message) => {
+                    const newMessage = JSON.parse(message.body);
+                    const senderIdStr = newMessage.senderId.toString();
+                    const currentActiveId = selectedIdRef.current;
 
-                        if (senderIdStr === currentActiveId) {
-                            setMessages((prev) => [...prev, { 
-                                id: Date.now().toString(), senderId: newMessage.senderId,
-                                content: newMessage.content, timestamp: newMessage.timestamp,
-                                isCurrentUser: false, isRead: true 
-                            }]);
-                            syncReadStatus(senderIdStr); 
-                        }
+                    // Update messages if chat is open
+                    if (senderIdStr === currentActiveId) {
+                        setMessages((prev) => [...prev, { 
+                            id: newMessage.id?.toString() || Date.now().toString(), 
+                            senderId: newMessage.senderId,
+                            content: newMessage.content, 
+                            timestamp: newMessage.timestamp,
+                            isCurrentUser: false, 
+                            isRead: true 
+                        }]);
+                        syncReadStatus(senderIdStr); 
+                    }
 
-                        setConversations((prev) => {
-                            const exists = prev.some(c => c.id === senderIdStr);
-                            if (!exists) { resolveAndAddContact(senderIdStr); return prev; }
+                    // Update Sidebar
+                    setConversations((prev) => {
+                        const exists = prev.some(c => c.id === senderIdStr);
+                        if (!exists) { resolveAndAddContact(senderIdStr); return prev; }
 
-                            const updated = prev.map(conv => {
-                                if (conv.id === senderIdStr) {
-                                    const isNotOpen = currentActiveId !== senderIdStr;
-                                    return { 
-                                        ...conv, 
-                                        lastMessage: newMessage.content, 
-                                        timestamp: newMessage.timestamp,
-                                        unread: isNotOpen,
-                                        unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
-                                    };
-                                }
-                                return conv;
-                            });
-                            return [...updated].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                        const updated = prev.map(conv => {
+                            if (conv.id === senderIdStr) {
+                                const isNotOpen = currentActiveId !== senderIdStr;
+                                return { 
+                                    ...conv, 
+                                    lastMessage: newMessage.content, 
+                                    timestamp: newMessage.timestamp,
+                                    unread: isNotOpen,
+                                    unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
+                                };
+                            }
+                            return conv;
                         });
+                        return [...updated].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                     });
-                }
+                });
             },
         });
+
         client.activate();
         setStompClient(client);
         return () => { void client.deactivate(); };
     }, [CHAT_SERVICE_URL, syncReadStatus]);
 
-    // --- 4. FETCH CONTACTS WITH PERSISTED UNREAD COUNTS ---
+    // --- 3. FETCH INITIAL DATA ---
     useEffect(() => {
         const fetchContacts = async () => {
             const token = sessionStorage.getItem("token"); 
@@ -162,10 +163,11 @@ function ChatContent() {
                 const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
                 if (res.ok) {
                     const ids: number[] = await res.json();
+                    if (ids.length === 0) { setIsLoading(false); return; }
+
                     const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
                     const nameMap = nameRes.ok ? await nameRes.json() : {};
 
-                    // Logic from seller side: Fetch unread count for each contact from DB
                     const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
                         const unreadRes = await fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
                         const dbCount = unreadRes.ok ? await unreadRes.json() : 0;
@@ -183,6 +185,7 @@ function ChatContent() {
         fetchContacts();
     }, [CHAT_SERVICE_URL, AUTH_SERVICE_URL]);
 
+    // Fetch History when conversation changes
     useEffect(() => {
         if (!selectedConversationId) return;
         const fetchHistory = async () => {
@@ -200,13 +203,20 @@ function ChatContent() {
         fetchHistory();
     }, [selectedConversationId, CHAT_SERVICE_URL]);
 
-    // --- 5. SEND MESSAGE ---
     const handleSendMessage = (content: string) => {
         if (stompClient?.connected && selectedConversationId) {
             const myId = sessionStorage.getItem("id");
             const currentTime = new Date().toISOString();
-            const chatMessage = { senderId: Number(myId), recipientId: Number(selectedConversationId), content, timestamp: currentTime, isRead: false };
+            const chatMessage = { 
+                senderId: Number(myId), 
+                recipientId: Number(selectedConversationId), 
+                content, 
+                timestamp: currentTime, 
+                isRead: false 
+            };
+
             stompClient.publish({ destination: "/app/chat.send", body: JSON.stringify(chatMessage) });
+            
             setMessages((prev) => [...prev, { ...chatMessage, id: Date.now().toString(), isCurrentUser: true }]);
             setConversations((prev) => {
                 const updated = prev.map(conv => conv.id === selectedConversationId ? { ...conv, lastMessage: content, timestamp: currentTime } : conv);
@@ -219,8 +229,6 @@ function ChatContent() {
         id: selectedConversationId, name: "Loading...", avatar: "/buyer-dashboard/farmer-portrait.png",
         unreadCount: 0, lastMessage: "", timestamp: new Date().toISOString(), unread: false, online: false, starred: false
     } : null);
-
-    const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
 
     return (
         <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
@@ -250,9 +258,7 @@ function ChatContent() {
 }
 
 export default function BuyerChatPage() {
-    // Shared total unread count calculation
-    const [conversations, setConversations] = useState<Conversation[]>([]);
-    const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+    const [totalUnread, setTotalUnread] = useState(0);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -260,7 +266,7 @@ export default function BuyerChatPage() {
             <div className="flex">
                 <DashboardNav unreadCount={totalUnread} />
                 <Suspense fallback={<div className="p-10 font-bold">Loading interface...</div>}>
-                    <ChatContent />
+                    <ChatContent onTotalUnreadChange={setTotalUnread} />
                 </Suspense>
             </div>
         </div>
