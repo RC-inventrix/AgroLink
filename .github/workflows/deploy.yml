@@ -224,5 +224,5 @@ jobs:
             docker compose -f docker-compose.production.yml up -d --remove-orphans
 
             # Clean up old images to save space
-            docker image -a prune -f
+            docker image prune -a -f
           ENDSSH
