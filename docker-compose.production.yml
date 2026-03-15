@@ -96,6 +96,7 @@ services:
     ports:
       - "8081:8081"
     environment:
+      JWT_KEY: ${JWT_KEY}            # <--- ADDED THIS TO FIX THE CRASH
       JWT_SECRET: ${JWT_KEY}
       DB_HOST: postgres
       DB_PORT: 5432
@@ -107,9 +108,9 @@ services:
       SPRING_MAIL_PORT: 587
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true               # <--- ADD THIS
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true               
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,7 +151,7 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_REGION: ${AWS_REGION}
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
@@ -193,8 +194,9 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
       CLIENT_BASE_URL: ${CLIENT_BASE_URL:-https://getagrolink.me}
+      JWT_KEY: ${JWT_KEY}            # <--- ADDED THIS 
       JWT_SECRET: ${JWT_KEY}
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
@@ -232,7 +234,7 @@ services:
       EUREKA_HOST: service-discovery
       JWT_KEY: ${JWT_KEY}
       CHAT_AES_KEY: ${CHAT_AES_KEY}
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
@@ -268,7 +270,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
@@ -304,8 +306,9 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
+      JWT_KEY: ${JWT_KEY}            # <--- ADDED THIS 
       JWT_SECRET: ${JWT_KEY}
-      JPA_DDL_AUTO: update   # <--- CHANGED FROM validate TO update
+      JPA_DDL_AUTO: update   
     depends_on:
       postgres:
         condition: service_healthy
