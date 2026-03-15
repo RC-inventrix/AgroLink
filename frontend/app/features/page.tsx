@@ -15,63 +15,18 @@ import {
   Truck,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Header from "@/components/header"
-import Image from "next/image";
-import Link from "next/link";
-import Footer from "@/components/Footer";
+import Headerall from "@/components/Headerall" 
+import Footer from "@/components/Footer"
 
 export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-        <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-14 sm:h-16">
-
-                    {/* Logo Section */}
-                    <div className="flex items-center gap-2">
-                        <Image
-                            src="/images/Group-6.png"
-                            alt="AgroLink Logo"
-                            width={180}
-                            height={64}
-                            className="h-8 sm:h-12 w-auto"
-                        />
-                    </div>
-
-                    {/* Desktop Menu */}
-                    <div className="hidden md:flex items-center gap-5 lg:gap-15">
-                        <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            Home
-                        </Link>
-                        <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            About
-                        </Link>
-                        <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            Features
-                        </Link>
-                    </div>
-
-                    {/* Auth Buttons - Desktop */}
-                    <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                        <Link href="/login">
-                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                Login
-                            </button>
-                        </Link>
-
-                        <Link href="/register">
-                            <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                Register
-                            </button>
-                        </Link>
-                    </div>
-
-                </div>
-            </div>
-        </nav>
+      
+      
+      <Headerall />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20">
+      <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20 mt-14 sm:mt-16">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-5xl font-bold mb-6 text-balance">Powerful Features for Modern Agriculture</h1>
           <p className="text-xl text-emerald-100 max-w-3xl mx-auto text-balance">
@@ -584,21 +539,8 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-2xl p-12 text-center">
-          <h2 className="text-4xl font-bold text-[#0d3b2e] mb-4 text-balance">
-            Ready to Transform Your Agricultural Business?
-          </h2>
-          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto text-balance">
-            Join thousands of farmers and buyers already benefiting from AgroLink's powerful features.
-          </p>
-          
-        </div>
-      </section>
-    <Footer/>
-      
+    
+      <Footer />
     </div>
   )
 }

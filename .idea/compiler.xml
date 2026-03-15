@@ -29,7 +29,16 @@
         <module name="identityAndUser-service" />
         <module name="productCatalog-service" />
       </profile>
-      <profile name="Annotation profile for service-discovery" enabled="true">
+      <profile name="Annotation profile for chatbot-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+        </processorPath>
+        <module name="chatbot-service" />
+      </profile>
+      <profile name="Annotation profile for api-gateway" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -41,20 +50,10 @@
         <module name="auction-service" />
         <module name="service-discovery" />
       </profile>
-      <profile name="Annotation profile for chatbot-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
-        </processorPath>
-        <module name="chatbot-service" />
-      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="auth-service" target="25" />
       <module name="indentityAndUser-service" target="21" />
-      <module name="moderation-service" target="17" />
       <module name="notification-service" target="21" />
       <module name="product-service" target="25" />
     </bytecodeTargetLevel>

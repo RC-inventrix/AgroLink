@@ -3,73 +3,25 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Footer from "@/components/Footer";
+import Headerall from "@/components/Headerall";
 export default function AboutPage() {
     return (
         <div className="min-h-screen bg-background">
-
-
-            <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
-                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-14 sm:h-16">
-
-                        {/* Logo Section */}
-                        <div className="flex items-center gap-2">
-                            <Image
-                                src="/images/Group-6.png"
-                                alt="AgroLink Logo"
-                                width={180}
-                                height={64}
-                                className="h-8 sm:h-12 w-auto"
-                            />
-                        </div>
-
-                        {/* Desktop Menu */}
-                        <div className="hidden md:flex items-center gap-5 lg:gap-15">
-                            <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Home
-                            </Link>
-                            <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                About
-                            </Link>
-                            <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Features
-                            </Link>
-                        </div>
-
-                        {/* Auth Buttons - Desktop */}
-                        <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                            <Link href="/login">
-                                <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                    Login
-                                </button>
-                            </Link>
-
-                            <Link href="/register">
-                                <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                    Register
-                                </button>
-                            </Link>
-                        </div>
-
-                    </div>
-                </div>
-            </nav>
-
-
+            <Headerall />
 
             {/* Hero Section */}
             <section className="bg-[#03230F] text-white py-20 pt-24 md:pt-32">
                 <div className="container mx-auto px-4 lg:px-8">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance">
-                            {"Empowering "}
-                            <span className="text-[#EEC044]">{"Sustainable Agriculture"}</span>
-                            {" Through Technology"}
+                    <div className="max-w-4xl mx-auto flex flex-col items-center justify-center">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-white text-center">
+                            Empowering 
+                            <span className="text-[#EEC044] block my-2 sm:my-3">
+                                Sustainable Agriculture
+                            </span>
+                            Through Technology
                         </h1>
-                        <p className="text-lg md:text-xl text-white/90 leading-relaxed text-pretty">
-                            {
-                                "AgroLink is revolutionizing the agricultural marketplace by connecting farmers directly with buyers, ensuring fair prices, transparency, and sustainable farming practices for a better tomorrow."
-                            }
+                        <p className="mt-6 text-lg md:text-xl text-white/90 leading-relaxed text-center max-w-2xl mx-auto">
+                            AgroLink is revolutionizing the agricultural marketplace by connecting farmers directly with buyers, ensuring fair prices, transparency, and sustainable farming practices for a better tomorrow.
                         </p>
                     </div>
                 </div>
@@ -95,7 +47,7 @@ export default function AboutPage() {
                             </div>
                             <div className="relative h-[400px] rounded-lg overflow-hidden bg-[#03230F]/10">
                                 <img
-                                    src="about-us/farmers-working-in-green-agricultural-fields.jpg"
+                                    src="/images/1.png"
                                     alt="Farmers working in fields"
                                     className="w-full h-full object-cover"
                                 />
