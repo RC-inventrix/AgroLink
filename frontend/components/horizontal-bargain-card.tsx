@@ -2,13 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Trash2, ShoppingCart, RotateCcw, MapPin, Truck, Store } from "lucide-react"
+import { Trash2, ShoppingCart, RotateCcw, MapPin, Truck, Store, User } from "lucide-react"
+import Link from "next/link" // Import Link for navigation
 
-// Updated Interface to include new Coordinate Types
+// Updated Interface to include sellerId
 interface BargainItem {
     id: string
     name: string
     seller: string
+    sellerId: string | number // Added sellerId for the link
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -40,16 +42,17 @@ function formatCurrency(amount: number): string {
 }
 
 export function HorizontalBargainCard({
-                                          item,
-                                          status,
-                                          hideActions = false,
-                                          onDelete,
-                                          onAddToCart,
-                                          onBargainAgain,
-                                      }: HorizontalBargainCardProps) {
+    item,
+    status,
+    hideActions = false,
+    onDelete,
+    onAddToCart,
+    onBargainAgain,
+}: HorizontalBargainCardProps) {
     const {
         name,
         seller,
+        sellerId, // Destructure sellerId
         image,
         pricePerKg,
         requestedQuantityKg,
@@ -99,10 +102,18 @@ export function HorizontalBargainCard({
                             <h3 className="font-bold text-2xl text-green-900">{name}</h3>
                             {getStatusBadge()}
                         </div>
-                        <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
-                            <Store className="w-4 h-4 opacity-70" />
-                            Sold by: Farmer {seller}
-                        </p>
+                        
+                        {/* Seller Link Section */}
+                        <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
+                            <User className="w-4 h-4 opacity-70" />
+                            <span>Sold by: </span>
+                            <Link 
+                                href={`/user/${sellerId}`} 
+                                className="font-bold text-green-900 hover:text-green-600 hover:underline transition-all decoration-green-600"
+                            >
+                                {seller}
+                            </Link>
+                        </div>
                     </div>
 
                     <div className="text-left sm:text-right bg-green-50/50 px-4 py-3 rounded-xl border border-green-100">
@@ -123,7 +134,6 @@ export function HorizontalBargainCard({
 
                 {/* Information Grids */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-
                     {/* Offer Details */}
                     <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl space-y-2">
                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Offer Details</h4>

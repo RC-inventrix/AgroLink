@@ -5,11 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
 import { Loader2, Leaf } from "lucide-react"
 
-// Updated Interface to include logistics and map data
 interface BargainRequestUI {
     id: string
     name: string
     buyerName: string
+    buyerId: number
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -29,7 +29,6 @@ export default function BargainPage() {
     const [requests, setRequests] = useState<BargainRequestUI[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // Fetch Requests from Backend
     useEffect(() => {
         const currentSellerId = sessionStorage.getItem("id")
 
@@ -41,39 +40,52 @@ export default function BargainPage() {
 
         const fetchBargains = async () => {
             try {
+                // 1. Fetch Bargain Requests
                 const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
-                if (response.ok) {
-                    const data = await response.json()
+                if (!response.ok) throw new Error("Failed to fetch bargains")
+                const data = await response.json()
 
-                    // Map Backend Entity to UI Interface including new fields
-                    const mappedData: BargainRequestUI[] = data.map((item: any) => {
-                        const originalTotal = item.originalPricePerKg * item.quantity;
-                        const discountAmount = originalTotal - item.suggestedPrice;
-                        const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
-
-                        return {
-                            id: item.id.toString(),
-                            name: item.vegetableName,
-                            buyerName: item.buyerName || "Anonymous Buyer",
-                            image: item.vegetableImage || "/placeholder.svg",
-                            pricePerHundredG: (item.originalPricePerKg || 0) / 10,
-                            pricePerKg: item.originalPricePerKg || 0,
-                            requestedQuantityKg: item.quantity,
-                            actualPrice: originalTotal,
-                            offeredPrice: item.suggestedPrice,
-                            discount: Math.round(discountPercent),
-                            status: item.status, // PENDING, ACCEPTED, REJECTED
-
-                            // NEW LOGISTICS FIELDS
-                            deliveryRequired: item.deliveryRequired || false,
-                            buyerAddress: item.buyerAddress || "Pickup at Farm",
-                            deliveryFee: item.deliveryFee || 0,
-                            buyerLatitude: item.buyerLatitude || null,
-                            buyerLongitude: item.buyerLongitude || null
-                        };
-                    });
-                    setRequests(mappedData)
+                // 2. Extract unique Buyer IDs
+                const buyerIds = Array.from(new Set(data.map((item: any) => item.buyerId))).filter(Boolean);
+                
+                let nameMap: Record<number, string> = {};
+                
+                // 3. Fetch Full Names from AuthController
+                if (buyerIds.length > 0) {
+                    const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${buyerIds.join(',')}`);
+                    if (namesResponse.ok) {
+                        nameMap = await namesResponse.json();
+                    }
                 }
+
+                // 4. Map Backend Entity to UI Interface
+                const mappedData: BargainRequestUI[] = data.map((item: any) => {
+                    const originalTotal = item.originalPricePerKg * item.quantity;
+                    const discountAmount = originalTotal - item.suggestedPrice;
+                    const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
+
+                    return {
+                        id: item.id.toString(),
+                        name: item.vegetableName,
+                        // Update: Use fullname from nameMap
+                        buyerName: nameMap[item.buyerId] || item.buyerName || "Anonymous Buyer",
+                        buyerId: item.buyerId,
+                        image: item.vegetableImage || "/placeholder.svg",
+                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                        pricePerKg: item.originalPricePerKg || 0,
+                        requestedQuantityKg: item.quantity,
+                        actualPrice: originalTotal,
+                        offeredPrice: item.suggestedPrice,
+                        discount: Math.round(discountPercent),
+                        status: item.status,
+                        deliveryRequired: item.deliveryRequired || false,
+                        buyerAddress: item.buyerAddress || "Pickup at Farm",
+                        deliveryFee: item.deliveryFee || 0,
+                        buyerLatitude: item.buyerLatitude || null,
+                        buyerLongitude: item.buyerLongitude || null
+                    };
+                });
+                setRequests(mappedData)
             } catch (error) {
                 console.error("Failed to fetch bargains", error)
             } finally {
@@ -84,7 +96,6 @@ export default function BargainPage() {
         fetchBargains()
     }, [])
 
-    // Handle Accept
     const handleAcceptDeal = async (id: string) => {
         try {
             const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
@@ -103,7 +114,6 @@ export default function BargainPage() {
         }
     }
 
-    // Handle Reject
     const handleRejectRequest = async (id: string) => {
         try {
             const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
@@ -122,12 +132,10 @@ export default function BargainPage() {
         }
     }
 
-    // Handle Remove (UI Only)
     const handleRemoveFromUI = (id: string) => {
         setRequests(prev => prev.filter(item => item.id !== id));
     }
 
-    // Filter lists based on Status
     const pendingItems = requests.filter(item => item.status === "PENDING")
     const acceptedItems = requests.filter(item => item.status === "ACCEPTED")
     const rejectedItems = requests.filter(item => item.status === "REJECTED")
@@ -145,7 +153,6 @@ export default function BargainPage() {
 
     return (
         <main className="min-h-screen bg-gray-50 pb-12 font-sans">
-            {/* Themed Agricultural Header */}
             <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
                 <div className="max-w-6xl mx-auto flex items-center gap-3">
                     <Leaf className="w-10 h-10 text-green-300" />
@@ -160,38 +167,24 @@ export default function BargainPage() {
                 <div className="w-full bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                     <div className="max-w-6xl mx-auto px-6">
                         <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar">
-                            <TabsTrigger
-                                value="all"
-                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap"
-                            >
+                            <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap">
                                 All Requests ({requests.length})
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="pending"
-                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap"
-                            >
+                            <TabsTrigger value="pending" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap">
                                 Pending ({pendingItems.length})
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="accepted"
-                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap"
-                            >
+                            <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap">
                                 Accepted ({acceptedItems.length})
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="rejected"
-                                className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap"
-                            >
+                            <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap">
                                 Rejected ({rejectedItems.length})
                             </TabsTrigger>
                         </TabsList>
                     </div>
                 </div>
 
-                {/* Tab Content */}
                 <div className="p-6">
                     <div className="max-w-6xl mx-auto">
-
                         <TabsContent value="all" className="space-y-6 mt-4">
                             {requests.length === 0 ? (
                                 <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No bargaining requests found.</p>
@@ -248,6 +241,7 @@ export default function BargainPage() {
                                 rejectedItems.map((item) => (
                                     <HorizontalBargainCard
                                         key={item.id}
+
                                         item={item}
                                         status="rejected"
                                         onDelete={() => handleRemoveFromUI(item.id)}
