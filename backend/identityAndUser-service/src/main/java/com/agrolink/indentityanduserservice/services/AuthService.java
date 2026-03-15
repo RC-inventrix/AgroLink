@@ -22,8 +22,6 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-
-
     public long getActiveFarmerCount() {
         return userRepository.countByRole(Role.Farmer);
     }
@@ -32,10 +30,6 @@ public class AuthService {
         return userRepository.countByRole(Role.Buyer);
     }
 
-    /**
-     * Finds a single user by their ID.
-     * This is required by the AuthController /auth/user/{id} endpoint.
-     */
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -67,10 +61,8 @@ public class AuthService {
         user.setBusinessName(request.getBusinessName());
         user.setAddress(request.getStreetAddress());
         user.setDistrict(request.getDistrict());
-        user.setZipcode(request.getZipcode());
-        user.setNic(request.getBusinessRegOrNic());
 
-        // --- Set New Location Fields ---
+        // --- Set Location Fields ---
         user.setProvince(request.getProvince());
         user.setCity(request.getCity());
         user.setLatitude(request.getLatitude());
@@ -99,7 +91,6 @@ public class AuthService {
         if (updateDTO.getAddress() != null) user.setAddress(updateDTO.getAddress());
         if (updateDTO.getBusinessName() != null) user.setBusinessName(updateDTO.getBusinessName());
         if (updateDTO.getDistrict() != null) user.setDistrict(updateDTO.getDistrict());
-        if (updateDTO.getZipcode() != null) user.setZipcode(updateDTO.getZipcode());
         if (updateDTO.getAvatarUrl() != null) user.setAvatarUrl(updateDTO.getAvatarUrl());
 
         return userRepository.save(user);
@@ -110,6 +101,6 @@ public class AuthService {
     }
 
     public long getTotalUserCount() {
-        return userRepository.count(); // JpaRepository provides this method automatically
+        return userRepository.count();
     }
 }

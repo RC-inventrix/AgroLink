@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import citiesData from "@/data/srilanka-cities.json"
 import { isWithinCityRadius } from "@/lib/geo-utils"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
 // --- TYPES ---
 interface LocationData {
@@ -86,8 +86,8 @@ function InteractiveMarker({
 }
 
 // --- INTERNAL COMPONENT: ATOMIC MAP INSTANCE ---
-// This component is mounted/unmounted purely based on keys.
-// It contains the specific strict-mode guard.
+// This component is strictly managed by its parent key.
+// No manual ID generation or aggressive cleanup is needed.
 const LeafletMapInstance = ({
                                 center,
                                 markerPosition,
@@ -97,44 +97,27 @@ const LeafletMapInstance = ({
                                 onError
                             }: any) => {
 
-    // STRICT MODE GUARD:
-    // We manually assign an ID to the container div and clean it up
-    // before the MapContainer initializes.
-    const containerId = `map-container-${Math.random().toString(36).substr(2, 9)}`;
-
     useEffect(() => {
-        // Fix Icons globally
-        // @ts-ignore
-        if (typeof window !== "undefined" && !L.Icon.Default.prototype._getIconUrl_Original) {
-            // @ts-ignore
-            L.Icon.Default.prototype._getIconUrl_Original = L.Icon.Default.prototype._getIconUrl;
-            // @ts-ignore
-            delete L.Icon.Default.prototype._getIconUrl;
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-                iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-            });
-        }
-
-        // AGGRESSIVE CLEANUP
-        // If this component unmounts, we find the DOM element and manually strip the Leaflet ID.
-        // This prevents the "already initialized" error if React reuses the node.
-        return () => {
-            const container = document.getElementById(containerId);
-            if (container) {
-                // @ts-ignore
-                container._leaflet_id = null;
+        // Safe, run-once initialization for Leaflet icons in Next.js
+        if (typeof window !== "undefined") {
+            const defaultIconPrototype = L.Icon.Default.prototype as any;
+            if (!defaultIconPrototype._getIconUrl_Original) {
+                defaultIconPrototype._getIconUrl_Original = defaultIconPrototype._getIconUrl;
+                delete defaultIconPrototype._getIconUrl;
+                L.Icon.Default.mergeOptions({
+                    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+                    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                });
             }
-        };
-    }, [containerId]);
+        }
+    }, []);
 
     return (
         <MapContainer
-            id={containerId}
             center={center}
             zoom={13}
-            style={{ height: "100%", width: "100%" }}
+            style={{ height: "100%", width: "100%", zIndex: 0 }}
             scrollWheelZoom={true}
         >
             <TileLayer
@@ -305,12 +288,6 @@ export default function LocationPickerMap({
                     </p>
 
                     <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0 bg-muted/10 flex items-center justify-center">
-                        {/* ARCHITECTURAL FIX:
-                           We use `value.city` as part of the KEY.
-                           This guarantees that if the city changes, React destroys the old map
-                           and creates a brand new one.
-                           The internal LeafletMapInstance handles strict mode cleanup.
-                        */}
                         <LeafletMapInstance
                             key={`map-${value.province}-${value.district}-${value.city}`}
                             center={initialCenter}

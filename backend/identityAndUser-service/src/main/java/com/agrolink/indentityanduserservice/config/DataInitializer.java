@@ -1,25 +1,20 @@
+/* fileName: indentityanduserservice/config/DataInitializer.java */
 package com.agrolink.indentityanduserservice.config;
 
-import com.agrolink.indentityanduserservice.model.Admin;
-import com.agrolink.indentityanduserservice.repository.AdminRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class DataInitializer {
 
+    // Initialization logic removed to prevent schema conflicts and rogue data insertion.
+    // The database schema will now be strictly managed by Hibernate based on the Entity models.
+
     @Bean
-    CommandLineRunner init(AdminRepository repo, PasswordEncoder encoder) {
+    CommandLineRunner init() {
         return args -> {
-            if(repo.findByUsername("admin")==null){
-                Admin admin = new Admin();
-                admin.setUsername("admin");
-                admin.setPassword(encoder.encode("admin123"));
-                repo.save(admin);
-            }
+            System.out.println("DataInitializer bypassed: Let Hibernate manage the schema.");
         };
     }
 }

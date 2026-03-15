@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -17,8 +18,7 @@ export default function BuyerRegistration() {
             streetAddress: "",
             latitude: null as number | null,
             longitude: null as number | null,
-        },
-        zipCode: "",
+        }
     })
     const [isLoading, setIsLoading] = useState(false)
 
@@ -60,23 +60,18 @@ export default function BuyerRegistration() {
             const step1Data = JSON.parse(sessionStorage.getItem("registerDataStep1") || "{}")
 
             // --- PAYLOAD UPDATE ---
-            // We now send city, province, lat, long as separate fields
-            // to match the updated Backend DTO.
+            // Removed zipCode to match the updated backend RegisterRequest DTO
             const payload = {
                 ...step1Data,
                 role: "Buyer",
                 businessName: formData.businessName,
-                // Send specific street address (don't concatenate city here)
                 streetAddress: formData.location.streetAddress,
-                // Send location details explicitly
                 city: formData.location.city,
                 district: formData.location.district,
                 province: formData.location.province,
                 latitude: formData.location.latitude,
                 longitude: formData.location.longitude,
-                zipcode: formData.zipCode,
-                // Buyers don't have a Business Reg/NIC field in this form, so we send empty
-                businessRegOrNic: ""
+                businessRegOrNic: "" // Buyers don't have a Business Reg/NIC field in this form
             }
 
             const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -171,17 +166,6 @@ export default function BuyerRegistration() {
                                     required={true}
                                     label="Delivery Address"
                                 />
-
-                                <div className="space-y-1">
-                                    <label className="text-white text-xs font-semibold ml-1">Zip Code</label>
-                                    <input
-                                        name="zipCode"
-                                        placeholder="12345"
-                                        onChange={handleInputChange}
-                                        className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
-                                        required
-                                    />
-                                </div>
 
                                 <button
                                     type="submit"
