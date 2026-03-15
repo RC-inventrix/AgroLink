@@ -1,3 +1,4 @@
+/* fileName: auctionservice/service/AuctionService.java */
 package com.agrolink.auctionservice.service;
 
 import com.agrolink.auctionservice.client.UserServiceClient;
@@ -59,7 +60,7 @@ public class AuctionService {
                 .startingPrice(request.getStartingPrice())
                 .reservePrice(request.getReservePrice())
                 .currentHighestBidAmount(null)
-                .highestBidderId(null) // Initialize as null
+                .highestBidderId(null)
                 .isDeliveryAvailable(request.getIsDeliveryAvailable())
                 .baseDeliveryFee(request.getBaseDeliveryFee())
                 .extraFeePer3Km(request.getExtraFeePer3Km())
@@ -119,10 +120,13 @@ public class AuctionService {
     @Transactional
     public BidResponse placeBid(Long auctionId, PlaceBidRequest request) {
         log.info("Verifying Bidder ID: {}", request.getBidderId());
+
+        // This will now successfully forward the JWT token
         UserResponseDto bidderInfo = userServiceClient.getUserById(request.getBidderId());
 
         if (bidderInfo == null) {
-            throw new RuntimeException("Bid rejected: User verification failed (Order Service unreachable or User ID invalid).");
+            // FIX: Updated error message to accurately reflect the Identity Service dependency
+            throw new RuntimeException("Bid rejected: User verification failed (Identity Service unreachable or Unauthorized).");
         }
 
         String safeName = (bidderInfo.getFullname() != null) ? bidderInfo.getFullname() : "Verified Bidder";
@@ -160,7 +164,6 @@ public class AuctionService {
 
         bid = bidRepository.save(bid);
 
-        // ✅ ATOMIC UPDATE: Update both amount and owner ID on the auction record
         auction.setCurrentHighestBidAmount(request.getBidAmount());
         auction.setHighestBidderId(request.getBidderId());
 
@@ -281,7 +284,6 @@ public class AuctionService {
         try {
             orderIntegrationService.createAuctionOrder(auction, winningBid);
 
-            // ✅ Mark as successfully transferred
             auction.setIsOrderCreated(true);
             auctionRepository.save(auction);
             log.info("Successfully converted Auction {} to Order", auction.getId());
@@ -289,15 +291,11 @@ public class AuctionService {
         } catch (Exception e) {
             log.error("Failed to create order for auction {}: {}", auction.getId(), e.getMessage());
 
-            // ✅ Mark as failed so the polling service catches it later
             auction.setIsOrderCreated(false);
             auctionRepository.save(auction);
         }
     }
 
-    /**
-     * ✅ NEW: Automated retry mechanism for network failures
-     */
     @Transactional
     public void retryFailedOrderTransfers() {
         List<Auction> failedTransfers = auctionRepository.findCompletedAuctionsWithPendingOrders();
@@ -321,13 +319,11 @@ public class AuctionService {
             Bid myHighestBid = myBids.stream().max(Comparator.comparing(Bid::getBidAmount)).orElseThrow();
             List<Bid> topBids = bidRepository.findTopBidsByAuctionId(auction.getId());
 
-            // ✅ FALLBACK LOGIC: Handle legacy auctions where highestBidderId is null
             Long actualHighestBidderId = auction.getHighestBidderId();
             if (actualHighestBidderId == null && !topBids.isEmpty()) {
                 actualHighestBidderId = topBids.get(0).getBidderId();
             }
 
-            // ✅ EXACT OWNERSHIP CALCULATION
             boolean isWinning = actualHighestBidderId != null && actualHighestBidderId.equals(buyerId);
 
             boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED &&
@@ -351,7 +347,7 @@ public class AuctionService {
                     .auctionEndTime(auction.getEndTime())
                     .myHighestBid(myHighestBid.getBidAmount())
                     .currentHighestBid(auction.getCurrentHighestBidAmount())
-                    .highestBidderId(actualHighestBidderId) // ✅ Exporting the guaranteed ID
+                    .highestBidderId(actualHighestBidderId)
                     .isWinning(isWinning)
                     .hasWon(hasWon)
                     .myBidRank(displayRank)
