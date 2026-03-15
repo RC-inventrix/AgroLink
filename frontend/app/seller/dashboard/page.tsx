@@ -5,7 +5,12 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight } from "lucide-react";
+import {
+    Plus, TrendingUp, Package, Wallet, Carrot, Sparkles,
+    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone, Megaphone, X, ShieldAlert
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -14,6 +19,13 @@ import Footer from "@/components/footer/Footer";
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
+    const [isBanned, setIsBanned] = useState<boolean>(false);
+
+    // States for Notices
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [warnings, setWarnings] = useState<any[]>([]);
+    const [showAnnouncements, setShowAnnouncements] = useState(true);
+
 
     // State for Orders and Analytics
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -34,29 +46,39 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
-                // Fetch User Data
-                const userRes = await fetch(`${baseUrl}/auth/me`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                const headers = { "Authorization": `Bearer ${token}` };
+
+                // 1. Fetch User Data / Ban Check
+                const userRes = await fetch(`${baseUrl}/auth/me`, { headers });
                 if (userRes.ok) {
                     const userData = await userRes.json();
+                    if (userData.isBanned) {
+                        setIsBanned(true);
+                        return;
+                    }
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // Fetch Order Analytics
-                const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                // 2. Fetch Private Warnings (Report System)
+                const warnRes = await fetch(`${baseUrl}/api/v1/moderation/user/notifications/${myId}`, { headers });
+                if (warnRes.ok) {
+                    const warnData = await warnRes.json();
+                    // Filter out already read warnings
+                    setWarnings(warnData.filter((w: any) => !w.read));
+                }
 
-                // Fetch All Orders
-                const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                // Fetch Active Products Count
-                const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                // 3. Fetch System Announcements (Communication System)
+                const annRes = await fetch(`${baseUrl}/api/v1/announcements/my-announcements?role=FARMER`, { headers });
+                if (annRes.ok) {
+                    const annData = await annRes.json();
+                    setAnnouncements(annData);
+                }
+                // 4. Fetch Stats, Orders, and Products
+                const [statsRes, ordersRes, productsRes] = await Promise.all([
+                    fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, { headers }),
+                    fetch(`${baseUrl}/api/seller/orders/${myId}`, { headers }),
+                    fetch(`${baseUrl}/products/farmer/${myId}`, { headers })
+                ]);
 
                 if (statsRes.ok && ordersRes.ok && productsRes.ok) {
                     const statsData = await statsRes.json();
@@ -77,7 +99,7 @@ export default function SellerDashboard() {
                     });
                 }
             } catch (err) {
-                console.error("Dashboard data sync error:", err);
+                console.error("Dashboard primary sync error:", err);
             }
         };
 
@@ -102,7 +124,7 @@ export default function SellerDashboard() {
         fetchDashboardData();
         syncGlobalUnread();
 
-        // WebSocket for real-time chat notifications
+        // WebSocket for real-time chat badges
         const socket = new SockJS(`${chatUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -117,13 +139,64 @@ export default function SellerDashboard() {
         return () => { void client.deactivate(); };
     }, []);
 
+    // Function to dismiss private warning
+    const handleDismissWarning = async (id: number) => {
+        const token = sessionStorage.getItem("token");
+        try {
+            const res = await fetch(`${baseUrl}/api/v1/moderation/notifications/mark-read/${id}`, {
+                method: "PATCH",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setWarnings(prev => prev.filter(w => w.id !== id));
+            }
+        } catch (error) {
+            console.error("Dismissal failed:", error);
+        }
+    };
+
+    if (isBanned) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                <div className="bg-white max-w-md w-full rounded-3xl shadow-2xl overflow-hidden border border-red-100 text-center">
+                    <div className="bg-red-600 p-6 flex justify-center">
+                        <AlertCircle size={64} className="text-white animate-pulse" />
+                    </div>
+                    <div className="p-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Restricted</h2>
+                        <p className="text-gray-600 mb-6 text-sm">
+                            Your account has been <strong>banned</strong> for policy violation. Please contact customer service for more information.
+                        </p>
+                        <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3 text-left border border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Support Contact</p>
+                            <div className="flex items-center gap-3 text-gray-700">
+                                <Mail size={18} className="text-red-500" />
+                                <span className="text-sm font-medium">agrolinkcustomerservice@gmail.com</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-gray-700">
+                                <Phone size={18} className="text-red-500" />
+                                <span className="text-sm font-medium">+94 11 234 5678</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { sessionStorage.clear(); window.location.href = "/login"; }}
+                            className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
+                        >
+                            <LogOut size={18} /> Logout from System
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[#F8F9FA]">
             <SellerHeader />
             <div className="flex">
                 <SellerSidebar unreadCount={navUnread} activePage="dashboard" />
 
-                <main className="flex-1 p-8">
+                <main className="flex-1 p-8 overflow-hidden">
                     {/* Welcome Header */}
                     <header className="bg-[#03230F] rounded-3xl p-8 mb-8 flex justify-between items-center shadow-lg">
                         <div>
@@ -139,38 +212,95 @@ export default function SellerDashboard() {
                         </Link>
                     </header>
 
+                    {/* --- 1. PRIVATE WARNINGS SECTION --- */}
+                    {warnings.length > 0 && (
+                        <div className="space-y-3 mb-8">
+                            {warnings.map((warn) => (
+                                <div key={warn.id} className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex justify-between items-center shadow-sm animate-in fade-in slide-in-from-left duration-300">
+                                    <div className="flex items-center gap-4 text-red-800">
+                                        <div className="bg-red-100 p-2 rounded-full">
+                                            <ShieldAlert size={24} className="text-red-600" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs uppercase tracking-widest">Administrative Warning</p>
+                                            <p className="text-sm font-medium">{warn.message}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-100" onClick={() => handleDismissWarning(warn.id)}>
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* --- 2. SWIPEABLE SYSTEM ANNOUNCEMENTS (SINGLE VIEW) --- */}
+                    {showAnnouncements && announcements.length > 0 && (
+                        <div className="relative mb-8 max-w-full">
+                            <div className="flex items-center justify-between mb-3 px-2">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Megaphone size={14} /> System Announcements ({announcements.length})
+                                </h3>
+                                <button onClick={() => setShowAnnouncements(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory w-full">
+                                {announcements.map((ann) => (
+                                    <div
+                                        key={ann.id}
+                                        className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
+                                            ann.priority === 'URGENT' 
+                                            ? 'bg-red-50 border-red-500' 
+                                            : 'bg-[#EEC044] border-[#03230F]'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
+                                                <Bell size={22} className={ann.priority === 'URGENT' ? 'text-red-600' : 'text-[#03230F]'} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start mb-1 gap-2">
+                                                    <h4 className={`font-bold text-base truncate ${ann.priority === 'URGENT' ? 'text-red-700' : 'text-[#03230F]'}`}>
+                                                        {ann.title}
+                                                    </h4>
+                                                    <Badge variant="outline" className="text-[10px] bg-white/40 border-transparent whitespace-nowrap">
+                                                        {new Date(ann.createdAt).toLocaleDateString()}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm text-[#03230F]/80 line-clamp-2 leading-relaxed">
+                                                    {ann.message}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {announcements.length > 1 && (
+                                <div className="flex justify-center gap-1.5 mt-4">
+                                    {announcements.map((_, i) => (
+                                        <div key={i} className="h-1 w-4 rounded-full bg-gray-300" />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <StatCard
-                            label="Total Revenue"
-                            value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`}
-                            Icon={Wallet}
-                            color="text-green-600"
-                        />
-                        <StatCard
-                            label="Pending Orders"
-                            value={analytics.totalPendingOrders}
-                            Icon={Package}
-                            highlight
-                        />
-                        <StatCard
-                            label="Active Listed Products"
-                            value={analytics.activeListingsCount}
-                            Icon={Carrot}
-                            color="text-orange-500"
-                        />
-                        <StatCard
-                            label="Total Sold"
-                            value={analytics.totalCompletedOrders}
-                            Icon={TrendingUp}
-                            color="text-blue-500"
-                        />
+                        <StatCard label="Total Revenue" value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`} Icon={Wallet} color="text-green-600" />
+                        <StatCard label="Pending Orders" value={analytics.totalPendingOrders} Icon={Package} highlight />
+                        <StatCard label="Active Listings" value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
+                        <StatCard label="Total Sold" value={analytics.totalCompletedOrders} Icon={TrendingUp} color="text-blue-500" />
                     </div>
 
+                    {/* Main Content Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column: AI & Pending Orders List */}
                         <div className="lg:col-span-2 space-y-8">
-
+                            {/* AI Insights Card */}
+                            
+                            {/* Pending Orders List */}
                             {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
                             <CropRecommendationCard />
 
@@ -198,9 +328,9 @@ export default function SellerDashboard() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-[#03230F] text-sm">Rs. {(order.amount / 100).toLocaleString()}</p>
-                                                    <span className="text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold uppercase tracking-wider">
+                                                    <Badge className="bg-yellow-100 text-yellow-700 text-[10px] uppercase font-bold border-none">
                                                         {order.status}
-                                                    </span>
+                                                    </Badge>
                                                 </div>
                                             </div>
                                         ))
@@ -240,10 +370,6 @@ export default function SellerDashboard() {
         </div>
     );
 }
-
-// ----------------------------------------------------------------------
-// HELPER COMPONENTS
-// ----------------------------------------------------------------------
 
 function StatCard({ label, value, Icon, highlight, color }: { label: string, value: string | number, Icon: any, highlight?: boolean, color?: string }) {
     return (

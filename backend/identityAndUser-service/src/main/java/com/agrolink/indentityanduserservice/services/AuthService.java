@@ -103,4 +103,21 @@ public class AuthService {
     public long getTotalUserCount() {
         return userRepository.count();
     }
+
+    public User updateUserBannedStatus(Long id, boolean status) {
+        // Retrieve the user or throw an error if they don't exist
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        // Set the persistent field from the User model
+        user.setBanned(status);
+
+        // Save to the shared database
+        return userRepository.save(user);
+    }
+
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
 }

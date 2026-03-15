@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
+// @ts-ignore - Suppress TS error for non-module CSS import
 import "leaflet/dist/leaflet.css"
 import citiesData from "@/data/srilanka-cities.json"
 import { isWithinCityRadius } from "@/lib/geo-utils"
@@ -28,7 +29,6 @@ interface LocationPickerProps {
 }
 
 // --- INTERNAL COMPONENT: MAP CONTROLLER ---
-// Handles programmatic map movement (FlyTo)
 function MapController({ center }: { center: [number, number] | null }) {
     const map = useMap()
     useEffect(() => {
@@ -41,7 +41,6 @@ function MapController({ center }: { center: [number, number] | null }) {
 }
 
 // --- INTERNAL COMPONENT: INTERACTIVE MARKER ---
-// Handles clicks and drags
 function InteractiveMarker({
                                position,
                                onPositionChange,
@@ -119,6 +118,7 @@ const LeafletMapInstance = ({
             zoom={13}
             style={{ height: "100%", width: "100%", zIndex: 0 }}
             scrollWheelZoom={true}
+            ref={mapRef} 
         >
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -145,12 +145,10 @@ export default function LocationPickerMap({
                                               label = "Location",
                                           }: LocationPickerProps) {
 
-    // Data State
     const [provinces] = useState<any[]>(citiesData.provinces);
     const [districts, setDistricts] = useState<any[]>([]);
     const [cities, setCities] = useState<any[]>([]);
 
-    // Map Logic State
     const [targetCenter, setTargetCenter] = useState<[number, number] | null>(null);
     const [selectedCityCenter, setSelectedCityCenter] = useState<{ lat: number; lng: number } | null>(null);
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
@@ -158,10 +156,8 @@ export default function LocationPickerMap({
     );
     const [boundaryError, setBoundaryError] = useState("");
 
-    // Initial Center (Sri Lanka)
     const initialCenter: [number, number] = [7.8731, 80.7718];
 
-    // --- CASCADING DROPDOWNS ---
     useEffect(() => {
         if (value.province) {
             const p = provinces.find((p) => p.name === value.province);
@@ -196,7 +192,6 @@ export default function LocationPickerMap({
         }
     }, [value.city, cities]);
 
-    // --- HANDLERS ---
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         onChange({ ...value, province: e.target.value, district: "", city: "", latitude: null, longitude: null });
         setMarkerPosition(null);
@@ -220,7 +215,6 @@ export default function LocationPickerMap({
         onChange({ ...value, latitude: pos[0], longitude: pos[1] });
     };
 
-    // Styling
     const isDark = variant === "dark";
     const inputClasses = isDark
         ? "w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
@@ -235,7 +229,6 @@ export default function LocationPickerMap({
                 {label}
             </h3>
 
-            {/* FORM SECTION */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelClasses}>Province {required && <span className="text-red-500">*</span>}</label>
@@ -279,7 +272,6 @@ export default function LocationPickerMap({
                 </div>
             )}
 
-            {/* MAP SECTION */}
             {value.city && (
                 <div className="mt-4 animate-in fade-in duration-300">
                     <label className={labelClasses}>Pin Your Exact Location</label>

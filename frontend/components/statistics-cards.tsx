@@ -6,26 +6,28 @@ import { Users, UserCheck, UserX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function StatisticsCards() {
-  
-  // State 3ක් හදාගමු
   const [totalUsers, setTotalUsers] = useState("0")
   const [activeFarmers, setActiveFarmers] = useState("0")
   const [activeBuyers, setActiveBuyers] = useState("0")
+  const [bannedUsers, setBannedUsers] = useState("0") // NEW state for banned users
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Total Users
-        const usersRes = await axios.get("http://127.0.0.1:8081/auth/count")
+        const baseUrl = "http://localhost:8080/auth"
+        
+        // Parallel fetching for better performance
+        const [usersRes, farmersRes, buyersRes, bannedRes] = await Promise.all([
+          axios.get(`${baseUrl}/count`),
+          axios.get(`${baseUrl}/count/farmers`),
+          axios.get(`${baseUrl}/count/buyers`),
+          axios.get(`${baseUrl}/count/banned`) // NEW endpoint call
+        ])
+
         setTotalUsers(usersRes.data.toString())
-
-        // 2. Active Farmers (අලුත් එක)
-        const farmersRes = await axios.get("http://127.0.0.1:8081/auth/count/farmers")
         setActiveFarmers(farmersRes.data.toString())
-
-        // 3. Active Buyers (අලුත් එක)
-        const buyersRes = await axios.get("http://127.0.0.1:8081/auth/count/buyers")
         setActiveBuyers(buyersRes.data.toString())
+        setBannedUsers(bannedRes.data.toString()) // Update state
 
       } catch (error) {
         console.error("Error fetching dashboard stats:", error)
@@ -38,7 +40,7 @@ export function StatisticsCards() {
   const stats = [
     {
       title: "Total Users",
-      value: totalUsers, // Backend Data
+      value: totalUsers,
       change: "+12%",
       icon: Users,
       bgColor: "bg-primary/10",
@@ -46,7 +48,7 @@ export function StatisticsCards() {
     },
     {
       title: "Active Farmers",
-      value: activeFarmers, // Backend Data
+      value: activeFarmers,
       change: "+8%",
       icon: UserCheck,
       bgColor: "bg-green-100",
@@ -54,7 +56,7 @@ export function StatisticsCards() {
     },
     {
       title: "Active Buyers",
-      value: activeBuyers, // Backend Data
+      value: activeBuyers,
       change: "+15%",
       icon: UserCheck,
       bgColor: "bg-blue-100",
@@ -62,7 +64,7 @@ export function StatisticsCards() {
     },
     {
       title: "Banned Users",
-      value: "28", // මේක තාම Hardcode (Backend එකේ Banned Flag එකක් තිබ්බම හදමු)
+      value: bannedUsers, // Now using backend data
       change: "+2",
       icon: UserX,
       bgColor: "bg-red-100",

@@ -1,9 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard, ShoppingBag, ShoppingCart, Heart, Package, TrendingUp, FileText, MessageSquare, Gavel,
+  LayoutDashboard, ShoppingBag, ShoppingCart, Package, TrendingUp, FileText, MessageSquare, Gavel,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,8 +23,45 @@ interface DashboardNavProps {
   unreadCount?: number;
 }
 
-export function DashboardNav({ unreadCount = 0 }: DashboardNavProps) {
+export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProps) {
   const pathname = usePathname()
+  const [liveUnreadCount, setLiveUnreadCount] = useState(initialCount)
+  const CHAT_SERVICE_URL = "http://localhost:8083"
+
+  // Polling Logic: Fetch total unread count every 3 seconds
+  useEffect(() => {
+    const fetchTotalUnread = async () => {
+      const token = sessionStorage.getItem("token");
+      const myId = sessionStorage.getItem("id");
+      
+      if (!token || !myId) return;
+
+      try {
+        // Calling the endpoint you have in ChatController.java
+        const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/total-unread`, {
+          headers: { 
+            "Authorization": `Bearer ${token}` 
+          }
+        });
+
+        if (res.ok) {
+          const count = await res.json();
+          setLiveUnreadCount(count);
+        }
+      } catch (err) {
+        console.error("Polling failed:", err);
+      }
+    };
+
+    // Initial fetch
+    fetchTotalUnread();
+
+    // Set up the interval
+    const interval = setInterval(fetchTotalUnread, 3000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [pathname]); // Refresh interval if path changes
 
   return (
     <nav className="hidden lg:flex w-64 flex-col border-r bg-sidebar p-6">
@@ -45,10 +83,10 @@ export function DashboardNav({ unreadCount = 0 }: DashboardNavProps) {
             >
               <div className="relative">
                 <Icon className="h-5 w-5" />
-                {/* Unread badge logic */}
-                {item.label === "Chat" && unreadCount > 0 && (
+                {/* Real-time Badge via Polling */}
+                {item.label === "Chat" && liveUnreadCount > 0 && (
                   <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                    {liveUnreadCount > 9 ? "9+" : liveUnreadCount}
                   </span>
                 )}
               </div>

@@ -10,18 +10,25 @@ import SellerHeader from "@/components/headers/SellerHeader"
 import SellerSidebar from "../../seller/dashboard/SellerSideBar"
 import '../dashboard/SellerDashboard.css';
 
-function ChatContent() {
+function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: number) => void }) {
     const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [messages, setMessages] = useState<Message[]>([])
     const [selectedConversationId, setSelectedConversationId] = useState<string>("")
     const [isLoading, setIsLoading] = useState(true)
-    const [stompClient, setStompClient] = useState<any>(null)
+    const [stompClient, setStompClient] = useState<Client | null>(null)
 
     const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"; 
     const CHAT_SERVICE_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"; 
     
     const selectedIdRef = useRef("");
+
+    // Update parent total unread count whenever conversations change
+    useEffect(() => {
+        const total = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+        onTotalUnreadChange(total);
+    }, [conversations, onTotalUnreadChange]);
+
     useEffect(() => {
         selectedIdRef.current = selectedConversationId;
     }, [selectedConversationId]);
@@ -60,25 +67,7 @@ function ChatContent() {
             ));
             syncReadStatus(selectedConversationId);
         }
-    }, [selectedConversationId, messages.length, syncReadStatus]);
-
-    // --- 2. FIXED: HANDLE URL PARAMETER ---
-    // Changed "userId" to "receiverId" to match your ItemRequestsPage redirect
-    useEffect(() => {
-        const receiverIdFromUrl = searchParams.get("receiverId"); 
-        
-        if (receiverIdFromUrl) {
-            setSelectedConversationId(receiverIdFromUrl);
-            
-            // Check if this contact already exists in the sidebar
-            const exists = conversations.some(conv => conv.id === receiverIdFromUrl);
-            
-            // If they don't exist and we've finished the initial load, add them
-            if (!exists && !isLoading) {
-                resolveAndAddContact(receiverIdFromUrl);
-            }
-        }
-    }, [searchParams, isLoading, conversations.length]);
+    }, [selectedConversationId, syncReadStatus]);
 
     const resolveAndAddContact = async (id: string) => {
         const token = sessionStorage.getItem("token");
@@ -104,49 +93,56 @@ function ChatContent() {
         } catch (err) { console.error("Failed to resolve contact:", err); }
     };
 
-    // --- 3. WEBSOCKET LOGIC ---
+    // --- 2. WEBSOCKET LOGIC (UPDATED) ---
     useEffect(() => {
+        const myId = sessionStorage.getItem("id");
+        if (!myId) return;
+
         const socket = new SockJS(`${CHAT_SERVICE_URL}/ws`); 
         const client = new Client({
             webSocketFactory: () => socket,
+            // CRITICAL: Tells UserInterceptor.java who is connecting
+            connectHeaders: {
+                user: myId 
+            },
             onConnect: () => {
-                const myId = sessionStorage.getItem("id");
-                if (myId) {
-                    client.subscribe(`/user/${myId}/queue/messages`, (message) => {
-                        const newMessage = JSON.parse(message.body);
-                        const senderIdStr = newMessage.senderId.toString();
-                        const currentActiveId = selectedIdRef.current;
+                client.subscribe(`/user/${myId}/queue/messages`, (message) => {
+                    const newMessage = JSON.parse(message.body);
+                    const senderIdStr = newMessage.senderId.toString();
+                    const currentActiveId = selectedIdRef.current;
 
-                        if (senderIdStr === currentActiveId) {
-                            setMessages((prev) => [...prev, { 
-                                id: Date.now().toString(), senderId: newMessage.senderId,
-                                content: newMessage.content, timestamp: newMessage.timestamp,
-                                isCurrentUser: false, isRead: true 
-                            }]);
-                            syncReadStatus(senderIdStr); 
-                        }
+                    if (senderIdStr === currentActiveId) {
+                        setMessages((prev) => [...prev, { 
+                            id: newMessage.id?.toString() || Date.now().toString(), 
+                            senderId: newMessage.senderId,
+                            content: newMessage.content, 
+                            timestamp: newMessage.timestamp,
+                            isCurrentUser: false, 
+                            isRead: true 
+                        }]);
+                        syncReadStatus(senderIdStr); 
+                    }
 
-                        setConversations((prev) => {
-                            const exists = prev.some(c => c.id === senderIdStr);
-                            if (!exists) { resolveAndAddContact(senderIdStr); return prev; }
+                    setConversations((prev) => {
+                        const exists = prev.some(c => c.id === senderIdStr);
+                        if (!exists) { resolveAndAddContact(senderIdStr); return prev; }
 
-                            const updated = prev.map(conv => {
-                                if (conv.id === senderIdStr) {
-                                    const isNotOpen = currentActiveId !== senderIdStr;
-                                    return { 
-                                        ...conv, 
-                                        lastMessage: newMessage.content, 
-                                        timestamp: newMessage.timestamp,
-                                        unread: isNotOpen,
-                                        unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
-                                    };
-                                }
-                                return conv;
-                            });
-                            return [...updated].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                        const updated = prev.map(conv => {
+                            if (conv.id === senderIdStr) {
+                                const isNotOpen = currentActiveId !== senderIdStr;
+                                return { 
+                                    ...conv, 
+                                    lastMessage: newMessage.content, 
+                                    timestamp: newMessage.timestamp,
+                                    unread: isNotOpen,
+                                    unreadCount: isNotOpen ? (conv.unreadCount || 0) + 1 : 0
+                                };
+                            }
+                            return conv;
                         });
+                        return [...updated].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                     });
-                }
+                });
             },
         });
         client.activate();
@@ -154,7 +150,19 @@ function ChatContent() {
         return () => { void client.deactivate(); };
     }, [CHAT_SERVICE_URL, syncReadStatus]);
 
-    // --- 4. FETCH CONTACTS & HISTORY ---
+    // --- 3. HANDLE URL PARAMETERS ---
+    useEffect(() => {
+        const receiverIdFromUrl = searchParams.get("receiverId"); 
+        if (receiverIdFromUrl) {
+            setSelectedConversationId(receiverIdFromUrl);
+            const exists = conversations.some(conv => conv.id === receiverIdFromUrl);
+            if (!exists && !isLoading) {
+                resolveAndAddContact(receiverIdFromUrl);
+            }
+        }
+    }, [searchParams, isLoading, conversations.length]);
+
+    // --- 4. FETCH DATA ---
     useEffect(() => {
         const fetchContacts = async () => {
             const token = sessionStorage.getItem("token"); 
@@ -163,6 +171,8 @@ function ChatContent() {
                 const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
                 if (res.ok) {
                     const ids: number[] = await res.json();
+                    if (ids.length === 0) { setIsLoading(false); return; }
+
                     const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
                     const nameMap = nameRes.ok ? await nameRes.json() : {};
 
@@ -199,7 +209,6 @@ function ChatContent() {
         fetchHistory();
     }, [selectedConversationId, CHAT_SERVICE_URL]);
 
-    // --- 5. SEND MESSAGE ---
     const handleSendMessage = (content: string) => {
         if (stompClient?.connected && selectedConversationId) {
             const myId = sessionStorage.getItem("id");
@@ -247,13 +256,15 @@ function ChatContent() {
 }
 
 export default function ChatPage() {
+    const [totalUnread, setTotalUnread] = useState(0);
+
     return (
         <div className="min-h-screen bg-gray-50">
             <SellerHeader />
             <div className="flex">
-                <SellerSidebar unreadCount={0} activePage="chat" />
+                <SellerSidebar unreadCount={totalUnread} activePage="chat" />
                 <Suspense fallback={<div className="p-10 font-bold">Loading interface...</div>}>
-                    <ChatContent />
+                    <ChatContent onTotalUnreadChange={setTotalUnread} />
                 </Suspense>
             </div>
         </div>
