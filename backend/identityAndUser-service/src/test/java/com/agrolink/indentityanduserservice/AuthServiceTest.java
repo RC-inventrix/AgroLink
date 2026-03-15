@@ -45,7 +45,7 @@ class AuthServiceTest {
         validRequest.setBusinessName("Green Farm");
         validRequest.setStreetAddress("123 Farm Lane");
         validRequest.setDistrict("Colombo");
-        validRequest.setZipcode("10100");
+       // validRequest.setZipcode("10100");
     }
 
     @Test
