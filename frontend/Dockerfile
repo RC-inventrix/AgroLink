@@ -15,6 +15,10 @@ COPY . .
 
 # Build the Next.js application (standalone output configured in next.config.ts)
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_CHAT_URL
+ENV NEXT_PUBLIC_CHAT_URL=$NEXT_PUBLIC_CHAT_URL
 RUN npm run build
 
 # Stage 3: Production runner

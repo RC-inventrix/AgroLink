@@ -22,6 +22,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import LocationPicker from "@/components/LocationPicker"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface Vegetable {
     id: string
     name: string
@@ -90,7 +92,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
             const token = sessionStorage.getItem("token")
             if (userId) {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/users/${userId}/address`, {
+                    const res = await fetch(`${API_URL}/api/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (res.ok) {
@@ -246,7 +248,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
         const finalTotal = goodsTotal + deliveryFee
 
         try {
-            const res = await fetch("http://localhost:8080/cart/add", {
+            const res = await fetch(`${API_URL}/cart/add`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

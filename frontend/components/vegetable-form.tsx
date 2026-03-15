@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import LocationPicker from "@/components/LocationPicker"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // --- UTILITY: Image Compression ---
 const compressImage = async (file: File): Promise<File> => {
     if (file.size <= 1024 * 1024) return file;
@@ -109,7 +111,7 @@ export default function VegetableForm() {
             const token = sessionStorage.getItem("token");
             if (myId) {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/usersProducts/${myId}/address`, {
+                    const res = await fetch(`${API_URL}/api/usersProducts/${myId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (res.ok) {
@@ -320,7 +322,7 @@ export default function VegetableForm() {
         try {
             const uploadPromises = images.map(async (file) => {
                 const presignRes = await fetch(
-                    `http://localhost:8080/products/presigned-url?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`,
+                    `${API_URL}/products/presigned-url?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`,
                     { headers: { "Authorization": `Bearer ${token}` }, signal }
                 );
 
@@ -378,7 +380,7 @@ export default function VegetableForm() {
                     imageUrls: uploadedUrls
                 };
 
-                response = await fetch("http://localhost:8080/products", {
+                response = await fetch(`${API_URL}/products`, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -409,7 +411,7 @@ export default function VegetableForm() {
                     pickupLongitude: finalLng
                 };
 
-                response = await fetch("http://localhost:8080/api/auctions", {
+                response = await fetch(`${API_URL}/api/auctions`, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`,

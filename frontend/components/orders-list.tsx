@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { OrderCard } from "./order-card"
 import { toast } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface OrdersListProps {
     initialOrders: any[]
     onOrderUpdated: () => void
@@ -86,7 +88,7 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/seller/orders/${orderId}/status?status=${nextStatus}`, {
+            const response = await fetch(`${API_URL}/api/seller/orders/${orderId}/status?status=${nextStatus}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

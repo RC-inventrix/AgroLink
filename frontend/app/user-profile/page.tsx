@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Save, Loader2, X, Check, AlertCircle } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState({
     fullname: "",
@@ -49,7 +51,7 @@ export default function ProfilePage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:8080/auth/user/${userId}`, {
+        const res = await fetch(`${API_URL}/auth/user/${userId}`, {
           method: "GET",
           headers: { 
             "Authorization": `Bearer ${token}`,
@@ -88,7 +90,7 @@ export default function ProfilePage() {
     const token = sessionStorage.getItem("token");
     
     try {
-      const res = await fetch(`http://localhost:8081/auth/profile/update`, {
+      const res = await fetch(`${API_URL}/auth/profile/update`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`,

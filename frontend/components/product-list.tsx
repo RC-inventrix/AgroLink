@@ -11,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import LocationPicker from "@/components/LocationPicker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // --- UTILITY: Image Compression ---
 const compressImage = async (file: File): Promise<File> => {
     if (file.size <= 1024 * 1024) return file;
@@ -91,11 +93,11 @@ export default function ProductList() {
         if (!farmerId) return setLoading(false);
 
         try {
-            const prodRes = await fetch(`http://localhost:8080/products/farmer/${farmerId}`, {
+            const prodRes = await fetch(`${API_URL}/products/farmer/${farmerId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
 
-            const userRes = await fetch(`http://localhost:8080/api/usersProducts/${farmerId}/address`, {
+            const userRes = await fetch(`${API_URL}/api/usersProducts/${farmerId}/address`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
 
@@ -180,7 +182,7 @@ export default function ProductList() {
 
             if (newImage) {
                 const presignRes = await fetch(
-                    `http://localhost:8080/products/presigned-url?fileName=${encodeURIComponent(newImage.name)}&contentType=${encodeURIComponent(newImage.type)}`,
+                    `${API_URL}/products/presigned-url?fileName=${encodeURIComponent(newImage.name)}&contentType=${encodeURIComponent(newImage.type)}`,
                     { headers: { "Authorization": `Bearer ${token}` } }
                 );
                 const { uploadUrl } = await presignRes.json();
@@ -222,7 +224,7 @@ export default function ProductList() {
                 imageUrls: [finalImageUrl]
             }
 
-            const res = await fetch(`http://localhost:8080/products/${editingProduct.id}`, {
+            const res = await fetch(`${API_URL}/products/${editingProduct.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify(payload)
@@ -243,7 +245,7 @@ export default function ProductList() {
         if (!showDeleteConfirm) return;
         const token = sessionStorage.getItem("token")
         try {
-            const res = await fetch(`http://localhost:8080/products/${showDeleteConfirm}`, {
+            const res = await fetch(`${API_URL}/products/${showDeleteConfirm}`, {
                 method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
             })
             if (res.ok) {

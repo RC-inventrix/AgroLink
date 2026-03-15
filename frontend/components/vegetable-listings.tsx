@@ -7,6 +7,8 @@ import AuctionBidPopup from "./auction-bid-popup" // Import the new component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // 1. Updated Interface to include Auction fields
 interface Vegetable {
     id: string
@@ -56,9 +58,9 @@ export default function VegetableListings() {
 
                 // 1. Run fetches in parallel
                 const [productsRes, auctionsRes] = await Promise.all([
-                    fetch("http://localhost:8080/products"),
+                    fetch(`${API_URL}/products`),
                     // Assuming API Gateway routes /api/auctions to the Auction Service
-                    fetch("http://localhost:8080/api/auctions/active", { headers })
+                    fetch(`${API_URL}/api/auctions/active`, { headers })
                 ]);
 
                 // handle responses
@@ -71,7 +73,7 @@ export default function VegetableListings() {
 
                 if (uniqueProductFarmerIds.length > 0) {
                     try {
-                        const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueProductFarmerIds.join(',')}`, {
+                        const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${uniqueProductFarmerIds.join(',')}`, {
                             method: "GET",
                             headers
                         });

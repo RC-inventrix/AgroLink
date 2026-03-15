@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare, Book, Timer } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface SellerSidebarProps {
     unreadCount: number; // This can now be treated as an initial value
     orderCount?: number;
@@ -17,7 +19,7 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                                                      }) => {
     const [newRequestCount, setNewRequestCount] = useState(0);
     const [liveUnreadCount, setLiveUnreadCount] = useState(initialUnreadCount);
-    
+
     const CHAT_SERVICE_URL = "http://localhost:8083";
     const AUTH_SERVICE_URL = "http://localhost:8080";
 
@@ -54,11 +56,13 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
             if (!token || !sellerId) return;
 
             try {
-                const reqRes = await fetch(`${AUTH_SERVICE_URL}/api/requirements/status/OPEN`, {
+                // 1. Fetch Open Requirements
+                const reqRes = await fetch(`${API_URL}/api/requirements/status/OPEN`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                const offerRes = await fetch(`${AUTH_SERVICE_URL}/api/offers/seller/${sellerId}`, {
+                // 2. Fetch Seller's existing offers
+                const offerRes = await fetch(`${API_URL}/api/offers/seller/${sellerId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 

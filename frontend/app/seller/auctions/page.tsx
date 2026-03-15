@@ -7,6 +7,8 @@ import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function AuctionsPage() {
   const [auctions, setAuctions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,7 +24,7 @@ export default function AuctionsPage() {
       }
 
       const res = await fetch(
-        `http://localhost:8080/api/auctions/farmer/${farmerId}`,
+        `${API_URL}/api/auctions/farmer/${farmerId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

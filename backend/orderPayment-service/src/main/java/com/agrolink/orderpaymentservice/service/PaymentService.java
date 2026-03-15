@@ -28,7 +28,8 @@ public class PaymentService {
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
 
-    private final String FRONTEND_URL = "http://localhost:3000";
+    @Value("${client.base.url:http://localhost:3000}")
+    private String frontendUrl;
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
@@ -59,8 +60,8 @@ public class PaymentService {
         // 2. Build Stripe Session Parameters (Do not save to DB yet)
         SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(FRONTEND_URL + "/buyer/order-success?payment=success")
-                .setCancelUrl(FRONTEND_URL + "/buyer/checkout?canceled=true")
+                .setSuccessUrl(frontendUrl + "/buyer/order-success?payment=success")
+                .setCancelUrl(frontendUrl + "/buyer/checkout?canceled=true")
                 .setClientReferenceId(userId.toString());
 
         for (CartItem item : cartItems) {

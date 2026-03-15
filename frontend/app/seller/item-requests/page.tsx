@@ -15,6 +15,9 @@ import {
 import { useRouter } from "next/navigation"
 import '../dashboard/SellerDashboard.css';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+
 interface Requirement {
     id: number;
     buyerId: number;
@@ -78,15 +81,15 @@ const ItemRequestsPage = () => {
         setLoading(true);
         try {
             const [openRes, fulfilledRes] = await Promise.all([
-                fetch(`http://localhost:8080/api/requirements/status/OPEN`, {
-                    headers: { "Authorization": `Bearer ${token}` }
+                fetch(`${API_URL}/api/requirements/status/OPEN`, {
+                    headers: { "Authorization": `Bearer ${token}` } 
                 }),
-                fetch(`http://localhost:8080/api/requirements/status/FULFILLED`, {
-                    headers: { "Authorization": `Bearer ${token}` }
+                fetch(`${API_URL}/api/requirements/status/FULFILLED`, {
+                    headers: { "Authorization": `Bearer ${token}` } 
                 })
             ]);
-
-            const offerRes = await fetch(`http://localhost:8080/api/offers/seller/${sellerId}`, {
+            
+            const offerRes = await fetch(`${API_URL}/api/offers/seller/${sellerId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
 
@@ -109,7 +112,7 @@ const ItemRequestsPage = () => {
 
                 const uniqueBuyerIds = Array.from(new Set(combinedReqs.map(r => r.buyerId)));
                 if (uniqueBuyerIds.length > 0) {
-                    const nameRes = await fetch(`http://localhost:8080/auth/fullnames?ids=${uniqueBuyerIds.join(',')}`, {
+                    const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${uniqueBuyerIds.join(',')}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (nameRes.ok) {
@@ -182,7 +185,7 @@ const ItemRequestsPage = () => {
         };
 
         try {
-            const res = await fetch(`http://localhost:8080/api/offers/create`, {
+            const res = await fetch(`${API_URL}/api/offers/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify(payload)
@@ -238,7 +241,7 @@ const ItemRequestsPage = () => {
                             {displayedRequests.map((req) => (
                                 <Card key={req.id} className="overflow-hidden border border-gray-200 shadow-md rounded-lg bg-white relative flex flex-col transition-all hover:shadow-xl">
                                     <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
-                                    
+
                                     <div className="p-8 flex-1">
                                         <div className="flex justify-between items-start mb-6">
                                             <div>
@@ -411,14 +414,14 @@ const ItemRequestsPage = () => {
                         <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2">Reject Request?</h2>
                         <p className="text-gray-500 text-sm mb-8 font-sans">This request will be removed from your view.</p>
                         <div className="flex flex-col gap-3">
-                            <Button 
-                                onClick={confirmReject} 
+                            <Button
+                                onClick={confirmReject}
                                 className="w-full bg-[#03230F] text-[#EEC044] font-bold py-7 rounded-md uppercase shadow-xl hover:bg-black transition-all"
                             >
                                 Yes, Reject
                             </Button>
-                            <button 
-                                onClick={() => { setShowRejectPopup(false); setItemToReject(null); }} 
+                            <button
+                                onClick={() => { setShowRejectPopup(false); setItemToReject(null); }}
                                 className="w-full font-bold text-gray-400 py-4 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors"
                             >
                                 Cancel

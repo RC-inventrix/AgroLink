@@ -20,7 +20,7 @@ const ForgotPassword = () => {
   const buttonStyles = "w-full bg-[#facc15] hover:bg-[#eab308] text-black font-bold py-3 rounded-md transition-colors mt-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
   // Replace this with your actual Gateway or Identity Service URL
-  const BASE_URL = "http://localhost:8080/forgotPassword";
+  const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080") + "/forgotPassword";
 
   // Step 1: Send OTP to Email
   // Step 1: Send OTP to Email

@@ -22,7 +22,7 @@ export default function DashboardHeader() {
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
     const [orderNotifs, setOrderNotifs] = useState<OrderNotification[]>([])
-    
+
     const dropdownRef = useRef<HTMLDivElement>(null)
     const notifRef = useRef<HTMLDivElement>(null)
 
@@ -32,22 +32,26 @@ export default function DashboardHeader() {
 
     const handleNotifClick = async (notif: OrderNotification) => {
         const token = sessionStorage.getItem("token");
+        
         try {
+            // 1. Mark as read in Backend if it's currently unread
             if (!notif.read) {
                 await fetch(`${orderBaseUrl}/api/buyer/orders/notifications/${notif.id}/read`, {
                     method: "PUT",
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 
-                setOrderNotifs(prev => 
+                setOrderNotifs(prev =>
                     prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
                 );
             }
+
+            // 2. Close the notification dropdown
             setIsNotifOpen(false);
 
             const msg = notif.message.toLowerCase();
             if (msg.includes("offer")) {
-                router.push(`/buyer/requests`); 
+                router.push(`/buyer/requests`);
             } else if (msg.includes("accepted")) {
                 router.push(`/buyer/order-history?tab=processing`);
             } else {
@@ -63,7 +67,7 @@ export default function DashboardHeader() {
         const myId = sessionStorage.getItem("id");
         if (!token || !myId) return;
 
-        const headers = { 
+        const headers = {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
         };
@@ -95,6 +99,22 @@ export default function DashboardHeader() {
             } catch (err) { console.error("Chat sync failed:", err); }
         };
 
+        const fetchCancelledNotifs = async (data: any) => {
+            try {
+                const res = await fetch(`${orderBaseUrl}/api/buyer/orders/notifications/${myId}`, {
+                    method: "GET",
+                    headers: { 
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    fetchCancelledNotifs(data);
+                }
+            } catch (err) { console.error("Notif fetch failed:", err); }
+        };
+
         syncUnreadCount();
         fetchAllNotifications();
 
@@ -112,9 +132,9 @@ export default function DashboardHeader() {
         });
         client.activate();
 
-        return () => { 
+        return () => {
             clearInterval(interval);
-            void client.deactivate(); 
+            void client.deactivate();
         };
     }, []);
 

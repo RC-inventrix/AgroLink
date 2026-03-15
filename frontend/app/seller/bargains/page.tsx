@@ -5,6 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
 import { Loader2, Leaf } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+// Updated Interface to include logistics and map data
 interface BargainRequestUI {
     id: string
     name: string
@@ -40,65 +43,65 @@ export default function BargainPage() {
 
         const fetchBargains = async () => {
             try {
-                // 1. Fetch Bargain Requests
-                const response = await fetch(`http://localhost:8080/api/bargains/seller/${currentSellerId}`)
-                if (!response.ok) throw new Error("Failed to fetch bargains")
-                const data = await response.json()
+                const response = await fetch(`${API_URL}/api/bargains/seller/${currentSellerId}`);
+                if (response.ok) {
+                    const data = await response.json();
 
-                // 2. Extract unique Buyer IDs
-                const buyerIds = Array.from(new Set(data.map((item: any) => item.buyerId))).filter(Boolean);
-                
-                let nameMap: Record<number, string> = {};
-                
-                // 3. Fetch Full Names from AuthController
-                if (buyerIds.length > 0) {
-                    const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${buyerIds.join(',')}`);
-                    if (namesResponse.ok) {
-                        nameMap = await namesResponse.json();
+                    // 2. Extract unique Buyer IDs
+                    const buyerIds = Array.from(new Set(data.map((item: any) => item.buyerId))).filter(Boolean);
+
+                    let nameMap: Record<number, string> = {};
+
+                    // 3. Fetch Full Names from AuthController
+                    if (buyerIds.length > 0) {
+                        const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${buyerIds.join(',')}`);
+                        if (namesResponse.ok) {
+                            nameMap = await namesResponse.json();
+                        }
                     }
+
+                    // 4. Map Backend Entity to UI Interface
+                    const mappedData: BargainRequestUI[] = data.map((item: any) => {
+                        const originalTotal = item.originalPricePerKg * item.quantity;
+                        const discountAmount = originalTotal - item.suggestedPrice;
+                        const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
+
+                        return {
+                            id: item.id.toString(),
+                            name: item.vegetableName,
+                            // Update: Use fullname from nameMap
+                            buyerName: nameMap[item.buyerId] || item.buyerName || "Anonymous Buyer",
+                            buyerId: item.buyerId,
+                            image: item.vegetableImage || "/placeholder.svg",
+                            pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                            pricePerKg: item.originalPricePerKg || 0,
+                            requestedQuantityKg: item.quantity,
+                            actualPrice: originalTotal,
+                            offeredPrice: item.suggestedPrice,
+                            discount: Math.round(discountPercent),
+                            status: item.status,
+                            deliveryRequired: item.deliveryRequired || false,
+                            buyerAddress: item.buyerAddress || "Pickup at Farm",
+                            deliveryFee: item.deliveryFee || 0,
+                            buyerLatitude: item.buyerLatitude || null,
+                            buyerLongitude: item.buyerLongitude || null
+                        };
+                    });
+                    setRequests(mappedData);
                 }
-
-                // 4. Map Backend Entity to UI Interface
-                const mappedData: BargainRequestUI[] = data.map((item: any) => {
-                    const originalTotal = item.originalPricePerKg * item.quantity;
-                    const discountAmount = originalTotal - item.suggestedPrice;
-                    const discountPercent = originalTotal > 0 ? (discountAmount / originalTotal) * 100 : 0;
-
-                    return {
-                        id: item.id.toString(),
-                        name: item.vegetableName,
-                        // Update: Use fullname from nameMap
-                        buyerName: nameMap[item.buyerId] || item.buyerName || "Anonymous Buyer",
-                        buyerId: item.buyerId,
-                        image: item.vegetableImage || "/placeholder.svg",
-                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
-                        pricePerKg: item.originalPricePerKg || 0,
-                        requestedQuantityKg: item.quantity,
-                        actualPrice: originalTotal,
-                        offeredPrice: item.suggestedPrice,
-                        discount: Math.round(discountPercent),
-                        status: item.status,
-                        deliveryRequired: item.deliveryRequired || false,
-                        buyerAddress: item.buyerAddress || "Pickup at Farm",
-                        deliveryFee: item.deliveryFee || 0,
-                        buyerLatitude: item.buyerLatitude || null,
-                        buyerLongitude: item.buyerLongitude || null
-                    };
-                });
-                setRequests(mappedData)
             } catch (error) {
-                console.error("Failed to fetch bargains", error)
+                console.error("Failed to fetch bargains", error);
             } finally {
-                setIsLoading(false)
+                setIsLoading(false);
             }
-        }
+        };
 
-        fetchBargains()
-    }, [])
+        fetchBargains();
+    }, []);
 
     const handleAcceptDeal = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
+            const response = await fetch(`${API_URL}/api/bargains/${id}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: "ACCEPTED" })
@@ -116,7 +119,7 @@ export default function BargainPage() {
 
     const handleRejectRequest = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/bargains/${id}/status`, {
+            const response = await fetch(`${API_URL}/api/bargains/${id}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: "REJECTED" })
@@ -153,7 +156,7 @@ export default function BargainPage() {
 
     return (
         <main className="min-h-screen bg-gray-50 pb-12 font-sans">
-            <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
+            <div className="px-6 py-10 bg-linear-to-r from-green-900 to-green-800 text-white shadow-md">
                 <div className="max-w-6xl mx-auto flex items-center gap-3">
                     <Leaf className="w-10 h-10 text-green-300" />
                     <div>

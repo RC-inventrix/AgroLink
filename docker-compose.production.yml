@@ -2,12 +2,6 @@
 # AgroLink - Production Docker Compose
 # Optimized for Google Cloud VM (8 GB RAM)
 # =============================================================
-# Usage:
-#   docker compose -f docker-compose.production.yml up -d
-#
-# All secrets must be provided via environment variables or
-# a .env file (never commit .env to version control).
-# =============================================================
 
 services:
   # ─────────────────────────────────────────
@@ -53,16 +47,17 @@ services:
     networks:
       - agro-net
     healthcheck:
+      # Simplified the wget command to just request the actuator health endpoint
       test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 15s
+      timeout: 5s
+      retries: 5
       start_period: 60s
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: "0.25"
+          memory: 512M    # <--- INCREASED THIS TO PREVENT SILENT CRASHES
+          cpus: "0.5"     # <--- INCREASED CPU SLIGHTLY TO HELP IT BOOT FASTER
 
   config-server:
     build:
@@ -121,7 +116,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -164,7 +159,7 @@ services:
     volumes:
       - uploads_data:/app/uploads
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -195,7 +190,7 @@ services:
       STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
-      CLIENT_BASE_URL: ${CLIENT_BASE_URL}
+      CLIENT_BASE_URL: ${CLIENT_BASE_URL:-https://getagrolink.me}
       JWT_SECRET: ${JWT_KEY}
       JPA_DDL_AUTO: validate
     depends_on:
@@ -206,7 +201,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8075/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8075/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -244,7 +239,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8083/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -280,7 +275,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8084/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -317,7 +312,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8086/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -346,7 +341,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8085/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -369,7 +364,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -391,7 +386,7 @@ services:
       - "8080:8080"
     environment:
       EUREKA_HOST: service-discovery
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://getagrolink.me,http://localhost:3000}
     depends_on:
       service-discovery:
         condition: service_healthy
@@ -402,7 +397,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -431,7 +426,7 @@ services:
     networks:
       - agro-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

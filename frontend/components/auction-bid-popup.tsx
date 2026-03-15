@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import LocationPicker from "@/components/LocationPicker"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // Interfaces
 interface Vegetable {
     id: string
@@ -128,7 +130,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
         if (isOpen && vegetable.id) {
             const fetchAuctionDetails = async () => {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/auctions/${vegetable.id}`)
+                    const res = await fetch(`${API_URL}/api/auctions/${vegetable.id}`)
                     if (res.ok) {
                         const data = await res.json()
                         setBids(data.topBids || [])
@@ -158,7 +160,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
             if (userId && isOpen) {
                 try {
                     // Fetch Email
-                    const userRes = await fetch(`http://localhost:8080/api/users/${userId}`, {
+                    const userRes = await fetch(`${API_URL}/api/users/${userId}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (userRes.ok) {
@@ -170,7 +172,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                     }
 
                     // Fetch Address
-                    const addrRes = await fetch(`http://localhost:8080/api/users/${userId}/address`, {
+                    const addrRes = await fetch(`${API_URL}/api/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (addrRes.ok) {
@@ -373,7 +375,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
         }
 
         try {
-            const res = await fetch(`http://localhost:8080/api/auctions/${vegetable.id}/bids`, {
+            const res = await fetch(`${API_URL}/api/auctions/${vegetable.id}/bids`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

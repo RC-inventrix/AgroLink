@@ -6,6 +6,8 @@ import Image from "next/image"
 import axios from "axios"
 import { Eye, EyeOff, Lock, User } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function AdminLogin() {
   const router = useRouter()
   
@@ -41,7 +43,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (response.status === 200) {
       // 1. Check if the field is 'token' or 'accessToken' or 'jwt'
       const token = response.data.token;
-      
+
       if (token) {
         // 2. Use sessionStorage so ReportsSummary can find it
         sessionStorage.setItem("token", token);

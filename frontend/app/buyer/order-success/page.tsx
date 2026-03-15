@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // 1. We move the logic into a separate "inner" component
 function OrderSuccessContent() {
   const router = useRouter()
@@ -20,7 +22,7 @@ function OrderSuccessContent() {
       if (paymentStatus === "success" && userId) {
         try {
           // 1. Call the backend to clear the database cart for this user
-          await fetch(`http://localhost:8080/cart/user/${userId}`, {
+          await fetch(`${API_URL}/cart/user/${userId}`, {
             method: 'DELETE',
           })
 

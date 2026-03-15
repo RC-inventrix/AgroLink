@@ -55,9 +55,9 @@ export default function BuyerBargainPage() {
 
             // 2. Extract unique Seller IDs
             const sellerIds = Array.from(new Set(data.map((item: any) => item.sellerId))).filter(Boolean);
-            
+
             let nameMap: Record<number, string> = {};
-            
+
             // 3. Fetch Full Names from AuthController (Batch Request)
             if (sellerIds.length > 0) {
                 const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${sellerIds.join(',')}`);
@@ -72,7 +72,7 @@ export default function BuyerBargainPage() {
                 name: item.vegetableName,
                 // Pass full name for display and raw ID for linking
                 seller: nameMap[item.sellerId] || `Farmer #${item.sellerId}`,
-                sellerId: item.sellerId, 
+                sellerId: item.sellerId,
                 image: item.vegetableImage || "/placeholder.svg",
                 pricePerHundredG: (item.originalPricePerKg || 0) / 10,
                 pricePerKg: item.originalPricePerKg || 0,
@@ -134,7 +134,6 @@ export default function BuyerBargainPage() {
 
     const handleAddToCart = async (item: BargainItem) => {
         const currentUserId = sessionStorage.getItem("id")
-        const sellerId = item.sellerId
         const token = sessionStorage.getItem("token")
 
         if (!currentUserId) {

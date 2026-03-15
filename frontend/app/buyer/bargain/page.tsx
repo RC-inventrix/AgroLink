@@ -23,6 +23,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import LocationPicker from "@/components/LocationPicker"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // 1. Updated Interface
 interface Vegetable {
     id: string
@@ -114,7 +116,7 @@ export default function BargainPage() {
             const token = sessionStorage.getItem("token")
             if (userId) {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/users/${userId}/address`, {
+                    const res = await fetch(`${API_URL}/api/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (res.ok) {
@@ -315,7 +317,7 @@ export default function BargainPage() {
         }
 
         try {
-            const response = await fetch('http://localhost:8080/api/bargains/create', {
+            const response = await fetch(`${API_URL}/api/bargains/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

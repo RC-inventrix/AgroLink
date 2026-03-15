@@ -39,7 +39,7 @@ export default function BuyerDashboard() {
     const [isBanned, setIsBanned] = useState(false)
     const [announcements, setAnnouncements] = useState<any[]>([])
     const [showAnnouncements, setShowAnnouncements] = useState(true)
-    
+
     const [navUnread, setNavUnread] = useState(0)
     const [liveChats, setLiveChats] = useState<any[]>([])
     const [isLoadingChats, setIsLoadingChats] = useState(true)
@@ -48,7 +48,7 @@ export default function BuyerDashboard() {
     const [pendingOrders, setPendingOrders] = useState<any[]>([])
     const [isLoadingOrders, setIsLoadingOrders] = useState(true)
 
-    const gatewayUrl = "http://localhost:8080"
+    const gatewayUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -62,7 +62,7 @@ export default function BuyerDashboard() {
         const response = await fetch(`${gatewayUrl}/auth/me`, { headers });
         if (response.ok) {
             const data = await response.json();
-            
+
             // Check ban status first
             if (data.isBanned) {
                 setIsBanned(true);
@@ -77,8 +77,8 @@ export default function BuyerDashboard() {
             const annData = await annRes.json();
             setAnnouncements(annData); // Store the list in state
         }
-    } catch (err) { 
-        console.error("User data or announcement fetch failed:", err); 
+    } catch (err) {
+        console.error("User data or announcement fetch failed:", err);
     }
 };
 
@@ -135,7 +135,10 @@ export default function BuyerDashboard() {
 
         const syncDashboardData = async () => {
             try {
-                const res = await fetch(`http://localhost:8083/api/chat/contacts`, { headers });
+                const res = await fetch(`${process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"}/api/chat/contacts`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
                 if (res.ok) {
                     const ids: number[] = await res.json();
                     if (ids.length === 0) {
@@ -147,7 +150,9 @@ export default function BuyerDashboard() {
                     const fullNameMap = nameRes.ok ? await nameRes.json() : {};
 
                     const data = await Promise.all(ids.map(async (senderId) => {
-                        const countRes = await fetch(`http://localhost:8083/api/chat/unread-count/${senderId}`, { headers });
+                        const countRes = await fetch(`${process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"}/api/chat/unread-count/${senderId}`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
                         const count = countRes.ok ? await countRes.json() : 0;
                         return { id: senderId, name: fullNameMap[senderId] || `Farmer ${senderId}`, count };
                     }));
