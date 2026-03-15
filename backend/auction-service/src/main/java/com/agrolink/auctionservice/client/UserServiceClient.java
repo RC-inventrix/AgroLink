@@ -1,3 +1,4 @@
+/* fileName: auctionservice/client/UserServiceClient.java */
 package com.agrolink.auctionservice.client;
 
 import com.agrolink.auctionservice.dto.UserResponseDto;
@@ -14,16 +15,18 @@ public class UserServiceClient {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Value("${order.service.url:http://orderpayment-service}")
-    private String orderServiceUrl;
+    // --- CHANGED: Now points to the Identity Service via Eureka ---
+    @Value("${identity.service.url:http://identityAndUser-service}")
+    private String identityServiceUrl;
 
     public UserResponseDto getUserById(Long userId) {
-        String url = orderServiceUrl + "/api/users/" + userId;
+        // --- CHANGED: Targets the AuthController endpoint in Identity Service ---
+        String url = identityServiceUrl + "/auth/user/" + userId;
         try {
-            log.info("Calling Order Service: {}", url);
+            log.info("Calling Identity Service: {}", url);
             return restTemplate.getForObject(url, UserResponseDto.class);
         } catch (Exception e) {
-            log.error("Failed to call Order Service at {}: {}", url, e.getMessage());
+            log.error("Failed to call Identity Service at {}: {}", url, e.getMessage());
             return null;
         }
     }
