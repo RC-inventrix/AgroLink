@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect } from "react"
 import L, { LeafletMouseEvent, DragEndEvent } from "leaflet"
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
 // @ts-ignore - Suppress TS error for non-module CSS import
@@ -85,6 +85,8 @@ function InteractiveMarker({
 }
 
 // --- INTERNAL COMPONENT: ATOMIC MAP INSTANCE ---
+// This component is strictly managed by its parent key.
+// No manual ID generation or aggressive cleanup is needed.
 const LeafletMapInstance = ({
                                 center,
                                 markerPosition,
@@ -93,19 +95,14 @@ const LeafletMapInstance = ({
                                 onPositionChange,
                                 onError
                             }: any) => {
-    
-    const mapRef = useRef<L.Map | null>(null);
 
     useEffect(() => {
-        // Fix Icons globally
+        // Safe, run-once initialization for Leaflet icons in Next.js
         if (typeof window !== "undefined") {
-            // Cast prototype to any to allow custom properties without TS errors
-            const leafletDefaultIcon = L.Icon.Default.prototype as any;
-
-            if (!leafletDefaultIcon._getIconUrl_Original) {
-                leafletDefaultIcon._getIconUrl_Original = leafletDefaultIcon._getIconUrl;
-                delete leafletDefaultIcon._getIconUrl;
-                
+            const defaultIconPrototype = L.Icon.Default.prototype as any;
+            if (!defaultIconPrototype._getIconUrl_Original) {
+                defaultIconPrototype._getIconUrl_Original = defaultIconPrototype._getIconUrl;
+                delete defaultIconPrototype._getIconUrl;
                 L.Icon.Default.mergeOptions({
                     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
                     iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -113,21 +110,13 @@ const LeafletMapInstance = ({
                 });
             }
         }
-
-        // CLEANUP: Destroy the map instance on unmount to prevent container reuse errors
-        return () => {
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
-        };
     }, []);
 
     return (
         <MapContainer
             center={center}
             zoom={13}
-            style={{ height: "100%", width: "100%" }}
+            style={{ height: "100%", width: "100%", zIndex: 0 }}
             scrollWheelZoom={true}
             ref={mapRef} 
         >

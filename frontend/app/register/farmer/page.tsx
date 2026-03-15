@@ -17,9 +17,7 @@ export default function FarmerRegistration() {
             streetAddress: "",
             latitude: null as number | null,
             longitude: null as number | null,
-        },
-        zipCode: "",
-        registrationNumber: "",
+        }
     })
     const [isLoading, setIsLoading] = useState(false)
 
@@ -61,20 +59,17 @@ export default function FarmerRegistration() {
             // 1. Retrieve Step 1 Data
             const step1Data = JSON.parse(sessionStorage.getItem("registerDataStep1") || "{}")
 
-            // 2. Create Payload for Backend
+            // 2. Create Payload for Backend (Removed zipCode & businessRegOrNic)
             const payload = {
                 ...step1Data,
                 role: "Farmer",
                 businessName: formData.businessName,
-                // Send street and city separately for better data structure
                 streetAddress: formData.location.streetAddress,
                 city: formData.location.city,
                 district: formData.location.district,
                 province: formData.location.province,
                 latitude: formData.location.latitude,
                 longitude: formData.location.longitude,
-                zipcode: formData.zipCode,
-                businessRegOrNic: formData.registrationNumber,
             }
 
             // 3. API Call to Spring Boot Backend
@@ -88,7 +83,7 @@ export default function FarmerRegistration() {
 
             if (response.ok) {
                 // 4. Success Logic
-                setNotification({ message: "Registration Successful! Welcome to AgroLink.", type: 'success' });
+                setNotification({ message: "Registration completed successfully! Welcome to AgroLink.", type: 'success' });
                 sessionStorage.removeItem("registerDataStep1")
 
                 // Redirect to Login after a short delay to show the message
@@ -97,18 +92,18 @@ export default function FarmerRegistration() {
                 }, 2000);
             } else {
                 const msg = await response.text()
-                setNotification({ message: "Registration Failed: " + msg, type: 'error' });
+                setNotification({ message: "Registration failed: " + msg, type: 'error' });
             }
         } catch (error: any) {
             console.error("Full Registration Error:", error);
 
             if (error.message === "Failed to fetch") {
                 setNotification({
-                    message: "CONNECTION ERROR: Cannot reach server. Please check your connection.",
+                    message: "Server error occurred. Cannot reach server. Please check your connection.",
                     type: 'error'
                 });
             } else {
-                setNotification({ message: "ERROR: " + error.message, type: 'error' });
+                setNotification({ message: "Invalid input data: " + error.message, type: 'error' });
             }
         } finally {
             setIsLoading(false)
@@ -165,16 +160,6 @@ export default function FarmerRegistration() {
                                 required={true}
                                 label="Farm Location"
                             />
-
-                            <div className="space-y-1">
-                                <label className="text-white/70 text-xs font-semibold ml-1">ZIP Code</label>
-                                <input type="text" name="zipCode" placeholder="ZIP Code" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-white/70 text-xs font-semibold ml-1">Identification Number</label>
-                                <input type="text" name="registrationNumber" placeholder="Business Reg No / NIC" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
-                            </div>
 
                             <button
                                 type="submit"
