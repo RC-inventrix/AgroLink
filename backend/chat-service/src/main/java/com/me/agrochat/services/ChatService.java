@@ -26,25 +26,24 @@ public class ChatService {
      * which respects soft-delete (deletedBySender/deletedByRecipient).
      */
     public List<ChatMessage> getChatHistory(Long user1, Long user2) {
-        // Use the new clean repository method
         List<ChatMessage> history = repository.findActiveChatHistory(user1, user2);
 
-        // Loop through and decrypt each message content
         history.forEach(msg -> {
-            try {
-                String decrypted = encryptionUtil.decrypt(msg.getContent());
-                msg.setContent(decrypted);
-            } catch (Exception e) {
-                // If a message isn't encrypted, keep original text
-                System.err.println("Failed to decrypt message ID " + msg.getId() + ": " + e.getMessage());
+            // Decrypt text content if it exists
+            if (msg.getContent() != null && !msg.getContent().isEmpty()) {
+                try {
+                    String decrypted = encryptionUtil.decrypt(msg.getContent());
+                    msg.setContent(decrypted);
+                } catch (Exception e) {
+                    System.err.println("Failed to decrypt message ID " + msg.getId());
+                }
             }
+            // imageUrl remains as-is from the database
         });
 
         return history;
     }
-
-    /**
-     * Fix 2: Changed return type to List<Long> to match numeric IDs
+     /* Fix 2: Changed return type to List<Long> to match numeric IDs
      * and Repository return type.
      */
     public List<Long> getContactList(Long userId) {
