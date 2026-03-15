@@ -1,3 +1,4 @@
+/* fileName: AuthServiceTest.java */
 package com.agrolink.indentityanduserservice;
 
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
@@ -45,7 +46,7 @@ class AuthServiceTest {
         validRequest.setBusinessName("Green Farm");
         validRequest.setStreetAddress("123 Farm Lane");
         validRequest.setDistrict("Colombo");
-       // validRequest.setZipcode("10100");
+        // Completely removed zipcode as per recent schema changes
     }
 
     @Test
