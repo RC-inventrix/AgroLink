@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { 
     Edit3, Trash2, Calendar, Scale, Banknote, 
-    Loader2, CheckCircle, ChevronDown, MessageCircle, Truck, Phone, User, AlertTriangle
+    Loader2, CheckCircle, ChevronDown, MessageCircle, Truck, Phone, User, AlertTriangle, MapPin, AlignLeft
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -116,7 +117,6 @@ export default function MyRequirementsPage() {
         if (!reqToUpdate || !token) return;
 
         try {
-            // 1. Update the Specific Offer to "ACCEPTED"
             const offerRes = await fetch(`${API_URL}/api/offers/${offerId}/status`, {
                 method: "PUT",
                 headers: { 
@@ -151,7 +151,12 @@ export default function MyRequirementsPage() {
     const handleUpdate = async (id: number) => {
         if (!token) return;
         try {
-            const payload = { ...editData, id, quantity: Number(editData.quantity), expectedUnitPrice: Number(editData.expectedUnitPrice) };
+            const payload = { 
+                ...editData, 
+                id, 
+                quantity: Number(editData.quantity), 
+                expectedUnitPrice: Number(editData.expectedUnitPrice) 
+            };
             const res = await fetch(`${API_URL}/api/requirements/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -214,51 +219,79 @@ export default function MyRequirementsPage() {
                                 <div className={`absolute top-0 left-0 w-2 h-full ${req.status === 'CLOSED' ? 'bg-gray-400' : 'bg-[#EEC044]'}`} />
                                 
                                 {editingId === req.id ? (
-                                    <div className="p-10 space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-3">
-                                                <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Crop Name</Label>
-                                                <Input value={editData.cropName || ""} onChange={e => setEditData({...editData, cropName: e.target.value})} className="rounded-md font-bold h-12" />
+                                    <div className="p-10 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Crop Name</Label>
+                                                <Input value={editData.cropName || ""} onChange={e => setEditData({...editData, cropName: e.target.value})} className="rounded-md font-bold" />
                                             </div>
-                                            <div className="space-y-3">
-                                                <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Quantity (kg)</Label>
-                                                <Input type="number" value={editData.quantity || ""} onChange={e => setEditData({...editData, quantity: parseFloat(e.target.value) || 0})} className="rounded-md font-bold h-12" />
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quantity (kg)</Label>
+                                                <Input type="number" value={editData.quantity || ""} onChange={e => setEditData({...editData, quantity: parseFloat(e.target.value) || 0})} className="rounded-md font-bold" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expected Price (Rs.)</Label>
+                                                <Input type="number" value={editData.expectedUnitPrice || ""} onChange={e => setEditData({...editData, expectedUnitPrice: parseFloat(e.target.value) || 0})} className="rounded-md font-bold" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expected Date</Label>
+                                                <Input type="date" value={editData.expectedDate || ""} onChange={e => setEditData({...editData, expectedDate: e.target.value})} className="rounded-md font-bold" />
                                             </div>
                                         </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Delivery Address</Label>
+                                            <Input value={editData.deliveryAddress || ""} onChange={e => setEditData({...editData, deliveryAddress: e.target.value})} className="rounded-md font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Description</Label>
+                                            <Textarea value={editData.description || ""} onChange={e => setEditData({...editData, description: e.target.value})} className="rounded-md font-bold min-h-[100px]" />
+                                        </div>
                                         <div className="flex gap-4">
-                                            <Button onClick={() => handleUpdate(req.id)} className="flex-1 bg-[#03230F] text-[#EEC044] font-black rounded-md py-7 uppercase text-xs tracking-widest">Save Changes</Button>
+                                            <Button onClick={() => handleUpdate(req.id)} className="flex-1 bg-[#03230F] text-[#EEC044] font-black rounded-md py-6 uppercase text-xs tracking-widest">Save Changes</Button>
                                             <Button variant="ghost" onClick={() => setEditingId(null)} className="bg-gray-100 rounded-md font-bold px-8">Cancel</Button>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="p-10">
-                                        <div className="flex flex-col md:flex-row justify-between items-center gap-10">
-                                            <div className="flex-1 space-y-5">
+                                        <div className="flex flex-col md:flex-row justify-between items-start gap-10">
+                                            <div className="flex-1 space-y-6 w-full">
                                                 <div className="flex items-center gap-4">
                                                     <h2 className="text-3xl font-black text-[#03230F] uppercase tracking-tight">{req.cropName}</h2>
-                                                    {req.status === 'CLOSED' && (
-                                                        <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-4 py-1.5 rounded-sm uppercase border border-gray-200 tracking-tighter">
-                                                            Closed
-                                                        </span>
-                                                    )}
+                                                    <span className={`text-[10px] font-bold px-4 py-1.5 rounded-sm uppercase border tracking-tighter ${req.status === 'CLOSED' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                                        {req.status}
+                                                    </span>
                                                 </div>
-                                                <div className="flex flex-wrap gap-10 text-gray-500 font-bold text-sm">
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-gray-500 font-bold text-sm">
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400">
-                                                            <Scale className="w-4 h-4 text-[#EEC044]" /> Expected Qty
-                                                        </span>
-                                                        <p className="text-gray-900 font-black text-2xl">{req.quantity}kg</p>
+                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Scale className="w-3.5 h-3.5 text-[#EEC044]" /> Qty</span>
+                                                        <p className="text-gray-900 font-black text-xl">{req.quantity}kg</p>
                                                     </div>
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400">
-                                                            <Banknote className="w-4 h-4 text-[#EEC044]" /> Expected Price
-                                                        </span>
-                                                        <p className="text-gray-900 font-black text-2xl">Rs.{req.expectedUnitPrice}/kg</p>
+                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Banknote className="w-3.5 h-3.5 text-[#EEC044]" /> Price</span>
+                                                        <p className="text-gray-900 font-black text-xl">Rs.{req.expectedUnitPrice}</p>
                                                     </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Calendar className="w-3.5 h-3.5 text-[#EEC044]" /> Needed By</span>
+                                                        <p className="text-gray-900 font-black text-sm">{new Date(req.expectedDate).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><MapPin className="w-3.5 h-3.5 text-[#EEC044]" /> Address</span>
+                                                        <p className="text-gray-900 font-black text-xs truncate max-w-[150px]">{req.deliveryAddress}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-gray-50 p-4 rounded-md border border-gray-100">
+                                                    <span className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-gray-400 font-black mb-2">
+                                                        <AlignLeft className="w-3 h-3 text-[#EEC044]" /> Description
+                                                    </span>
+                                                    <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                                                        {req.description || "No additional description provided."}
+                                                    </p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col items-end gap-5 min-w-[200px]">
+                                            <div className="flex flex-col items-end gap-5 min-w-[200px] w-full md:w-auto">
                                                 <button 
                                                     onClick={() => setExpandedReqId(isExpanded ? null : req.id)}
                                                     className={`w-full px-8 py-4 rounded-md font-black text-[11px] uppercase tracking-widest flex items-center justify-between border transition-all ${reqOffers.length > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-100'}`}
