@@ -2,11 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Trash2, Check, X, MapPin, Truck, Store, Map } from "lucide-react"
+import { Trash2, Check, X, MapPin, Truck, Store, Map, User } from "lucide-react"
+import Link from "next/link"
 
 interface BargainRequest {
     id: string
     name: string
+    buyerId?: number
     buyerName: string
     image: string
     pricePerHundredG: number
@@ -52,6 +54,7 @@ export function HorizontalBargainCard({
         image,
         pricePerHundredG,
         pricePerKg,
+        buyerId,
         requestedQuantityKg,
         actualPrice,
         offeredPrice,
@@ -103,9 +106,21 @@ export function HorizontalBargainCard({
                             <h3 className="font-bold text-2xl text-green-900">{name}</h3>
                             {getStatusBadge()}
                         </div>
-                        <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
-                            Buyer: <span className="font-bold">{buyerName}</span>
-                        </p>
+                        {/* UPDATED: Linked Buyer Name */}
+                        <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5">
+                            <User className="w-4 h-4 opacity-70" />
+                            <span>Buyer: </span>
+                            {buyerId ? (
+                                <Link 
+                                    href={`/user/${buyerId}`} 
+                                    className="font-bold text-green-900 hover:text-green-600 hover:underline transition-all cursor-pointer"
+                                >
+                                    {buyerName}
+                                </Link>
+                            ) : (
+                                <span className="font-bold text-green-900">{buyerName}</span>
+                            )}
+                        </div>
                     </div>
 
                     <div className="text-left sm:text-right bg-green-50/50 px-4 py-3 rounded-xl border border-green-100">

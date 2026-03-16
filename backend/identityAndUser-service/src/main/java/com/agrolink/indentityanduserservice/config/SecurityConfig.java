@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/auth/check-email",
                                 "/api/admin/register",
                                 "/api/admin/login",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "auth/fullnames"
                         ).permitAll()
 
                         // Protected endpoints (Requires Token)

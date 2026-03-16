@@ -7,19 +7,47 @@ import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare, Book, Time
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 interface SellerSidebarProps {
-    unreadCount: number;
+    unreadCount: number; // This can now be treated as an initial value
     orderCount?: number;
     activePage: string;
 }
 
 const SellerSidebar: React.FC<SellerSidebarProps> = ({
-                                                         unreadCount,
+                                                         unreadCount: initialUnreadCount,
                                                          orderCount = 0,
                                                          activePage
                                                      }) => {
     const [newRequestCount, setNewRequestCount] = useState(0);
+    const [liveUnreadCount, setLiveUnreadCount] = useState(initialUnreadCount);
 
-    // Fetch the count automatically on mount
+    const CHAT_SERVICE_URL = "http://localhost:8083";
+    const AUTH_SERVICE_URL = "http://localhost:8080";
+
+    // 1. Polling for Chat Unread Count (Every 3 Seconds)
+    useEffect(() => {
+        const fetchChatCount = async () => {
+            const token = sessionStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/total-unread`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const count = await res.json();
+                    setLiveUnreadCount(count);
+                }
+            } catch (err) {
+                console.error("Chat count polling failed:", err);
+            }
+        };
+
+        fetchChatCount(); // Initial fetch
+        const interval = setInterval(fetchChatCount, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // 2. Fetch Item Requests (Every 60 Seconds)
     useEffect(() => {
         const fetchCounts = async () => {
             const token = sessionStorage.getItem("token");
@@ -41,22 +69,16 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                 if (reqRes.ok && offerRes.ok) {
                     const requirements = await reqRes.json();
                     const myOffers = await offerRes.json();
-
-                    // Map requirement IDs that have already been responded to
                     const respondedIds = new Set(myOffers.map((o: any) => o.requirementId));
-
-                    // Count only requirements that are NOT in the responded list
                     const count = requirements.filter((req: any) => !respondedIds.has(req.id)).length;
                     setNewRequestCount(count);
                 }
             } catch (err) {
-                console.error("Sidebar count fetch failed:", err);
+                console.error("Sidebar request count fetch failed:", err);
             }
         };
 
         fetchCounts();
-
-        // Optional: Refresh every 60 seconds to keep counts live
         const interval = setInterval(fetchCounts, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -81,7 +103,6 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                     </div>
                 </Link>
 
-                {/* --- NEW ELEMENT: My Auctions --- */}
                 <Link href="/seller/auctions"
                       className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'auctions' ? 'active bg-gray-100 font-semibold' : ''}`}>
                     <div className='flex items-center gap-3'>
@@ -115,30 +136,27 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                       className={`nav-item flex items-center justify-between p-3 rounded-lg transition-colors ${activePage === 'chat' ? 'active bg-[#D4A017] text-black font-semibold shadow-sm' : ''}`}>
                     <div className="flex items-center gap-3">
                         <MessageSquare size={20} />
-                        <span>Chat</span>{unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                            {unreadCount > 99 ? "99+" : unreadCount}
-                        </span>
-                    )}
+                        <span>Chat</span>
+                        {/* Updated to use liveUnreadCount from polling */}
+                        {liveUnreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                {liveUnreadCount > 99 ? "99+" : liveUnreadCount}
+                            </span>
+                        )}
                     </div>
-
                 </Link>
 
                 <Link href="/seller/item-requests"
                       className={`nav-item flex items-center justify-between p-1 rounded-lg transition-colors ${activePage === 'item-requests' ? 'active bg-gray-100 font-semibold' : ''}`}>
-
-
                     <div className='flex items-center gap-3'>
                         <Book size={20} />
                         <span className='text-sm'>Item Requests</span>
-                        {/* Display the dynamically fetched count */}
                         {newRequestCount > 0 && (
                             <span className="bg-[#EEC044] text-[#03230F] text-sm rounded-full px-2 py-0.5 text-center shadow-sm">
                             {newRequestCount}
                         </span>
                         )}
                     </div>
-
                 </Link>
             </nav>
         </aside>

@@ -242,7 +242,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
         const token = sessionStorage.getItem("token");
 
         try {
-            const res = await fetch(`${gatewayUrl}/api/reviews/${order.displayOrderId}?userId=${userId}`, {
+            const res = await fetch(`${API_URL}/api/reviews/${order.displayOrderId}?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ rating, comment })

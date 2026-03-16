@@ -6,13 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
 import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
 // Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
     name: string
     seller: string
+    sellerId: number
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -38,58 +37,70 @@ export default function BuyerBargainPage() {
     const router = useRouter()
 
     useEffect(() => {
-        const currentUserId = sessionStorage.getItem("id")
-        const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
-        setAddedToCartIds(storedAddedIds)
+    const currentUserId = sessionStorage.getItem("id")
+    const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
+    setAddedToCartIds(storedAddedIds)
 
-        if (!currentUserId) {
-            console.error("No user ID found.")
-            setIsLoading(false)
-            return
-        }
+    if (!currentUserId) {
+        setIsLoading(false)
+        return
+    }
 
-        const fetchBargains = async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`)
+    const fetchBargains = async () => {
+        try {
+            // 1. Fetch Bargain Requests
+            const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
+            if (!response.ok) throw new Error("Failed to fetch bargains")
+            const data = await response.json()
 
-                if (response.ok) {
-                    const data = await response.json()
+            // 2. Extract unique Seller IDs
+            const sellerIds = Array.from(new Set(data.map((item: any) => item.sellerId))).filter(Boolean);
 
-                    const mappedData: BargainItem[] = data.map((item: any) => ({
-                        id: item.id.toString(),
-                        name: item.vegetableName,
-                        seller: item.sellerId,
-                        image: item.vegetableImage || "/placeholder.svg",
-                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
-                        pricePerKg: item.originalPricePerKg || 0,
-                        requestedQuantityKg: item.quantity,
-                        actualPrice: (item.originalPricePerKg || 0) * item.quantity,
-                        requestedPrice: item.suggestedPrice,
-                        discount: item.originalPricePerKg
-                            ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
-                            : 0,
-                        status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
-                        vegetableId: item.vegetableId,
+            let nameMap: Record<number, string> = {};
 
-                        // Logistics & Coordinates Mapped Here
-                        deliveryRequired: item.deliveryRequired || false,
-                        buyerAddress: item.buyerAddress || "Pickup at Farm",
-                        deliveryFee: item.deliveryFee || 0,
-                        buyerLatitude: item.buyerLatitude || null,
-                        buyerLongitude: item.buyerLongitude || null
-                    }))
-
-                    setItems(mappedData)
+            // 3. Fetch Full Names from AuthController (Batch Request)
+            if (sellerIds.length > 0) {
+                const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${sellerIds.join(',')}`);
+                if (namesResponse.ok) {
+                    nameMap = await namesResponse.json();
                 }
-            } catch (error) {
-                console.error("Error fetching bargains:", error)
-            } finally {
-                setIsLoading(false)
             }
-        }
 
-        fetchBargains()
-    }, [router])
+            // 4. Map Backend Entity to UI Interface
+            const mappedData: BargainItem[] = data.map((item: any) => ({
+                id: item.id.toString(),
+                name: item.vegetableName,
+                // Pass full name for display and raw ID for linking
+                seller: nameMap[item.sellerId] || `Farmer #${item.sellerId}`,
+                sellerId: item.sellerId,
+                image: item.vegetableImage || "/placeholder.svg",
+                pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                pricePerKg: item.originalPricePerKg || 0,
+                requestedQuantityKg: item.quantity,
+                actualPrice: (item.originalPricePerKg || 0) * item.quantity,
+                requestedPrice: item.suggestedPrice,
+                discount: item.originalPricePerKg
+                    ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
+                    : 0,
+                status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
+                vegetableId: item.vegetableId,
+                deliveryRequired: item.deliveryRequired || false,
+                buyerAddress: item.buyerAddress || "Pickup at Farm",
+                deliveryFee: item.deliveryFee || 0,
+                buyerLatitude: item.buyerLatitude || null,
+                buyerLongitude: item.buyerLongitude || null
+            }))
+
+            setItems(mappedData)
+        } catch (error) {
+            console.error("Error fetching bargains:", error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    fetchBargains()
+}, [router])
 
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type })
@@ -108,7 +119,7 @@ export default function BuyerBargainPage() {
 
     const handleRemoveFromUI = async (id: string) => {
         try {
-            const res = await fetch(`${API_URL}/api/bargains/${id}`, {
+            const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -153,8 +164,8 @@ export default function BuyerBargainPage() {
             pricePerKg: bargainedPricePerKg,
             quantity: item.requestedQuantityKg,
             imageUrl: item.image,
-            sellerId: parseInt(item.seller),
-            sellerName: "Farmer " + item.seller,
+            sellerId: item.sellerId,
+            sellerName: item.seller,
 
             // Bargain Specific Data (NEW)
             bargainId: parseInt(item.id),
@@ -172,7 +183,7 @@ export default function BuyerBargainPage() {
         }
 
         try {
-            const res = await fetch(`${API_URL}/cart/add`, {
+            const res = await fetch("http://localhost:8080/cart/add", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

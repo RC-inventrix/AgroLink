@@ -49,4 +49,5 @@ public class UserReport {
     }
 
     public enum RiskLevel { LOW, MEDIUM, HIGH }
+
 }

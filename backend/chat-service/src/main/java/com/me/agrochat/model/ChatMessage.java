@@ -38,4 +38,7 @@ public class ChatMessage {
 
     @Column(nullable = false,name = "deleted_by_recipient")
     private Boolean deletedByRecipient = false;
+
+    @Column(name = "image_url", length = 1000) // URLs can be long
+    private String imageUrl;
 }
