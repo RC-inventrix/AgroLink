@@ -41,7 +41,6 @@ public class AuctionService {
         for (Auction auction : readyAuctions) {
             auction.setStatus(AuctionStatus.ACTIVE);
             auctionRepository.save(auction);
-            log.info("Activated scheduled auction: ID {}, Product: {}", auction.getId(), auction.getProductName());
         }
     }
 
@@ -119,20 +118,14 @@ public class AuctionService {
 
     @Transactional
     public BidResponse placeBid(Long auctionId, PlaceBidRequest request) {
-        log.info("Verifying Bidder ID: {}", request.getBidderId());
-
-        // This will now successfully forward the JWT token
         UserResponseDto bidderInfo = userServiceClient.getUserById(request.getBidderId());
 
         if (bidderInfo == null) {
-            // FIX: Updated error message to accurately reflect the Identity Service dependency
             throw new RuntimeException("Bid rejected: User verification failed (Identity Service unreachable or Unauthorized).");
         }
 
         String safeName = (bidderInfo.getFullname() != null) ? bidderInfo.getFullname() : "Verified Bidder";
         String safeEmail = (bidderInfo.getEmail() != null) ? bidderInfo.getEmail() : "no-email@agrolink.com";
-
-        log.info("Bidder Verified: Name={}, Email={}", safeName, safeEmail);
 
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found with id: " + auctionId));
@@ -170,12 +163,10 @@ public class AuctionService {
         try {
             auctionRepository.save(auction);
         } catch (OptimisticLockException e) {
-            log.warn("Optimistic lock exception while placing bid on auction {}", auctionId);
             throw new RuntimeException("Another bid was placed simultaneously. Please try again.");
         }
 
         pruneExcessBids(auctionId);
-
         return mapToBidResponse(bid, 1);
     }
 
@@ -193,8 +184,7 @@ public class AuctionService {
 
     @Transactional
     public Auction updateReservePrice(Long auctionId, UpdateReservePriceRequest request) {
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new RuntimeException("Auction not found"));
+        Auction auction = auctionRepository.findById(auctionId).orElseThrow(() -> new RuntimeException("Auction not found"));
         if (auction.getStatus() != AuctionStatus.ACTIVE && auction.getStatus() != AuctionStatus.DRAFT) {
             throw new RuntimeException("Reserve price can only be updated for active or draft auctions");
         }
@@ -283,14 +273,9 @@ public class AuctionService {
     private void triggerAuctionWonFlow(Auction auction, Bid winningBid) {
         try {
             orderIntegrationService.createAuctionOrder(auction, winningBid);
-
             auction.setIsOrderCreated(true);
             auctionRepository.save(auction);
-            log.info("Successfully converted Auction {} to Order", auction.getId());
-
         } catch (Exception e) {
-            log.error("Failed to create order for auction {}: {}", auction.getId(), e.getMessage());
-
             auction.setIsOrderCreated(false);
             auctionRepository.save(auction);
         }
@@ -299,10 +284,7 @@ public class AuctionService {
     @Transactional
     public void retryFailedOrderTransfers() {
         List<Auction> failedTransfers = auctionRepository.findCompletedAuctionsWithPendingOrders();
-
         for (Auction auction : failedTransfers) {
-            log.info("Retrying order creation for completed Auction: {}", auction.getId());
-
             bidRepository.findById(auction.getWinningBidId()).ifPresent(winningBid -> {
                 triggerAuctionWonFlow(auction, winningBid);
             });
@@ -325,7 +307,6 @@ public class AuctionService {
             }
 
             boolean isWinning = actualHighestBidderId != null && actualHighestBidderId.equals(buyerId);
-
             boolean hasWon = auction.getStatus() == AuctionStatus.COMPLETED &&
                     auction.getWinningBidId() != null &&
                     auction.getWinningBidId().equals(myHighestBid.getId());
@@ -364,11 +345,12 @@ public class AuctionService {
         }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
     }
 
-
     private AuctionResponse mapToAuctionResponse(Auction auction, List<Bid> topBids, int totalBidCount) {
         List<BidResponse> bidResponses = IntStream.range(0, Math.min(topBids.size(), MAX_BIDS_PER_AUCTION))
                 .mapToObj(i -> mapToBidResponse(topBids.get(i), i + 1))
                 .collect(Collectors.toList());
+
+        // REMOVED createdAt and updatedAt here to fix your compilation error
         return AuctionResponse.builder()
                 .id(auction.getId())
                 .farmerId(auction.getFarmerId())
@@ -393,8 +375,6 @@ public class AuctionService {
                 .pickupLongitude(auction.getPickupLongitude())
                 .topBids(bidResponses)
                 .totalBidCount(totalBidCount)
-                .createdAt(auction.getCreatedAt())
-                .updatedAt(auction.getUpdatedAt())
                 .build();
     }
 

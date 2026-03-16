@@ -87,7 +87,7 @@ public class AuctionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(bid);
     }
 
-    // FIX: Added alias `/buyer/{buyerId}/activity` to safely catch legacy frontend calls to prevent 404s
+    // Safely handles both path variations to prevent 404 errors on the frontend
     @GetMapping({"/buyer/{buyerId}", "/buyer/{buyerId}/activity"})
     public ResponseEntity<List<BuyerAuctionActivity>> getBuyerActivity(@PathVariable Long buyerId) {
         List<BuyerAuctionActivity> activity = auctionService.getBuyerAuctionActivity(buyerId);
