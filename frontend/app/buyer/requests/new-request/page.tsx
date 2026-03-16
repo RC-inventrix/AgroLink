@@ -14,10 +14,15 @@ import {
     CalendarDays, 
     Loader2, 
     CheckCircle,
-    FileText 
+    FileText,
+    Truck,
+    Store,
+    ShoppingBag,
+    Phone
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import DashboardHeader from "@/components/header"
+import BuyerHeader from "@/components/headers/BuyerHeader"
+import LocationPicker from "@/components/LocationPicker"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -25,14 +30,27 @@ export default function RequirementForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    
+    // Toggle state for Delivery vs Pickup
+    const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("PICKUP");
 
     const [formData, setFormData] = useState({
         cropName: "",
         quantity: "",
         expectedUnitPrice: "",
-        deliveryAddress: "",
         expectedDate: "",
-        description: ""
+        description: "",
+        contactNumber: "" // Added to state
+    });
+
+    // Map Location State
+    const [location, setLocation] = useState({
+        province: "",
+        district: "",
+        city: "",
+        streetAddress: "",
+        latitude: null as number | null,
+        longitude: null as number | null
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +70,18 @@ export default function RequirementForm() {
                 body: JSON.stringify({
                     ...formData,
                     buyerId: userId,
-                    // Safety: Default to 0 if parsing an empty string to avoid backend errors
+                    deliveryMethod,
+                    // Send map data if delivery is selected
+                    ...(deliveryMethod === "DELIVERY" ? {
+                        province: location.province,
+                        district: location.district,
+                        city: location.city,
+                        deliveryAddress: location.streetAddress,
+                        latitude: location.latitude,
+                        longitude: location.longitude
+                    } : {
+                        deliveryAddress: "Buyer Pickup at Farm"
+                    }),
                     quantity: parseFloat(formData.quantity) || 0,
                     expectedUnitPrice: parseFloat(formData.expectedUnitPrice) || 0
                 })
@@ -82,145 +111,189 @@ export default function RequirementForm() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <div className="max-w-3xl mx-auto py-8 px-4">
-            
-            <div className="mb-8 flex items-center gap-4">
-                <div className="bg-[#03230F] p-3 rounded-2xl shadow-lg">
-                    <ShoppingBag className="w-6 h-6 text-[#EEC044]" />
+        <div className="min-h-screen bg-gray-50 pb-20">
+            <BuyerHeader />
+            <div className="max-w-3xl mx-auto py-8 px-4">
+                
+                <div className="mb-8 flex items-center gap-4">
+                    <div className="bg-[#03230F] p-3 rounded-2xl shadow-lg">
+                        <ShoppingBag className="w-6 h-6 text-[#EEC044]" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-[#03230F] uppercase tracking-tight">Post Your Crop Need</h1>
+                        <p className="text-gray-500 font-medium">Inform farmers about your bulk requirements</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-3xl font-black text-[#03230F] uppercase tracking-tight">Post Your Crop Need</h1>
-                    <p className="text-gray-500 font-medium">Inform farmers about your bulk requirements</p>
-                </div>
+
+                <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white overflow-hidden relative">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
+
+                    <form onSubmit={handleSubmit} className="space-y-8 mt-4">
+                        {/* Upper Grid for Basic Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <Leaf className="w-4 h-4" /> Vegetable Name
+                                </Label>
+                                <Input 
+                                    required
+                                    placeholder="e.g. Carrots"
+                                    className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
+                                    value={formData.cropName}
+                                    onChange={(e) => setFormData({...formData, cropName: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <Scale className="w-4 h-4" /> Quantity (kg)
+                                </Label>
+                                <Input 
+                                    required
+                                    type="number"
+                                    placeholder="e.g. 100"
+                                    className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
+                                    value={formData.quantity}
+                                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <Banknote className="w-4 h-4" /> Target Unit Price (LKR)
+                                </Label>
+                                <Input 
+                                    required
+                                    type="number"
+                                    placeholder="e.g. 150"
+                                    className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
+                                    value={formData.expectedUnitPrice}
+                                    onChange={(e) => setFormData({...formData, expectedUnitPrice: e.target.value})}
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <CalendarDays className="w-4 h-4" /> Expected Receive Date
+                                </Label>
+                                <Input 
+                                    required
+                                    type="date"
+                                    className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-gray-500"
+                                    value={formData.expectedDate}
+                                    onChange={(e) => setFormData({...formData, expectedDate: e.target.value})}
+                                />
+                            </div>
+
+                            {/* --- NEW CONTACT NUMBER FIELD --- */}
+                            <div className="space-y-3">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <Phone className="w-4 h-4" /> Contact Number
+                                </Label>
+                                <Input 
+                                    required
+                                    type="tel"
+                                    placeholder="e.g. 0712345678"
+                                    className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
+                                    value={formData.contactNumber}
+                                    onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        {/* RADIO BUTTONS - Positioned Above Description */}
+                        <div className="space-y-4 pt-4 border-t border-gray-100">
+                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                <Truck className="w-4 h-4" /> Fulfillment Method
+                            </Label>
+                            <div className="flex gap-8 items-center bg-gray-50 p-4 rounded-2xl">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative flex items-center justify-center">
+                                        <input 
+                                            type="radio" 
+                                            name="deliveryMethod"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all"
+                                            checked={deliveryMethod === "PICKUP"}
+                                            onChange={() => setDeliveryMethod("PICKUP")}
+                                        />
+                                        <div className="absolute h-2.5 w-2.5 rounded-full bg-[#03230F] opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-600 peer-checked:text-[#03230F] flex items-center gap-2">
+                                        <Store className="w-4 h-4" /> I will Pickup
+                                    </span>
+                                </label>
+
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative flex items-center justify-center">
+                                        <input 
+                                            type="radio" 
+                                            name="deliveryMethod"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all"
+                                            checked={deliveryMethod === "DELIVERY"}
+                                            onChange={() => setDeliveryMethod("DELIVERY")}
+                                        />
+                                        <div className="absolute h-2.5 w-2.5 rounded-full bg-[#03230F] opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-600 peer-checked:text-[#03230F] flex items-center gap-2">
+                                        <Truck className="w-4 h-4" /> Need Delivery
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Requirement Description */}
+                        <div className="space-y-3">
+                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                <FileText className="w-4 h-4" /> Requirement Description
+                            </Label>
+                            <Textarea 
+                                required
+                                placeholder="Provide details about quality standards, variety, or specific packaging needs..."
+                                className="rounded-xl border-gray-200 bg-gray-50/50 min-h-[100px] focus:border-[#EEC044] focus:ring-0 transition-all font-medium"
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            />
+                        </div>
+
+                        {/* Conditional Map View */}
+                        {deliveryMethod === "DELIVERY" && (
+                            <div className="space-y-3 animate-in slide-in-from-top duration-500">
+                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <MapPin className="w-4 h-4" /> Set Delivery Location
+                                </Label>
+                                <div className="rounded-2xl border-2 border-gray-100 p-4 bg-gray-50/30">
+                                    <LocationPicker 
+                                        value={location}
+                                        onChange={setLocation}
+                                        variant="light"
+                                        showStreetAddress={true}
+                                        required={true}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-4 pt-4">
+                            <Button 
+                                type="submit" 
+                                disabled={loading}
+                                className="flex bg-[#03230F] hover:bg-[#03230F]/90 text-white py-5 px-10 rounded-xl text-sm font-semibold shadow-xl transition-all active:scale-[0.98] gap-3"
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : "Publish Need"}
+                            </Button>
+                            <Button 
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.back()}
+                                className="bg-gray-100 border-none text-gray-600 font-bold py-5 px-8 rounded-xl hover:bg-gray-200 transition-all uppercase tracking-widest"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </form>
+                </Card>
             </div>
-
-            <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white overflow-hidden relative">
-                {/* Accent bar matching your dashboard cards */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
-
-                <form onSubmit={handleSubmit} className="space-y-8 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
-                        {/* Vegetable Name */}
-                        <div className="space-y-3">
-                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <Leaf className="w-4 h-4" /> Vegetable Name
-                            </Label>
-                            <Input 
-                                required
-                                placeholder="e.g. Carrots"
-                                className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
-                                // FIX: Added || "" to prevent null value error
-                                value={formData.cropName || ""}
-                                onChange={(e) => setFormData({...formData, cropName: e.target.value})}
-                            />
-                        </div>
-
-                        {/* Quantity */}
-                        <div className="space-y-3">
-                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <Scale className="w-4 h-4" /> Quantity (kg)
-                            </Label>
-                            <Input 
-                                required
-                                type="number"
-                                placeholder="e.g. 100"
-                                className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
-                                value={formData.quantity || ""}
-                                onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                            />
-                        </div>
-
-                        {/* Expected Price */}
-                        <div className="space-y-3">
-                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <Banknote className="w-4 h-4" /> Target Unit Price (LKR)
-                            </Label>
-                            <Input 
-                                required
-                                type="number"
-                                placeholder="e.g. 150"
-                                className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
-                                value={formData.expectedUnitPrice || ""}
-                                onChange={(e) => setFormData({...formData, expectedUnitPrice: e.target.value})}
-                            />
-                        </div>
-
-                        {/* Date */}
-                        <div className="space-y-3">
-                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4" /> Expected Receive Date
-                            </Label>
-                            <Input 
-                                required
-                                type="date"
-                                className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-gray-500"
-                                value={formData.expectedDate || ""}
-                                onChange={(e) => setFormData({...formData, expectedDate: e.target.value})}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Requirement Description */}
-                    <div className="space-y-3">
-                        <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                            <FileText className="w-4 h-4" /> Requirement Description
-                        </Label>
-                        <Textarea 
-                            required
-                            placeholder="Provide details about quality standards, variety, or specific packaging needs..."
-                            className="rounded-xl border-gray-200 bg-gray-50/50 min-h-[100px] focus:border-[#EEC044] focus:ring-0 transition-all font-medium"
-                            // FIX: Added || "" to prevent null value error
-                            value={formData.description || ""}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        />
-                    </div>
-
-                    {/* Delivery Address */}
-                    <div className="space-y-3">
-                        <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                            <MapPin className="w-4 h-4" /> Detailed Delivery Address
-                        </Label>
-                        <Textarea 
-                            required
-                            placeholder="Describe building, street, city..."
-                            className="rounded-xl border-gray-200 bg-gray-50/50 min-h-[100px] focus:border-[#EEC044] focus:ring-0 transition-all font-medium"
-                            // FIX: Added || "" to prevent null value error
-                            value={formData.deliveryAddress || ""}
-                            onChange={(e) => setFormData({...formData, deliveryAddress: e.target.value})}
-                        />
-                    </div>
-
-                    {/* Action Buttons styled like your dashboard */}
-                    <div className="flex gap-4 pt-4">
-                        <Button 
-                            type="submit" 
-                            disabled={loading}
-                            className="flex bg-[#03230F] hover:bg-[#03230F]/90 text-white py-5 px-10 rounded-xl text-sm font-semibold shadow-xl transition-all active:scale-[0.98] gap-3"
-                        >
-                            {loading ? <Loader2 className="animate-spin" /> : "Publish Need"}
-                        </Button>
-                        <Button 
-                            type="button"
-                            variant="outline"
-                            onClick={() => router.back()}
-                            className="bg-gray-100 border-none text-gray-600 font-bold py-5 px-8 rounded-xl hover:bg-gray-200 transition-all uppercase tracking-widest"
-                        >
-                            Cancel
-                        </Button>
-                    </div>
-                </form>
-            </Card>
-        </div>
         </div>
     );
-}
-
-// Icon helper
-function ShoppingBag(props: any) {
-    return (
-        <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-    )
 }
