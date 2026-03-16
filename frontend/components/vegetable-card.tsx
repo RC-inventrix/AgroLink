@@ -1,3 +1,4 @@
+/* fileName: vegetable-card.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -172,6 +173,14 @@ export default function VegetableCard({
                                 <span className="font-medium text-orange-600">Pickup Only</span>
                             </>
                         )}
+                    </div>
+
+                    {/* NEW: Product Location Display */}
+                    <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-xs text-muted-foreground truncate" title={vegetable.pickupAddress || "Location not specified"}>
+                            {vegetable.pickupAddress || "Location not specified"}
+                        </span>
                     </div>
 
                     <div className="flex items-center gap-2">

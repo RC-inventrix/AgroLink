@@ -1,13 +1,14 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react"
+import { X, ShoppingBag, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
-import CartSummary from "@/components/cart-summary"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import { Button } from "@/components/ui/button"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -21,7 +22,6 @@ interface CartItemData {
     sellerName: string
     sellerId: number
     selected: boolean
-    // New fields
     deliveryFee: number
     deliveryAddress: string
     distance: number
@@ -35,12 +35,13 @@ export default function Cart() {
 
     const [notification, setNotification] = useState<{
         message: string;
-        type: 'success' | 'error' | 'info';
+        type: 'success' | 'error' | 'info' | 'loading';
     } | null>(null);
 
+    // Auto-dismiss notifications (except loading state)
     useEffect(() => {
-        if (notification) {
-            const timer = setTimeout(() => setNotification(null), 3000);
+        if (notification && notification.type !== 'loading') {
+            const timer = setTimeout(() => setNotification(null), 5000);
             return () => clearTimeout(timer);
         }
     }, [notification]);
@@ -61,7 +62,6 @@ export default function Cart() {
                         quantity: item.quantity,
                         sellerName: item.sellerName,
                         selected: false,
-                        // New fields
                         deliveryFee: item.deliveryFee || 0,
                         deliveryAddress: item.deliveryAddress || "",
                         distance: item.distance || 0,
@@ -113,20 +113,60 @@ export default function Cart() {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
 
-    const handleCheckout = () => {
+    // --- UPDATED: Directly processes the order request, bypassing the checkout page ---
+    const handleCheckout = async () => {
         if (selectedItems.length === 0) {
-            setNotification({ message: "Select items in your cart to proceed to checkout.", type: 'info' });
-            return
+            setNotification({ message: "Select items in your cart to proceed.", type: 'info' });
+            return;
         }
 
+        setNotification({ message: "Preparing your order request...", type: 'loading' });
+
+        const userId = sessionStorage.getItem("id") || "1";
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+
         try {
-            sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems));
-            setNotification({ message: "Redirecting to checkout...", type: 'success' });
-            setTimeout(() => {
-                router.push("/buyer/checkout");
-            }, 800);
-        } catch (err) {
-            setNotification({ message: "An error occurred. Please try again.", type: 'error' });
+            // 1. Fetch user data securely to attach the address
+            const userRes = await fetch(`${API_URL}/auth/user/${userId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            let deliveryAddress = "Location N/A";
+            let contactPhone = "N/A";
+
+            if (userRes.ok) {
+                const userData = await userRes.json();
+                const formattedAddress = `${userData.address || ""}, ${userData.district || ""}`.replace(/^, |, $/g, '').trim();
+                deliveryAddress = formattedAddress || deliveryAddress;
+                contactPhone = userData.phone || contactPhone;
+            }
+
+            // 2. Send Cash On Delivery Order Request
+            const response = await fetch(`${API_URL}/api/payment/cod?userId=${userId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    deliveryAddress: deliveryAddress,
+                    contactPhone: contactPhone
+                })
+            });
+
+            if (response.ok) {
+                setNotification({
+                    message: "Order request has been sent to the farmer. Check your order management page to track progress.",
+                    type: 'success'
+                });
+
+                // Clear successfully ordered items from the cart state immediately
+                setItems(items.filter(item => !item.selected));
+            } else {
+                setNotification({ message: "Failed to send order request. Please try again.", type: 'error' });
+            }
+        } catch (error) {
+            setNotification({ message: "Network error. Could not send order request.", type: 'error' });
         }
     }
 
@@ -142,19 +182,23 @@ export default function Cart() {
             <BuyerHeader/>
 
             {notification && (
-                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
                     <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
                         notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
                             notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
-                                "bg-[#03230F] border-gray-700 text-white"
+                                notification.type === 'loading' ? "bg-white border-blue-500 text-blue-800" :
+                                    "bg-[#03230F] border-gray-700 text-white"
                     }`}>
-                        {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                        {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
-                        {notification.type === 'info' && <ShoppingBag className="w-5 h-5 text-[#EEC044]" />}
-                        <p className="text-sm font-semibold flex-1">{notification.message}</p>
-                        <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100 transition-opacity">
-                            <X className="w-4 h-4" />
-                        </button>
+                        {notification.type === 'success' && <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />}
+                        {notification.type === 'error' && <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />}
+                        {notification.type === 'info' && <ShoppingBag className="w-6 h-6 text-[#EEC044] shrink-0" />}
+                        {notification.type === 'loading' && <Loader2 className="w-6 h-6 text-blue-500 animate-spin shrink-0" />}
+                        <p className="text-sm font-semibold flex-1 leading-snug">{notification.message}</p>
+                        {notification.type !== 'loading' && (
+                            <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100 transition-opacity shrink-0">
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -205,22 +249,49 @@ export default function Cart() {
                         </div>
                     </div>
 
-                    <CartSummary
-                        selectedItems={selectedItems.map(item => ({
-                            id: item.id.toString(),
-                            name: item.productName,
-                            image: item.imageUrl,
-                            pricePerKg: item.pricePerKg,
-                            quantity: item.quantity,
-                            seller: item.sellerName,
-                            selected: item.selected,
-                            deliveryFee: item.deliveryFee
-                        }))}
-                        totalPrice={totalPrice}
-                        subtotal={subtotal}
-                        totalDeliveryFees={totalDeliveryFees}
-                        onCheckout={handleCheckout}
-                    />
+                    {/* --- REPLACED: Inlined Cart Summary to safely modify labels without needing the missing component --- */}
+                    <div className="lg:col-span-1">
+                        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
+
+                            <div className="space-y-4 mb-6">
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Subtotal ({selectedItems.length} items)</span>
+                                    <span className="font-medium">Rs. {subtotal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Total Delivery Fee</span>
+                                    <span className="font-medium">Rs. {totalDeliveryFees.toFixed(2)}</span>
+                                </div>
+                                <div className="h-px bg-gray-200 my-4"></div>
+                                <div className="flex justify-between text-[#03230F] text-lg font-bold">
+                                    <span>Total Amount</span>
+                                    <span className="text-primary">Rs. {totalPrice.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            {/* NEW: Cash on Delivery Label Requirement */}
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
+                                <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Only Cash on Delivery is available
+                                </p>
+                            </div>
+
+                            {/* NEW: Updated Button Label & Size Requirement */}
+                            <Button
+                                onClick={handleCheckout}
+                                disabled={selectedItems.length === 0 || notification?.type === 'loading'}
+                                className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-6 text-base shadow-md active:scale-95 transition-all whitespace-normal h-auto"
+                            >
+                                {notification?.type === 'loading' ? (
+                                    <><Loader2 className="w-5 h-5 animate-spin mr-2"/> Processing...</>
+                                ) : (
+                                    "Send order request"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>

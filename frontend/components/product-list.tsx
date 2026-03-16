@@ -1,8 +1,9 @@
+/* fileName: product-list.tsx */
 "use client"
 
 import { useState, useEffect, useRef } from "react"
 import ProductCard from "./product-card"
-import { Loader2, AlertCircle, Upload, X, MapPin, Home, StopCircle, Check } from "lucide-react"
+import {Loader2, AlertCircle, Upload, X, MapPin, Home, StopCircle, Check, Package} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import LocationPicker from "@/components/LocationPicker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast, Toaster } from "sonner"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -56,329 +58,501 @@ interface Product {
     pricingType: "FIXED" | "BIDDING"
     biddingPrice?: number
     deliveryAvailable: boolean
-    baseCharge?: number
-    extraRatePerKm?: number
-    pickupLatitude?: number
-    pickupLongitude?: number
-    pickupAddress?: string
+    baseCharge?: number | null
+    extraRatePerKm?: number | null
+    pickupLatitude?: number | null
+    pickupLongitude?: number | null
+    pickupAddress?: string | null
 }
 
 export default function ProductList() {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
-    const [userDefaultAddress, setUserDefaultAddress] = useState<string | null>(null)
-    const [defaultCoords, setDefaultCoords] = useState<{lat: number|null, lng: number|null}>({lat: null, lng: null})
-
-    // --- MODAL STATES ---
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-    const [showSaveConfirm, setShowSaveConfirm] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false)
 
-    // Edit Form State
-    const [editForm, setEditForm] = useState<any>({})
-    const [newImage, setNewImage] = useState<File | null>(null)
-    const [imagePreview, setImagePreview] = useState<string | null>(null)
-    const [useCustomLocation, setUseCustomLocation] = useState(false)
-    const [uploadError, setUploadError] = useState<string|null>(null)
+    // --- NEW STATES FOR QUICK QUANTITY UPDATE ---
+    const [quantityUpdateProduct, setQuantityUpdateProduct] = useState<Product | null>(null)
+    const [newQuantity, setNewQuantity] = useState<string>("")
+    const [isUpdatingQuantity, setIsUpdatingQuantity] = useState(false)
 
-    // --- 1. Fetch Data ---
+    const [userDefaultAddress, setUserDefaultAddress] = useState<{
+        address: string;
+        latitude: number | null;
+        longitude: number | null;
+    } | null>(null)
+
+    const [addressOption, setAddressOption] = useState<"keep" | "default" | "custom">("keep")
+    const [customLocation, setCustomLocation] = useState({
+        province: "",
+        district: "",
+        city: "",
+        streetAddress: "",
+        latitude: null as number | null,
+        longitude: null as number | null,
+    })
+
     useEffect(() => {
-        fetchData();
-    }, [])
-
-    const fetchData = async () => {
-        const farmerId = sessionStorage.getItem("id")
-        const token = sessionStorage.getItem("token")
-        if (!farmerId) return setLoading(false);
-
-        try {
-            const prodRes = await fetch(`${API_URL}/products/farmer/${farmerId}`, {
-                headers: { "Authorization": `Bearer ${token}` }
-            })
-
-            const userRes = await fetch(`${API_URL}/api/usersProducts/${farmerId}/address`, {
-                headers: { "Authorization": `Bearer ${token}` }
-            })
-
-            if (prodRes.ok) {
-                const data = await prodRes.json()
-                const mapped = data.map((item: any) => ({
-                    id: item.id.toString(),
-                    name: item.vegetableName,
-                    category: item.category || "Vegetable",
-                    description: item.description || "",
-                    image: (item.images && item.images.length > 0) ? item.images[0].imageUrl : "/placeholder.svg",
-                    quantity: item.quantity,
-                    pricePerKg: item.fixedPrice || 0,
-                    pricingType: item.pricingType,
-                    biddingPrice: item.biddingPrice,
-                    deliveryAvailable: item.deliveryAvailable || false,
-                    baseCharge: item.deliveryFeeFirst3Km,
-                    extraRatePerKm: item.deliveryFeePerKm,
-                    pickupLatitude: item.pickupLatitude,
-                    pickupLongitude: item.pickupLongitude,
-                    pickupAddress: item.pickupAddress,
-                }))
-                setProducts(mapped)
-            }
-
-            if (userRes.ok) {
-                const userData = await userRes.json()
-                const parts = [userData.address, userData.city, userData.district].filter(Boolean)
-                setUserDefaultAddress(parts.join(", "))
-                setDefaultCoords({lat: userData.latitude, lng: userData.longitude})
-            }
-
-        } catch (error) { console.error(error) }
-        finally { setLoading(false) }
-    }
-
-    // --- 2. Edit Handlers ---
-    const handleEditClick = (product: Product) => {
-        setEditingProduct(product)
-        setNewImage(null)
-        setImagePreview(product.image)
-        setUploadError(null)
-
-        const isCustom = product.pickupAddress !== userDefaultAddress;
-        setUseCustomLocation(isCustom)
-
-        setEditForm({
-            ...product,
-            pickupLocation: {
-                streetAddress: "",
-                city: "",
-                district: "",
-                latitude: product.pickupLatitude,
-                longitude: product.pickupLongitude
-            }
-        })
-    }
-
-    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            try {
-                const compressed = await compressImage(file);
-                if (compressed.size > 5*1024*1024) {
-                    setUploadError("Image too large (>5MB)"); return;
+        const fetchUserAddress = async () => {
+            const myId = sessionStorage.getItem("id");
+            const token = sessionStorage.getItem("token");
+            if (myId) {
+                try {
+                    const res = await fetch(`${API_URL}/users/${myId}/address`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const userData = await res.json();
+                        const parts = [userData.address, userData.city, userData.district].filter(Boolean);
+                        setUserDefaultAddress({
+                            address: parts.join(", "),
+                            latitude: userData.latitude || null,
+                            longitude: userData.longitude || null
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch address", error);
                 }
-                setNewImage(compressed);
-                setImagePreview(URL.createObjectURL(compressed));
-                setUploadError(null);
-            } catch (err) { setUploadError("Image processing failed"); }
-        }
-    }
+            }
+        };
+        fetchUserAddress();
+    }, []);
 
-    // --- 3. Save Logic ---
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const token = sessionStorage.getItem("token");
+            const farmerId = sessionStorage.getItem("id");
+
+            if (!farmerId || !token) return;
+
+            const res = await fetch(`${API_URL}/products/farmer/${farmerId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+
+                const mappedProducts = data.map((p: any) => {
+                    let displayImage = "/placeholder.svg";
+                    const imgArray = p.imageUrls || p.images || [];
+                    if (Array.isArray(imgArray) && imgArray.length > 0) {
+                        const firstImg = imgArray[0];
+                        displayImage = typeof firstImg === 'string' ? firstImg : (firstImg.imageUrl || "/placeholder.svg");
+                    } else if (typeof p.imageUrl === 'string') {
+                        displayImage = p.imageUrl;
+                    } else if (typeof p.productImageUrl === 'string') {
+                        displayImage = p.productImageUrl;
+                    }
+
+                    return {
+                        id: p.id.toString(),
+                        name: p.vegetableName,
+                        category: p.category || "General",
+                        description: p.description,
+                        image: displayImage,
+                        pricePerKg: p.fixedPrice || 0,
+                        quantity: p.quantity || 0,
+                        pricingType: p.pricingType || "FIXED",
+                        biddingPrice: p.biddingPrice || 0,
+                        deliveryAvailable: p.deliveryAvailable || false,
+                        baseCharge: p.deliveryFeeFirst3Km || null,
+                        extraRatePerKm: p.deliveryFeePerKm || null,
+                        pickupLatitude: p.pickupLatitude,
+                        pickupLongitude: p.pickupLongitude,
+                        pickupAddress: p.pickupAddress,
+                    };
+                });
+                setProducts(mappedProducts);
+            }
+        } catch (error) {
+            console.error("Failed to load products", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this product?")) return;
+        try {
+            const token = sessionStorage.getItem("token");
+            const res = await fetch(`${API_URL}/products/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                toast.success("Product deleted successfully");
+                fetchProducts();
+            } else {
+                toast.error("Failed to delete product");
+            }
+        } catch (error) {
+            toast.error("Network error");
+        }
+    };
+
+    const handleEdit = (product: Product) => {
+        setEditingProduct({ ...product });
+        setAddressOption("keep");
+        setCustomLocation({
+            province: "", district: "", city: "", streetAddress: "",
+            latitude: null, longitude: null,
+        });
+    };
+
+    // --- NEW: Setup state for quick quantity update ---
+    const handleUpdateQuantityClick = (product: Product) => {
+        setQuantityUpdateProduct(product);
+        setNewQuantity(product.quantity.toString());
+    };
+
+    // --- NEW: Process the quick quantity update logic ---
+    const executeQuantityUpdate = async () => {
+        if (!quantityUpdateProduct || !newQuantity) return;
+        setIsUpdatingQuantity(true);
+        try {
+            const token = sessionStorage.getItem("token");
+            const farmerId = sessionStorage.getItem("id");
+
+            // Construct payload mirroring the full DTO, but substituting ONLY the new quantity
+            const payload = {
+                farmerId: parseInt(farmerId || "0"),
+                vegetableName: quantityUpdateProduct.name,
+                category: quantityUpdateProduct.category,
+                quantity: Number(newQuantity),
+                pricingType: quantityUpdateProduct.pricingType,
+                fixedPrice: quantityUpdateProduct.pricingType === "FIXED" ? Number(quantityUpdateProduct.pricePerKg) : null,
+                biddingPrice: quantityUpdateProduct.pricingType === "BIDDING" ? Number(quantityUpdateProduct.biddingPrice) : null,
+                description: quantityUpdateProduct.description,
+                deliveryAvailable: quantityUpdateProduct.deliveryAvailable,
+                deliveryFeeFirst3Km: quantityUpdateProduct.deliveryAvailable ? Number(quantityUpdateProduct.baseCharge) : null,
+                deliveryFeePerKm: quantityUpdateProduct.deliveryAvailable ? Number(quantityUpdateProduct.extraRatePerKm) : null,
+                pickupAddress: quantityUpdateProduct.pickupAddress,
+                pickupLatitude: quantityUpdateProduct.pickupLatitude,
+                pickupLongitude: quantityUpdateProduct.pickupLongitude,
+            };
+
+            const res = await fetch(`${API_URL}/products/${quantityUpdateProduct.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                toast.success("Quantity updated successfully!");
+                setQuantityUpdateProduct(null);
+                fetchProducts();
+            } else {
+                const err = await res.text();
+                toast.error(`Failed to update quantity: ${err}`);
+            }
+        } catch (err) {
+            toast.error("Network error");
+        } finally {
+            setIsUpdatingQuantity(false);
+        }
+    };
+
     const executeSave = async () => {
         if (!editingProduct) return;
         setIsSaving(true);
-        const token = sessionStorage.getItem("token")
-
         try {
-            let finalImageUrl = editForm.image;
+            const token = sessionStorage.getItem("token");
+            const farmerId = sessionStorage.getItem("id");
 
-            if (newImage) {
-                const presignRes = await fetch(
-                    `${API_URL}/products/presigned-url?fileName=${encodeURIComponent(newImage.name)}&contentType=${encodeURIComponent(newImage.type)}`,
-                    { headers: { "Authorization": `Bearer ${token}` } }
-                );
-                const { uploadUrl } = await presignRes.json();
-                await fetch(uploadUrl, { method: "PUT", body: newImage, headers: { "Content-Type": newImage.type } });
-                finalImageUrl = getCleanS3Url(uploadUrl);
-            }
+            let finalAddress = editingProduct.pickupAddress;
+            let finalLat = editingProduct.pickupLatitude;
+            let finalLng = editingProduct.pickupLongitude;
 
-            let finalAddr = userDefaultAddress;
-            let finalLat = defaultCoords.lat;
-            let finalLng = defaultCoords.lng;
-
-            if (useCustomLocation) {
-                if (editForm.pickupLocation.streetAddress) {
-                    finalAddr = `${editForm.pickupLocation.streetAddress}, ${editForm.pickupLocation.city}, ${editForm.pickupLocation.district}`;
-                    finalLat = editForm.pickupLocation.latitude;
-                    finalLng = editForm.pickupLocation.longitude;
-                } else {
-                    finalAddr = editForm.pickupAddress;
-                    finalLat = editForm.pickupLatitude;
-                    finalLng = editForm.pickupLongitude;
-                }
+            if (addressOption === "custom" && customLocation.latitude) {
+                finalAddress = [customLocation.streetAddress, customLocation.city, customLocation.district].filter(Boolean).join(", ");
+                finalLat = customLocation.latitude;
+                finalLng = customLocation.longitude;
+            } else if (addressOption === "default" && userDefaultAddress) {
+                finalAddress = userDefaultAddress.address;
+                finalLat = userDefaultAddress.latitude;
+                finalLng = userDefaultAddress.longitude;
             }
 
             const payload = {
-                farmerId: sessionStorage.getItem("id"),
-                vegetableName: editForm.name,
-                category: editForm.category,
-                quantity: editForm.quantity,
-                pricingType: editForm.pricingType,
-                fixedPrice: editForm.pricingType === "FIXED" ? editForm.pricePerKg : null,
-                biddingPrice: editForm.pricingType === "BIDDING" ? editForm.biddingPrice : null,
-                description: editForm.description,
-                deliveryAvailable: editForm.deliveryAvailable,
-                deliveryFeeFirst3Km: editForm.deliveryAvailable ? editForm.baseCharge : null,
-                deliveryFeePerKm: editForm.deliveryAvailable ? editForm.extraRatePerKm : null,
-                pickupAddress: finalAddr,
+                farmerId: parseInt(farmerId || "0"),
+                vegetableName: editingProduct.name,
+                category: editingProduct.category,
+                quantity: Number(editingProduct.quantity),
+                pricingType: editingProduct.pricingType,
+                fixedPrice: editingProduct.pricingType === "FIXED" ? Number(editingProduct.pricePerKg) : null,
+                biddingPrice: editingProduct.pricingType === "BIDDING" ? Number(editingProduct.biddingPrice) : null,
+                description: editingProduct.description,
+                deliveryAvailable: editingProduct.deliveryAvailable,
+                deliveryFeeFirst3Km: editingProduct.deliveryAvailable ? Number(editingProduct.baseCharge) : null,
+                deliveryFeePerKm: editingProduct.deliveryAvailable ? Number(editingProduct.extraRatePerKm) : null,
+                pickupAddress: finalAddress,
                 pickupLatitude: finalLat,
                 pickupLongitude: finalLng,
-                imageUrls: [finalImageUrl]
-            }
+            };
 
             const res = await fetch(`${API_URL}/products/${editingProduct.id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
                 body: JSON.stringify(payload)
-            })
+            });
 
             if (res.ok) {
-                setEditingProduct(null);
+                toast.success("Product updated successfully!");
                 setShowSaveConfirm(false);
-                fetchData();
+                setEditingProduct(null);
+                fetchProducts();
             } else {
-                alert("Failed to update product");
+                const err = await res.text();
+                toast.error(`Update failed: ${err}`);
             }
-        } catch (e) { console.error(e); alert("Update failed"); }
-        finally { setIsSaving(false); }
-    }
-
-    const executeDelete = async () => {
-        if (!showDeleteConfirm) return;
-        const token = sessionStorage.getItem("token")
-        try {
-            const res = await fetch(`${API_URL}/products/${showDeleteConfirm}`, {
-                method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
-            })
-            if (res.ok) {
-                setProducts(products.filter(p => p.id !== showDeleteConfirm))
-                setShowDeleteConfirm(null)
-            }
-        } catch (e) { console.error(e) }
-    }
-
-    if (loading) return <div className="text-center py-20 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+        } catch (error) {
+            toast.error("Network error during update");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
-        <section className="max-w-7xl mx-auto px-6 py-8">
-            <div className="mb-8">
-                <h2 className="text-3xl font-bold text-foreground mb-2">My Products</h2>
-                <p className="text-muted-foreground">Manage your vegetable listings and locations</p>
+        <section className="flex-1 p-8 overflow-y-auto w-full relative">
+            <Toaster position="top-center" richColors />
+            <div className="max-w-6xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">My Products</h1>
+                    <p className="text-[#A3ACBA] font-medium">Manage and update your currently listed inventory.</p>
+                </div>
+
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    </div>
+                ) : products.length === 0 ? (
+                    <div className="text-center py-20 bg-muted/10 border border-border rounded-xl">
+                        <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-foreground">No Products Found</h3>
+                        <p className="text-muted-foreground mt-2">You haven't listed any products yet.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {products.map((product) => (
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                userDefaultAddress={userDefaultAddress?.address || null}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onUpdateQuantity={handleUpdateQuantityClick}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {products.length === 0 ? (
-                <div className="text-center py-10 bg-muted/20 rounded-xl border border-dashed border-border">
-                    <p className="text-muted-foreground">No products found. Start by adding one!</p>
-                </div>
-            ) : (
-                // UPDATED: Changed from lg:grid-cols-4 to lg:grid-cols-3
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {products.map((product) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            userDefaultAddress={userDefaultAddress}
-                            onEdit={handleEditClick}
-                            onDelete={setShowDeleteConfirm}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* --- DELETE MODAL --- */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full border border-border animate-in fade-in zoom-in-95">
-                        <h3 className="text-lg font-bold mb-2">Delete Product?</h3>
-                        <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
-                        <div className="flex gap-3">
-                            <Button variant="destructive" className="flex-1" onClick={executeDelete}>Delete</Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setShowDeleteConfirm(null)}>Cancel</Button>
+            {/* --- NEW: QUICK QUANTITY UPDATE MODAL --- */}
+            {quantityUpdateProduct && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-card w-full max-w-sm rounded-xl shadow-2xl border border-border animate-in fade-in zoom-in-95">
+                        <div className="p-5 border-b flex justify-between items-center bg-muted/20">
+                            <h2 className="text-lg font-bold">Update Quantity</h2>
+                            <Button variant="ghost" size="icon" onClick={() => setQuantityUpdateProduct(null)}>
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-muted-foreground">Adjust the available stock for <strong>{quantityUpdateProduct.name}</strong>.</p>
+                            <div className="space-y-2">
+                                <Label>New Quantity (kg)</Label>
+                                <Input
+                                    type="number"
+                                    value={newQuantity}
+                                    onChange={(e) => setNewQuantity(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                            <Button
+                                className="w-full mt-2 bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold h-11"
+                                onClick={executeQuantityUpdate}
+                                disabled={isUpdatingQuantity || !newQuantity}
+                            >
+                                {isUpdatingQuantity ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
+                                Update Quantity
+                            </Button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* --- EDIT MODAL (Unchanged Logic, Same Layout) --- */}
+            {/* --- EDIT MODAL --- */}
             {editingProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="bg-card p-8 rounded-xl shadow-2xl max-w-2xl w-full border border-border max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-6 border-b pb-4">
-                            <h2 className="text-2xl font-bold">Edit Product</h2>
-                            <button onClick={() => setEditingProduct(null)} className="p-1 hover:bg-muted rounded"><X className="w-5 h-5"/></button>
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card w-full max-w-2xl rounded-xl shadow-2xl border border-border my-8 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b flex justify-between items-center bg-muted/20 sticky top-0 z-10">
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground">Edit Product</h2>
+                                <p className="text-xs text-muted-foreground mt-1">Update details for {editingProduct.name}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setEditingProduct(null)}>
+                                <X className="w-5 h-5" />
+                            </Button>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="p-6 space-y-6 overflow-y-auto flex-1">
                             <div className="flex gap-6 items-start">
-                                <img src={imagePreview || ""} className="w-24 h-24 object-cover rounded-lg border" alt="Preview"/>
-                                <div className="flex-1">
-                                    <Label>Product Image</Label>
-                                    <Input type="file" className="mt-2" onChange={handleImageChange} accept="image/*" />
-                                    {uploadError && <p className="text-red-500 text-xs mt-1">{uploadError}</p>}
+                                <img src={editingProduct.image || "/placeholder.svg"} className="w-24 h-24 object-cover rounded-lg border shadow-sm" alt="Preview"/>
+                                <div className="flex-1 space-y-2">
+                                    <Label className="text-muted-foreground text-xs">Note</Label>
+                                    <p className="text-sm">To change the product image, please delete this listing and create a new one.</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Name</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
-                                <div>
+                                <div className="space-y-2">
+                                    <Label>Vegetable Name</Label>
+                                    <Input
+                                        value={editingProduct.name ?? ""}
+                                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <Label>Category</Label>
-                                    <Select value={editForm.category} onValueChange={v => setEditForm({...editForm, category: v})}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Leafy">Leafy</SelectItem>
-                                            <SelectItem value="Root">Root</SelectItem>
-                                            <SelectItem value="Fruit">Fruit</SelectItem>
+                                    <Select
+                                        value={editingProduct.category ?? ""}
+                                        onValueChange={(val) => setEditingProduct({ ...editingProduct, category: val })}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent className="z-[10000]">
+                                            <SelectItem value="Leafy">Leafy Vegetables</SelectItem>
+                                            <SelectItem value="Root">Root Vegetables</SelectItem>
+                                            <SelectItem value="Fruit">Fruit Vegetables</SelectItem>
                                             <SelectItem value="Organic">Organic</SelectItem>
+                                            <SelectItem value="Vegetable">General Vegetable</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
 
-                            <div><Label>Description</Label><Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Quantity (kg)</Label>
+                                    <Input
+                                        type="number"
+                                        value={editingProduct.quantity ?? ""}
+                                        onChange={(e) => setEditingProduct({ ...editingProduct, quantity: parseFloat(e.target.value) || 0 })}
+                                    />
+                                </div>
+                            </div>
 
                             <div className="bg-muted/30 p-4 rounded-lg">
-                                <Label className="mb-2 block">Pricing</Label>
-                                <RadioGroup value={editForm.pricingType} onValueChange={v => setEditForm({...editForm, pricingType: v})} className="flex gap-4 mb-3">
-                                    <div className="flex items-center gap-2"><RadioGroupItem value="FIXED" id="e-fixed"/><Label htmlFor="e-fixed">Fixed</Label></div>
-                                    <div className="flex items-center gap-2"><RadioGroupItem value="BIDDING" id="e-bid"/><Label htmlFor="e-bid">Bidding</Label></div>
-                                </RadioGroup>
-                                {editForm.pricingType === "FIXED" ? (
-                                    <Input type="number" placeholder="Price per Kg" value={editForm.pricePerKg} onChange={e => setEditForm({...editForm, pricePerKg: parseFloat(e.target.value)})} />
+                                <Label className="mb-3 block font-semibold text-base border-b pb-2">
+                                    Pricing ({editingProduct.pricingType === "FIXED" ? "Fixed Price" : "Auction Based"})
+                                </Label>
+
+                                {editingProduct.pricingType === "FIXED" ? (
+                                    <div className="space-y-2 mt-3">
+                                        <Label className="text-xs text-muted-foreground">Price per Kg (LKR)</Label>
+                                        <Input
+                                            type="number"
+                                            value={editingProduct.pricePerKg ?? ""}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, pricePerKg: parseFloat(e.target.value) || 0 })}
+                                        />
+                                    </div>
                                 ) : (
-                                    <Input type="number" placeholder="Starting Bid" value={editForm.biddingPrice} onChange={e => setEditForm({...editForm, biddingPrice: parseFloat(e.target.value)})} />
+                                    <div className="space-y-2 mt-3">
+                                        <Label className="text-xs text-muted-foreground">Starting Bid (LKR)</Label>
+                                        <Input
+                                            type="number"
+                                            value={editingProduct.biddingPrice ?? ""}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, biddingPrice: parseFloat(e.target.value) || 0 })}
+                                        />
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="bg-muted/30 p-4 rounded-lg">
-                                <Label className="mb-3 block font-semibold">Pickup Location</Label>
-                                <RadioGroup value={useCustomLocation ? "custom" : "default"} onValueChange={v => setUseCustomLocation(v === "custom")} className="grid gap-4">
-                                    <div className="flex items-start gap-3 p-3 border rounded bg-background">
-                                        <RadioGroupItem value="default" id="e-loc-def" className="mt-1"/>
-                                        <div><Label htmlFor="e-loc-def">Registered Address</Label><div className="flex items-center gap-2 text-sm text-muted-foreground mt-1"><Home className="w-3 h-3"/> {userDefaultAddress || "Loading..."}</div></div>
+                            <div className="space-y-2">
+                                <Label>Description</Label>
+                                <Textarea
+                                    rows={3}
+                                    value={editingProduct.description ?? ""}
+                                    onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t">
+                                <Label className="text-base">Pickup Location Update</Label>
+                                <RadioGroup value={addressOption} onValueChange={(v: any) => setAddressOption(v)}>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="keep" id="keep" />
+                                        <Label htmlFor="keep">Keep Current Address ({editingProduct.pickupAddress})</Label>
                                     </div>
-                                    <div className="border rounded bg-background overflow-hidden">
-                                        <div className="flex items-center gap-3 p-3 border-b"><RadioGroupItem value="custom" id="e-loc-cus"/><Label htmlFor="e-loc-cus">Custom Location</Label></div>
-                                        {useCustomLocation && (
-                                            <div className="p-3 bg-muted/10">
-                                                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><MapPin className="w-3 h-3"/> Current: {editForm.pickupAddress || "Same as default"}</p>
-                                                <LocationPicker value={editForm.pickupLocation} onChange={loc => setEditForm({...editForm, pickupLocation: loc})} variant="light" showStreetAddress label="Select New Location"/>
-                                            </div>
-                                        )}
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="default" id="default" />
+                                        <Label htmlFor="default">Use My Registration Address ({userDefaultAddress?.address || "Loading..."})</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="custom" id="custom" />
+                                        <Label htmlFor="custom">Select New Custom Location on Map</Label>
                                     </div>
                                 </RadioGroup>
+
+                                {addressOption === "custom" && (
+                                    <div className="p-4 bg-muted/30 rounded-lg border">
+                                        <LocationPicker
+                                            value={customLocation}
+                                            onChange={setCustomLocation}
+                                            variant="light"
+                                            showStreetAddress={true}
+                                            required={true}
+                                            label="Select New Location"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="flex items-center gap-2 mb-2">
-                                <input type="checkbox" id="e-del" checked={editForm.deliveryAvailable} onChange={e => setEditForm({...editForm, deliveryAvailable: e.target.checked})} className="w-4 h-4"/>
-                                <Label htmlFor="e-del">Delivery Available?</Label>
-                            </div>
-                            {editForm.deliveryAvailable && (
-                                <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded">
-                                    <div><Label>Base Charge</Label><Input type="number" value={editForm.baseCharge} onChange={e => setEditForm({...editForm, baseCharge: parseFloat(e.target.value)})}/></div>
-                                    <div><Label>Extra /km</Label><Input type="number" value={editForm.extraRatePerKm} onChange={e => setEditForm({...editForm, extraRatePerKm: parseFloat(e.target.value)})}/></div>
+                            <div className="space-y-4 pt-4 border-t">
+                                <Label className="text-base">Delivery Options</Label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="deliveryToggle"
+                                        className="w-4 h-4 rounded border-gray-300"
+                                        checked={editingProduct.deliveryAvailable}
+                                        onChange={(e) => setEditingProduct({ ...editingProduct, deliveryAvailable: e.target.checked })}
+                                    />
+                                    <Label htmlFor="deliveryToggle" className="cursor-pointer font-normal">Yes, I provide delivery</Label>
                                 </div>
-                            )}
+
+                                {editingProduct.deliveryAvailable && (
+                                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Base Charge (First 3km)</Label>
+                                            <Input
+                                                type="number"
+                                                value={editingProduct.baseCharge ?? ""}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, baseCharge: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Extra Rate (Per km)</Label>
+                                            <Input
+                                                type="number"
+                                                value={editingProduct.extraRatePerKm ?? ""}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, extraRatePerKm: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex gap-4 mt-8 pt-4 border-t">
+                        <div className="p-6 border-t bg-muted/10 flex gap-4 sticky bottom-0 z-10">
                             <Button size="lg" className="flex-1" onClick={() => setShowSaveConfirm(true)}>Save Changes</Button>
                             <Button size="lg" variant="outline" className="flex-1" onClick={() => setEditingProduct(null)}>Cancel</Button>
                         </div>
@@ -388,7 +562,7 @@ export default function ProductList() {
 
             {/* --- SAVE MODAL --- */}
             {showSaveConfirm && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full border border-border animate-in fade-in zoom-in-95">
                         <h3 className="text-lg font-bold mb-2">Confirm Updates?</h3>
                         <p className="text-sm text-muted-foreground mb-6">These changes will be visible to buyers immediately.</p>

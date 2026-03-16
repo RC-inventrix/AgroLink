@@ -627,7 +627,7 @@ export default function VegetableForm() {
 
                     {/* Pickup Location Section */}
                     <div className="mb-8 pb-8 border-b border-border">
-                        <Label className="text-base font-semibold mb-4 block">Pickup Location</Label>
+                        <Label className="text-base font-semibold mb-4 block">Adress for this product</Label>
                         <RadioGroup value={formData.useCustomPickupLocation ? "custom" : "default"} onValueChange={handleLocationTypeChange} className="grid gap-4">
                             <div>
                                 <div className="flex items-start space-x-3 space-y-0">
@@ -644,7 +644,7 @@ export default function VegetableForm() {
                             <div>
                                 <div className="flex items-center space-x-3 space-y-0 mb-3">
                                     <RadioGroupItem value="custom" id="loc-custom" />
-                                    <Label htmlFor="loc-custom" className="cursor-pointer font-medium">Use a Different Pickup Location</Label>
+                                    <Label htmlFor="loc-custom" className="cursor-pointer font-medium">Use a Different Location</Label>
                                 </div>
                                 {formData.useCustomPickupLocation && (
                                     <div className="pl-7 animate-in fade-in slide-in-from-top-2 duration-300">
