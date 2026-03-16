@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,17 +6,21 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight } from "lucide-react";
+import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
 import Footer from "@/components/footer/Footer";
 
+// Hoisted to global scope so all components in this file can access them
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
+
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
 
-    // State for Orders and Analytics
+    // State for Orders, Analytics, and Banner Logic
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
         totalCompletedIncome: 0,
@@ -24,13 +29,9 @@ export default function SellerDashboard() {
         activeListingsCount: 0
     });
 
-    // --- FIXED: baseUrl stays in parent scope and gets passed down ---
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
-
-    // --- Inventory Reminder Banner State ---
-    const [showInventoryReminder, setShowInventoryReminder] = useState(false);
-    const [inventoryChecked, setInventoryChecked] = useState(false);
+    // --- INVENTORY BANNER STATES ---
+    const [hasFixedPriceProducts, setHasFixedPriceProducts] = useState(false);
+    const [bannerState, setBannerState] = useState<"ALERT" | "CLICKED">("ALERT");
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -39,7 +40,6 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
-                // Fetch User Data
                 const userRes = await fetch(`${baseUrl}/auth/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -48,17 +48,14 @@ export default function SellerDashboard() {
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // Fetch Order Analytics
                 const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // Fetch All Orders
                 const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                // Fetch Active Products Count
                 const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -68,7 +65,6 @@ export default function SellerDashboard() {
                     const allOrders: any[] = await ordersRes.json();
                     const allProducts: any[] = await productsRes.json();
 
-                    // Filter orders
                     const filteredPending = allOrders.filter((o) =>
                         ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
                     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -81,31 +77,9 @@ export default function SellerDashboard() {
                         activeListingsCount: allProducts.length
                     });
 
-                    // --- Inventory Reminder Visibility Logic ---
-                    // Show only if farmer has at least one FIXED product
-                    const hasFixedPriceProducts = allProducts.some((p: any) =>
-                        String(p.pricingType || "").toUpperCase() === "FIXED" ||
-                        String(p.pricingType || "").toLowerCase() === "fixed price"
-                    );
-
-                    if (hasFixedPriceProducts) {
-                        setShowInventoryReminder(true);
-
-                        // 12-hour reset using localStorage timestamp
-                        const key = `inventoryReminderLastChecked_${myId}`;
-                        const savedTs = localStorage.getItem(key);
-
-                        if (!savedTs) {
-                            setInventoryChecked(false);
-                        } else {
-                            const lastChecked = Number(savedTs);
-                            const twelveHoursMs = 12 * 60 * 60 * 1000;
-                            const now = Date.now();
-                            setInventoryChecked(now - lastChecked < twelveHoursMs);
-                        }
-                    } else {
-                        setShowInventoryReminder(false);
-                    }
+                    // Logic: Check if user has FIXED price items to trigger the banner
+                    const hasFixed = allProducts.some(p => p.pricingType === "FIXED");
+                    setHasFixedPriceProducts(hasFixed);
                 }
             } catch (err) {
                 console.error("Dashboard data sync error:", err);
@@ -133,7 +107,6 @@ export default function SellerDashboard() {
         fetchDashboardData();
         syncGlobalUnread();
 
-        // WebSocket for real-time chat notifications
         const socket = new SockJS(`${chatUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -146,16 +119,28 @@ export default function SellerDashboard() {
 
         client.activate();
         return () => { void client.deactivate(); };
-    }, [baseUrl, chatUrl]);
+    }, []);
 
-    const handleInventoryReminderClick = () => {
-        const myId = sessionStorage.getItem("id");
-        if (myId) {
-            const key = `inventoryReminderLastChecked_${myId}`;
-            localStorage.setItem(key, Date.now().toString());
-            setInventoryChecked(true);
+    // --- PROTECTED BANNER TIMER LOGIC ---
+    useEffect(() => {
+        const clickedAtStr = localStorage.getItem("inventoryBannerClickedAt");
+        if (clickedAtStr) {
+            const clickedAtTime = parseInt(clickedAtStr, 10);
+            const timeDiff = Date.now() - clickedAtTime;
+            const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+            if (timeDiff < TWELVE_HOURS) {
+                setBannerState("CLICKED");
+            } else {
+                localStorage.removeItem("inventoryBannerClickedAt");
+                setBannerState("ALERT");
+            }
         }
-        window.location.href = "/seller/my-products";
+    }, []);
+
+    const handleBannerClick = () => {
+        localStorage.setItem("inventoryBannerClickedAt", Date.now().toString());
+        setBannerState("CLICKED");
     };
 
     return (
@@ -166,7 +151,7 @@ export default function SellerDashboard() {
 
                 <main className="flex-1 p-8">
                     {/* Welcome Header */}
-                    <header className="bg-[#03230F] rounded-3xl p-8 mb-8 flex justify-between items-center shadow-lg">
+                    <header className="bg-[#03230F] rounded-3xl p-8 mb-6 flex justify-between items-center shadow-lg">
                         <div>
                             <h1 className="text-white text-3xl font-bold flex items-center gap-2">
                                 Welcome back, {userName} 👋
@@ -180,18 +165,60 @@ export default function SellerDashboard() {
                         </Link>
                     </header>
 
-                    {/* Inventory Update Reminder Banner */}
-                    {showInventoryReminder && (
-                        <div
-                            className={`${inventoryChecked ? "bg-green-100 border-green-300" : "bg-yellow-100 border-yellow-300"} border rounded-3xl p-5 mb-8 shadow-sm cursor-pointer`}
-                            onClick={handleInventoryReminderClick}
-                        >
-                            <p className={`${inventoryChecked ? "text-green-800" : "text-yellow-800"} font-semibold`}>
-                                {inventoryChecked
-                                    ? "You have checked your products' quantities are up to date, but if you still need to update a product, please click here."
-                                    : "Have you checked the quantity of your listed fixed price product? Please click here to update the quantities of your products."}
-                            </p>
-                        </div>
+                    {/* BEAUTIFIED CONDITIONAL INVENTORY REMINDER BANNER */}
+                    {hasFixedPriceProducts && (
+                        <Link href="/seller/my-products" onClick={handleBannerClick}>
+                            <div className={`mb-8 p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between shadow-md cursor-pointer hover:shadow-xl group relative overflow-hidden ${
+                                bannerState === "ALERT"
+                                    ? "bg-[#03230F] border-[#EEC044]/40 hover:border-[#EEC044]"
+                                    : "bg-white border-green-200 hover:border-green-300"
+                            }`}>
+
+                                {/* Decorative background blob for ALERT state */}
+                                {bannerState === "ALERT" && (
+                                    <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-[#EEC044]/10 blur-3xl pointer-events-none"></div>
+                                )}
+
+                                <div className="flex items-start md:items-center gap-5 relative z-10">
+                                    <div className={`p-4 rounded-2xl flex-shrink-0 ${
+                                        bannerState === "ALERT"
+                                            ? "bg-[#EEC044]/10 text-[#EEC044]"
+                                            : "bg-green-50 text-green-600"
+                                    }`}>
+                                        {bannerState === "ALERT" ? (
+                                            <Package className="w-8 h-8" />
+                                        ) : (
+                                            <CheckCircle2 className="w-8 h-8" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-black text-xl mb-1.5 tracking-tight ${
+                                            bannerState === "ALERT" ? "text-white" : "text-[#03230F]"
+                                        }`}>
+                                            {bannerState === "ALERT" ? "Action Needed: Check Your Stock!" : "Inventory Up to Date"}
+                                        </h4>
+                                        <p className={`text-sm font-medium leading-relaxed max-w-3xl ${
+                                            bannerState === "ALERT" ? "text-gray-300" : "text-gray-500"
+                                        }`}>
+                                            {bannerState === "ALERT"
+                                                ? "Don't miss out on potential sales! Ensure your fixed-price products are fully stocked. Click here to quickly adjust your available quantities."
+                                                : "Great job keeping your listings fresh. If you recently harvested more crops and need to update a product, click here to adjust your stock levels."}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 md:mt-0 relative z-10 flex-shrink-0">
+                                    <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all group-hover:scale-105 shadow-sm ${
+                                        bannerState === "ALERT"
+                                            ? "bg-[#EEC044] text-[#03230F]"
+                                            : "bg-green-50 text-green-700 border border-green-200"
+                                    }`}>
+                                        {bannerState === "ALERT" ? "Update Quantities" : "Manage Stock"}
+                                        <ChevronRight className="w-4 h-4" />
+                                    </span>
+                                </div>
+                            </div>
+                        </Link>
                     )}
 
                     {/* Stats Grid */}
@@ -225,8 +252,7 @@ export default function SellerDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column: AI & Pending Orders List */}
                         <div className="lg:col-span-2 space-y-8">
-                            {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
-                            <CropRecommendationCard baseUrl={baseUrl} />
+                            <CropRecommendationCard />
 
                             {/* Pending Orders Section */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
@@ -295,10 +321,7 @@ export default function SellerDashboard() {
     );
 }
 
-// ----------------------------------------------------------------------
-// HELPER COMPONENTS
-// ----------------------------------------------------------------------
-
+// Helper Components
 function StatCard({ label, value, Icon, highlight, color }: { label: string, value: string | number, Icon: any, highlight?: boolean, color?: string }) {
     return (
         <div className={`p-6 rounded-4xl shadow-sm border transition-transform hover:scale-[1.02] ${highlight ? 'bg-[#EEC044] border-[#EEC044]' : 'bg-white border-gray-100'}`}>
@@ -311,8 +334,7 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
     );
 }
 
-// New AI Crop Recommendation Sub-component
-function CropRecommendationCard({ baseUrl }: { baseUrl: string }) {
+function CropRecommendationCard() {
     const [temperature, setTemperature] = useState("");
     const [humidity, setHumidity] = useState("");
     const [rainfall, setRainfall] = useState("");
@@ -341,9 +363,7 @@ function CropRecommendationCard({ baseUrl }: { baseUrl: string }) {
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to get crop prediction");
-            }
+            if (!response.ok) throw new Error("Failed to get crop prediction");
 
             const data = await response.json();
             setResult(data.crop);
@@ -367,15 +387,15 @@ function CropRecommendationCard({ baseUrl }: { baseUrl: string }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature (°C)</label>
-                    <input type="number" placeholder="e.g. 28" value={temperature} onChange={e => setTemperature(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
+                    <input type="number" placeholder="e.g. 28" value={temperature} onChange={e => setTemperature(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Humidity (%)</label>
-                    <input type="number" placeholder="e.g. 70" value={humidity} onChange={e => setHumidity(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
+                    <input type="number" placeholder="e.g. 70" value={humidity} onChange={e => setHumidity(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Rainfall (mm)</label>
-                    <input type="number" placeholder="e.g. 120" value={rainfall} onChange={e => setRainfall(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
+                    <input type="number" placeholder="e.g. 120" value={rainfall} onChange={e => setRainfall(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
             </div>
 
@@ -389,12 +409,8 @@ function CropRecommendationCard({ baseUrl }: { baseUrl: string }) {
                 <div className={`flex items-center gap-6 p-4 rounded-2xl transition-all ${error ? 'bg-red-50' : 'bg-green-50'}`}>
                     <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
                     <div>
-                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>
-                            {error ? 'Analysis Error' : `Best to grow: ${result}`}
-                        </h4>
-                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>
-                            {error ? error : "Based on the weather conditions you provided."}
-                        </p>
+                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>{error ? 'Analysis Error' : `Best to grow: ${result}`}</h4>
+                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : "Based on the weather conditions you provided."}</p>
                     </div>
                 </div>
             ) : (
