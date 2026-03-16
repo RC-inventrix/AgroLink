@@ -33,28 +33,32 @@ public class ChatController {
     @MessageMapping("/chat.send")
     public void processMessage(@Payload ChatMessage chatMessage) {
         chatMessage.setIsRead(false);
-
-        // Ensure soft-delete flags are false for new messages
         chatMessage.setDeletedBySender(false);
         chatMessage.setDeletedByRecipient(false);
 
         String plainText = chatMessage.getContent();
 
-        // Encrypt for DB storage
-        String encryptedContent = encryptionUtil.encrypt(plainText);
-        chatMessage.setContent(encryptedContent);
+        // Only encrypt if there is text content
+        if (plainText != null && !plainText.isEmpty()) {
+            String encryptedContent = encryptionUtil.encrypt(plainText);
+            chatMessage.setContent(encryptedContent);
+        }
+
         chatMessage.setTimestamp(LocalDateTime.now());
 
+        // Save to DB (includes the plain imageUrl and encrypted content)
         chatMessageRepository.save(chatMessage);
 
-        // Send plain text to recipient
+        // Prepare for WebSocket broadcast: Send plain text back to the user
         chatMessage.setContent(plainText);
-        messagingTemplate.convertAndSendToUser(
-                String.valueOf(chatMessage.getRecipientId()), "/queue/messages", chatMessage);
-    }
 
-    /**
-     * GET the sidebar list (All unique conversation partners)
+        messagingTemplate.convertAndSendToUser(
+                String.valueOf(chatMessage.getRecipientId()),
+                "/queue/messages",
+                chatMessage
+        );
+    }
+     /* GET the sidebar list (All unique conversation partners)
      */
     @GetMapping("/contacts")
     public ResponseEntity<?> getContacts(HttpServletRequest request, Authentication auth) {
