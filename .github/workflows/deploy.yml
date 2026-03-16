@@ -192,10 +192,11 @@ jobs:
           chmod 600 ~/.ssh/gcp_key
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Copy docker-compose.production.yml to VM
+      # ---> THIS IS THE UPDATED STEP <---
+      - name: Copy deployment files to VM
         run: |
-          scp -i ~/.ssh/gcp_key \
-            docker-compose.production.yml \
+          scp -i ~/.ssh/gcp_key -r \
+            docker-compose.production.yml postgres-init/ \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/agrolink/"
 
       - name: Deploy on GCP VM
@@ -223,5 +224,5 @@ jobs:
             docker compose -f docker-compose.production.yml up -d --remove-orphans
 
             # Clean up old images to save space
-            docker image prune -f
+            docker image prune -a -f
           ENDSSH

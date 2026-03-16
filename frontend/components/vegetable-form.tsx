@@ -1,3 +1,4 @@
+/* fileName: vegetable-form.tsx */
 "use client"
 
 import type React from "react"
@@ -104,14 +105,15 @@ export default function VegetableForm() {
         }
     }, [notification]);
 
-    // --- Fetch User Default Address & Coordinates ---
+    // --- Fetch User Default Address & Coordinates (UPDATED API CALL) ---
     useEffect(() => {
         const fetchUserAddress = async () => {
             const myId = sessionStorage.getItem("id");
             const token = sessionStorage.getItem("token");
             if (myId) {
                 try {
-                    const res = await fetch(`${API_URL}/api/usersProducts/${myId}/address`, {
+                    // Changed route to access Identity Service properly via Gateway
+                    const res = await fetch(`${API_URL}/users/${myId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (res.ok) {
@@ -122,8 +124,14 @@ export default function VegetableForm() {
                             latitude: userData.latitude || null,
                             longitude: userData.longitude || null
                         });
+                        setNotification({ message: "Location successfully retrieved", type: 'success' });
+                    } else {
+                        setNotification({ message: "Unable to retrieve farmer location", type: 'error' });
                     }
-                } catch (error) { console.error(error); }
+                } catch (error) {
+                    console.error(error);
+                    setNotification({ message: "Server error occurred. Identity service unavailable.", type: 'error' });
+                }
             }
         };
         fetchUserAddress();
@@ -203,13 +211,10 @@ export default function VegetableForm() {
         setFormData((prev) => ({ ...prev, useCustomPickupLocation: value === "custom" }))
     }
 
-    // --- FIX: Prevent Mouse Wheel from changing numbers ---
     const preventScrollChange = (e: React.WheelEvent<HTMLInputElement>) => {
-        // Blurring the input removes focus, so scrolling moves the page instead of the number
         (e.target as HTMLInputElement).blur();
     }
 
-    // --- HELPER: Format number with commas (e.g. 1000 -> 1,000) ---
     const formatNumber = (value: string) => {
         if (!value) return "";
         const parts = value.toString().split(".");
@@ -217,13 +222,10 @@ export default function VegetableForm() {
         return parts.join(".");
     };
 
-    // --- HANDLER: specific for price inputs to handle commas ---
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        // Remove commas to store the clean number in state
         const rawValue = value.replace(/,/g, "");
 
-        // Only allow digits and a single decimal point
         if (/^\d*\.?\d*$/.test(rawValue)) {
             setFormData((prev) => ({ ...prev, [name]: rawValue }));
         }
@@ -301,7 +303,6 @@ export default function VegetableForm() {
             return;
         }
 
-        // --- VALIDATION FOR AUCTION ---
         if (formData.pricingType === "bidding") {
             const start = new Date(formData.biddingStartDate);
             const end = new Date(formData.biddingEndDate);
@@ -360,9 +361,7 @@ export default function VegetableForm() {
 
             let response;
 
-            // --- BRANCH LOGIC ---
             if (formData.pricingType === "fixed") {
-                // Existing Fixed Price Flow
                 const payload = {
                     farmerId: myId,
                     vegetableName: formData.vegetableName,
@@ -390,14 +389,13 @@ export default function VegetableForm() {
                     signal
                 });
             } else {
-                // --- NEW AUCTION FLOW ---
                 const auctionPayload = {
                     farmerId: parseInt(myId),
                     farmerName: sessionStorage.getItem("name") || "Farmer",
-                    productId: 0, // Placeholder as per requirement to not use products table
+                    productId: 0,
                     productName: formData.vegetableName,
                     productQuantity: parseFloat(formData.quantity),
-                    productImageUrl: uploadedUrls[0], // Use primary image
+                    productImageUrl: uploadedUrls[0],
                     description: formData.description,
                     startTime: formData.biddingStartDate.length === 16 ? formData.biddingStartDate + ":00" : formData.biddingStartDate,
                     endTime: formData.biddingEndDate.length === 16 ? formData.biddingEndDate + ":00" : formData.biddingEndDate,
@@ -559,11 +557,11 @@ export default function VegetableForm() {
                                         required
                                         id="biddingPrice"
                                         name="biddingPrice"
-                                        type="text" // Changed to text to support commas
-                                        inputMode="decimal" // Helps mobile keyboards show numbers
+                                        type="text"
+                                        inputMode="decimal"
                                         placeholder="Min price to start"
-                                        value={formatNumber(formData.biddingPrice)} // Format for display
-                                        onChange={handlePriceChange} // Use new handler
+                                        value={formatNumber(formData.biddingPrice)}
+                                        onChange={handlePriceChange}
                                     />
                                 </div>
                                 <div>
@@ -571,11 +569,11 @@ export default function VegetableForm() {
                                     <Input
                                         id="reservePrice"
                                         name="reservePrice"
-                                        type="text" // Changed to text to support commas
-                                        inputMode="decimal" // Helps mobile keyboards show numbers
+                                        type="text"
+                                        inputMode="decimal"
                                         placeholder="Lowest acceptable price"
-                                        value={formatNumber(formData.reservePrice)} // Format for display
-                                        onChange={handlePriceChange} // Use new handler
+                                        value={formatNumber(formData.reservePrice)}
+                                        onChange={handlePriceChange}
                                     />
                                     <p className="text-xs text-muted-foreground mt-1">If bids don't reach this amount, the item won't be sold.</p>
                                 </div>

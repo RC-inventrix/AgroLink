@@ -41,6 +41,8 @@ public class AuctionResponse {
     private BigDecimal reservePrice;
     private BigDecimal currentHighestBidAmount;
     private Long winningBidId;
+    private List<BidResponse> topBids;
+    private Integer totalBidCount;
 
     // Delivery info
     private Boolean isDeliveryAvailable;
@@ -53,9 +55,7 @@ public class AuctionResponse {
     private Double pickupLongitude;
 
     // Top 5 bids
-    private List<BidResponse> topBids;
 
-    private int totalBidCount;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

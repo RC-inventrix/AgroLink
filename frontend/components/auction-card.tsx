@@ -1,3 +1,4 @@
+/* fileName: auction-card.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -146,9 +147,10 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                             <span className="font-medium">Delivery available</span>
                             <span className="text-[#A3ACBA]">•</span>
                             <MapPin className="w-4 h-4 text-gray-400" />
+                            {/* FIX: Now correctly displaying the complete address from the DB */}
                             <span className="text-[#A3ACBA]">
-                {auction.pickupAddress ? auction.pickupAddress.split(",")[0] : "Location N/A"}
-              </span>
+                                {auction.pickupAddress ? auction.pickupAddress : "Location N/A"}
+                            </span>
                         </div>
                     )}
                 </div>
