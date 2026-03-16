@@ -30,6 +30,7 @@ interface ProductCardProps {
     userDefaultAddress: string | null
     onEdit: (product: Product) => void
     onDelete: (id: string) => void
+    onUpdateQuantity: (product: Product) => void
 }
 
 export default function ProductCard({
@@ -37,6 +38,7 @@ export default function ProductCard({
                                         userDefaultAddress,
                                         onEdit,
                                         onDelete,
+                                        onUpdateQuantity,
                                     }: ProductCardProps) {
 
     const isDefaultAddress = userDefaultAddress && product.pickupAddress
@@ -47,7 +49,6 @@ export default function ProductCard({
         <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
             {/* Product Image */}
             <div className="relative h-56 bg-muted overflow-hidden border-b border-border">
-                {/* FIX: Built-in synthetic onError ensures any broken URL seamlessly reverts to the placeholder icon */}
                 <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
@@ -113,7 +114,7 @@ export default function ProductCard({
                     </div>
 
                     {/* 5. Address Info */}
-                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground">
+                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground mb-4">
                         {isDefaultAddress ? (
                             <Home className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         ) : (
@@ -127,6 +128,16 @@ export default function ProductCard({
                                 {product.pickupAddress || "No address set"}
                             </span>
                         </div>
+                    </div>
+
+                    {/* NEW: Visually striking, perfectly fitted Quantity Update Button */}
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                        <Button
+                            className="w-full bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold shadow-md transition-all text-sm h-11 rounded-lg"
+                            onClick={() => onUpdateQuantity(product)}
+                        >
+                            Update Quantity
+                        </Button>
                     </div>
                 </div>
             </div>

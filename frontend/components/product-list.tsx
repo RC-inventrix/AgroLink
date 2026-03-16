@@ -72,6 +72,11 @@ export default function ProductList() {
     const [isSaving, setIsSaving] = useState(false)
     const [showSaveConfirm, setShowSaveConfirm] = useState(false)
 
+    // --- NEW STATES FOR QUICK QUANTITY UPDATE ---
+    const [quantityUpdateProduct, setQuantityUpdateProduct] = useState<Product | null>(null)
+    const [newQuantity, setNewQuantity] = useState<string>("")
+    const [isUpdatingQuantity, setIsUpdatingQuantity] = useState(false)
+
     const [userDefaultAddress, setUserDefaultAddress] = useState<{
         address: string;
         latitude: number | null;
@@ -200,6 +205,59 @@ export default function ProductList() {
         });
     };
 
+    // --- NEW: Setup state for quick quantity update ---
+    const handleUpdateQuantityClick = (product: Product) => {
+        setQuantityUpdateProduct(product);
+        setNewQuantity(product.quantity.toString());
+    };
+
+    // --- NEW: Process the quick quantity update logic ---
+    const executeQuantityUpdate = async () => {
+        if (!quantityUpdateProduct || !newQuantity) return;
+        setIsUpdatingQuantity(true);
+        try {
+            const token = sessionStorage.getItem("token");
+            const farmerId = sessionStorage.getItem("id");
+
+            // Construct payload mirroring the full DTO, but substituting ONLY the new quantity
+            const payload = {
+                farmerId: parseInt(farmerId || "0"),
+                vegetableName: quantityUpdateProduct.name,
+                category: quantityUpdateProduct.category,
+                quantity: Number(newQuantity),
+                pricingType: quantityUpdateProduct.pricingType,
+                fixedPrice: quantityUpdateProduct.pricingType === "FIXED" ? Number(quantityUpdateProduct.pricePerKg) : null,
+                biddingPrice: quantityUpdateProduct.pricingType === "BIDDING" ? Number(quantityUpdateProduct.biddingPrice) : null,
+                description: quantityUpdateProduct.description,
+                deliveryAvailable: quantityUpdateProduct.deliveryAvailable,
+                deliveryFeeFirst3Km: quantityUpdateProduct.deliveryAvailable ? Number(quantityUpdateProduct.baseCharge) : null,
+                deliveryFeePerKm: quantityUpdateProduct.deliveryAvailable ? Number(quantityUpdateProduct.extraRatePerKm) : null,
+                pickupAddress: quantityUpdateProduct.pickupAddress,
+                pickupLatitude: quantityUpdateProduct.pickupLatitude,
+                pickupLongitude: quantityUpdateProduct.pickupLongitude,
+            };
+
+            const res = await fetch(`${API_URL}/products/${quantityUpdateProduct.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                toast.success("Quantity updated successfully!");
+                setQuantityUpdateProduct(null);
+                fetchProducts();
+            } else {
+                const err = await res.text();
+                toast.error(`Failed to update quantity: ${err}`);
+            }
+        } catch (err) {
+            toast.error("Network error");
+        } finally {
+            setIsUpdatingQuantity(false);
+        }
+    };
+
     const executeSave = async () => {
         if (!editingProduct) return;
         setIsSaving(true);
@@ -291,11 +349,46 @@ export default function ProductList() {
                                 userDefaultAddress={userDefaultAddress?.address || null}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                onUpdateQuantity={handleUpdateQuantityClick}
                             />
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* --- NEW: QUICK QUANTITY UPDATE MODAL --- */}
+            {quantityUpdateProduct && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-card w-full max-w-sm rounded-xl shadow-2xl border border-border animate-in fade-in zoom-in-95">
+                        <div className="p-5 border-b flex justify-between items-center bg-muted/20">
+                            <h2 className="text-lg font-bold">Update Quantity</h2>
+                            <Button variant="ghost" size="icon" onClick={() => setQuantityUpdateProduct(null)}>
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-muted-foreground">Adjust the available stock for <strong>{quantityUpdateProduct.name}</strong>.</p>
+                            <div className="space-y-2">
+                                <Label>New Quantity (kg)</Label>
+                                <Input
+                                    type="number"
+                                    value={newQuantity}
+                                    onChange={(e) => setNewQuantity(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                            <Button
+                                className="w-full mt-2 bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold h-11"
+                                onClick={executeQuantityUpdate}
+                                disabled={isUpdatingQuantity || !newQuantity}
+                            >
+                                {isUpdatingQuantity ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
+                                Update Quantity
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- EDIT MODAL --- */}
             {editingProduct && (
@@ -335,7 +428,6 @@ export default function ProductList() {
                                         onValueChange={(val) => setEditingProduct({ ...editingProduct, category: val })}
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
-                                        {/* FIX: explicitly set z-index to 10000 so the dropdown appears above the modal overlay */}
                                         <SelectContent className="z-[10000]">
                                             <SelectItem value="Leafy">Leafy Vegetables</SelectItem>
                                             <SelectItem value="Root">Root Vegetables</SelectItem>
@@ -359,7 +451,6 @@ export default function ProductList() {
                             </div>
 
                             <div className="bg-muted/30 p-4 rounded-lg">
-                                {/* FIX: Removed RadioGroup, strictly locked the pricing type to the original type */}
                                 <Label className="mb-3 block font-semibold text-base border-b pb-2">
                                     Pricing ({editingProduct.pricingType === "FIXED" ? "Fixed Price" : "Auction Based"})
                                 </Label>

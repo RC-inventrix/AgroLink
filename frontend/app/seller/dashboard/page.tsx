@@ -24,8 +24,13 @@ export default function SellerDashboard() {
         activeListingsCount: 0
     });
 
+    // --- FIXED: baseUrl stays in parent scope and gets passed down ---
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
     const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
+
+    // --- Inventory Reminder Banner State ---
+    const [showInventoryReminder, setShowInventoryReminder] = useState(false);
+    const [inventoryChecked, setInventoryChecked] = useState(false);
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -75,6 +80,32 @@ export default function SellerDashboard() {
                         totalPendingOrders: filteredPending.length,
                         activeListingsCount: allProducts.length
                     });
+
+                    // --- Inventory Reminder Visibility Logic ---
+                    // Show only if farmer has at least one FIXED product
+                    const hasFixedPriceProducts = allProducts.some((p: any) =>
+                        String(p.pricingType || "").toUpperCase() === "FIXED" ||
+                        String(p.pricingType || "").toLowerCase() === "fixed price"
+                    );
+
+                    if (hasFixedPriceProducts) {
+                        setShowInventoryReminder(true);
+
+                        // 12-hour reset using localStorage timestamp
+                        const key = `inventoryReminderLastChecked_${myId}`;
+                        const savedTs = localStorage.getItem(key);
+
+                        if (!savedTs) {
+                            setInventoryChecked(false);
+                        } else {
+                            const lastChecked = Number(savedTs);
+                            const twelveHoursMs = 12 * 60 * 60 * 1000;
+                            const now = Date.now();
+                            setInventoryChecked(now - lastChecked < twelveHoursMs);
+                        }
+                    } else {
+                        setShowInventoryReminder(false);
+                    }
                 }
             } catch (err) {
                 console.error("Dashboard data sync error:", err);
@@ -115,7 +146,17 @@ export default function SellerDashboard() {
 
         client.activate();
         return () => { void client.deactivate(); };
-    }, []);
+    }, [baseUrl, chatUrl]);
+
+    const handleInventoryReminderClick = () => {
+        const myId = sessionStorage.getItem("id");
+        if (myId) {
+            const key = `inventoryReminderLastChecked_${myId}`;
+            localStorage.setItem(key, Date.now().toString());
+            setInventoryChecked(true);
+        }
+        window.location.href = "/seller/my-products";
+    };
 
     return (
         <div className="min-h-screen bg-[#F8F9FA]">
@@ -138,6 +179,20 @@ export default function SellerDashboard() {
                             </button>
                         </Link>
                     </header>
+
+                    {/* Inventory Update Reminder Banner */}
+                    {showInventoryReminder && (
+                        <div
+                            className={`${inventoryChecked ? "bg-green-100 border-green-300" : "bg-yellow-100 border-yellow-300"} border rounded-3xl p-5 mb-8 shadow-sm cursor-pointer`}
+                            onClick={handleInventoryReminderClick}
+                        >
+                            <p className={`${inventoryChecked ? "text-green-800" : "text-yellow-800"} font-semibold`}>
+                                {inventoryChecked
+                                    ? "You have checked your products' quantities are up to date, but if you still need to update a product, please click here."
+                                    : "Have you checked the quantity of your listed fixed price product? Please click here to update the quantities of your products."}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -170,9 +225,8 @@ export default function SellerDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column: AI & Pending Orders List */}
                         <div className="lg:col-span-2 space-y-8">
-
                             {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
-                            <CropRecommendationCard />
+                            <CropRecommendationCard baseUrl={baseUrl} />
 
                             {/* Pending Orders Section */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
@@ -258,7 +312,7 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
 }
 
 // New AI Crop Recommendation Sub-component
-function CropRecommendationCard() {
+function CropRecommendationCard({ baseUrl }: { baseUrl: string }) {
     const [temperature, setTemperature] = useState("");
     const [humidity, setHumidity] = useState("");
     const [rainfall, setRainfall] = useState("");
@@ -292,7 +346,6 @@ function CropRecommendationCard() {
             }
 
             const data = await response.json();
-            // Assuming your backend returns a field named 'crop'
             setResult(data.crop);
         } catch (err: any) {
             setError(err.message || "Something went wrong. Please try again.");
@@ -311,51 +364,27 @@ function CropRecommendationCard() {
                 <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">Powered by ML</span>
             </div>
 
-            {/* Input Form Area */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature (°C)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 28"
-                        value={temperature}
-                        onChange={e => setTemperature(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 28" value={temperature} onChange={e => setTemperature(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Humidity (%)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 70"
-                        value={humidity}
-                        onChange={e => setHumidity(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 70" value={humidity} onChange={e => setHumidity(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Rainfall (mm)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 120"
-                        value={rainfall}
-                        onChange={e => setRainfall(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 120" value={rainfall} onChange={e => setRainfall(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all" />
                 </div>
             </div>
 
             <div className="flex justify-end mb-6">
-                <button
-                    onClick={handlePredict}
-                    disabled={loading}
-                    className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
+                <button onClick={handlePredict} disabled={loading} className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                     {loading ? "Analyzing Weather..." : "Recommend Crop"}
                 </button>
             </div>
 
-            {/* Results Display */}
             {(result || error) ? (
                 <div className={`flex items-center gap-6 p-4 rounded-2xl transition-all ${error ? 'bg-red-50' : 'bg-green-50'}`}>
                     <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
