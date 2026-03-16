@@ -1,3 +1,4 @@
+/* fileName: auction-bid-popup.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -159,8 +160,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
             const token = sessionStorage.getItem("token")
             if (userId && isOpen) {
                 try {
-                    // Fetch Email
-                    const userRes = await fetch(`${API_URL}/api/users/${userId}`, {
+                    // --- CHANGED: Fetch Email from Identity Service via Gateway ---
+                    const userRes = await fetch(`${API_URL}/auth/user/${userId}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (userRes.ok) {
@@ -171,8 +172,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                         setBuyerName(fullName);
                     }
 
-                    // Fetch Address
-                    const addrRes = await fetch(`${API_URL}/api/users/${userId}/address`, {
+                    // --- CHANGED: Fetch Address from Identity Service via Gateway ---
+                    const addrRes = await fetch(`${API_URL}/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (addrRes.ok) {
@@ -340,7 +341,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
     const submitBid = async () => {
         setLoading(true)
         const userId = sessionStorage.getItem("id")
-       // const userName = sessionStorage.getItem("name") || "Bidder"
+        // const userName = sessionStorage.getItem("name") || "Bidder"
 
         if (!userId) {
             setNotification({ message: "You must be logged in to bid", type: "error" })
@@ -647,5 +648,3 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
         </div>
     )
 }
-
-

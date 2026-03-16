@@ -1,3 +1,4 @@
+/* fileName: auction-details-modal.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,11 +7,10 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Clock, TrendingUp, MapPin, Truck, Calendar, Hourglass, PlayCircle, Save } from "lucide-react"
+import { AlertCircle, Clock, TrendingUp, Calendar, User, Loader2, Truck, Gavel, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
@@ -40,554 +40,366 @@ export function AuctionDetailsModal({
     const [isUpdatingReserve, setIsUpdatingReserve] = useState(false)
     const [isEndingAuction, setIsEndingAuction] = useState(false)
     const [isCancelling, setIsCancelling] = useState(false)
-    const [isStartingNow, setIsStartingNow] = useState(false) // New state
     const [error, setError] = useState<string | null>(null)
 
-    // --- NEW: State for full details ---
-    const [fetchedDetails, setFetchedDetails] = useState<any>(null)
+    // --- STATE FOR BIDS FETCHING ---
+    const [detailedAuction, setDetailedAuction] = useState<any>(null)
+    const [loadingBids, setLoadingBids] = useState(false)
 
-    const token = typeof window !== "undefined" ? sessionStorage.getItem("token") : null
+    // Format dates for input fields (YYYY-MM-DDTHH:mm)
+    useEffect(() => {
+        if (auction) {
+            setEditStartTime(auction.startTime ? auction.startTime.substring(0, 16) : "")
+            setEditEndTime(auction.endTime ? auction.endTime.substring(0, 16) : "")
+        }
+    }, [auction])
 
-    // --- NEW: Fetch Full Details on Open ---
+    // --- FETCH FULL AUCTION DETAILS (FOR BIDS) ---
     useEffect(() => {
         if (isOpen && auction?.id) {
-            setFetchedDetails(null);
-            const fetchFullDetails = async () => {
-                try {
-                    const res = await fetch(`${API_URL}/api/auctions/${auction.id}`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        setFetchedDetails(data);
-                        // Initialize edit states
-                        setEditStartTime(data.startTime ? data.startTime.slice(0, 16) : "");
-                        setEditEndTime(data.endTime ? data.endTime.slice(0, 16) : "");
-                    }
-                } catch (e) {
-                    console.error("Failed to load full auction details", e);
-                }
-            };
-            fetchFullDetails();
+            setLoadingBids(true)
+            fetch(`${API_URL}/api/auctions/${auction.id}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Failed to fetch detailed auction")
+                    return res.json()
+                })
+                .then(data => {
+                    setDetailedAuction(data)
+                })
+                .catch(err => console.error("Error fetching bids:", err))
+                .finally(() => setLoadingBids(false))
         }
-    }, [isOpen, auction, token]);
+    }, [isOpen, auction?.id])
 
-    // --- USE MERGED DATA ---
-    const displayData = fetchedDetails || auction;
-
-    // Status Checks
-    const status = displayData?.status?.toUpperCase()
-    const isActive = status === "ACTIVE"
-    const isDraft = status === "DRAFT"
-    const isEditable = isActive || isDraft
-
-    // --- HELPER: Safe Date Parsing & Formatting ---
-    const parseDate = (dateInput: any) => {
-        if (!dateInput) return null;
-        const d = new Date(dateInput);
-        return isNaN(d.getTime()) ? null : d;
-    };
-
-    // --- FIX: Header Z-Index Management ---
+    // --- Timer Logic ---
     useEffect(() => {
-        if (isOpen) {
-            const header = document.querySelector('header');
-            let originalZIndex = '';
-            if (header) {
-                originalZIndex = header.style.zIndex;
-                header.style.zIndex = '0';
-            }
-            return () => {
-                if (header) {
-                    header.style.zIndex = originalZIndex;
-                }
-            };
-        }
-    }, [isOpen]);
+        if (!auction?.endTime) return;
 
-    // Countdown Timer
-    useEffect(() => {
-        if (!displayData) return
-
-        const updateCountdown = () => {
-            const start = parseDate(displayData.startTime);
-            const end = parseDate(displayData.endTime);
-            const now = new Date().getTime();
-
-            let targetTime = 0;
-
-            if (isDraft && start) {
-                targetTime = start.getTime();
-            } else if (end) {
-                targetTime = end.getTime();
-            } else {
-                setTimeLeft(isDraft ? "Loading..." : "Ended");
-                return;
-            }
-
-            const diff = targetTime - now;
-
+        const interval = setInterval(() => {
+            const diff = new Date(auction.endTime).getTime() - new Date().getTime()
             if (diff <= 0) {
-                setTimeLeft(isDraft ? "Started" : "Ended")
+                setTimeLeft("Ended")
+                clearInterval(interval)
                 return
             }
 
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24))
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+            setTimeLeft(d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`)
+        }, 1000)
 
-            if (days > 0) {
-                setTimeLeft(`${days}d ${hours}h`)
-            } else if (hours > 0) {
-                setTimeLeft(`${hours}h ${minutes}m`)
-            } else {
-                setTimeLeft(`${minutes}m`)
-            }
-        }
-
-        updateCountdown()
-        const interval = setInterval(updateCountdown, 60000)
         return () => clearInterval(interval)
-    }, [displayData, isDraft])
+    }, [auction?.endTime])
 
-    // Reset state on open
-    useEffect(() => {
-        if (isOpen) {
-            setNewReservePrice("")
-            setError(null)
-        }
-    }, [isOpen])
+    if (!isOpen || !auction) return null
 
-    // --- HELPER: Format number with commas ---
-    const formatNumber = (value: string) => {
-        if (!value) return "";
-        const rawValue = value.replace(/,/g, "");
-        if (isNaN(Number(rawValue))) return value;
-        return Number(rawValue).toLocaleString("en-US");
-    };
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
 
-    const handleReserveChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const rawValue = e.target.value.replace(/,/g, "");
-        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-            const parts = rawValue.split(".");
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            setNewReservePrice(parts.join("."));
-        }
-    };
-
-    // --- NEW: Start Auction Immediately ---
-    const handleStartNow = async () => {
-        if (!confirm("Are you sure you want to start this auction immediately? It will move to the Active tab.")) return;
-
-        setIsStartingNow(true);
-        setError(null);
-        try {
-            const res = await fetch(`${API_URL}/api/auctions/${displayData.id}/start-now`, {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-
-            if (res.ok) {
-                toast.success("Auction started successfully!");
-                onUpdate();
-                onClose();
-            } else {
-                const err = await res.json().catch(() => ({ message: "Failed to start auction" }));
-                setError(err.message);
-            }
-        } catch (e) {
-            setError("Network error occurred");
-        } finally {
-            setIsStartingNow(false);
-        }
-    };
-
-    // --- NEW: Update Auction Times ---
     const handleUpdateTime = async () => {
-        setIsUpdatingTime(true);
-        setError(null);
-
-        // Append :00 if seconds missing (datetime-local inputs don't always have seconds)
-        const formatForBackend = (val: string) => val.length === 16 ? val + ":00" : val;
-
-        const payload: any = {
-            endTime: formatForBackend(editEndTime)
-        };
-
-        // Only include startTime if it's a draft (Active auctions can't change start time)
-        if (isDraft) {
-            payload.startTime = formatForBackend(editStartTime);
-        }
-
+        setError(null)
+        setIsUpdatingTime(true)
         try {
-            const res = await fetch(`${API_URL}/api/auctions/${displayData.id}/time`, {
+            const res = await fetch(`${API_URL}/api/auctions/${auction.id}/time`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify(payload)
-            });
-
+                body: JSON.stringify({
+                    startTime: editStartTime.length === 16 ? editStartTime + ":00" : editStartTime,
+                    endTime: editEndTime.length === 16 ? editEndTime + ":00" : editEndTime
+                }),
+            })
             if (res.ok) {
-                toast.success("Auction timing updated!");
-                const updated = await res.json();
-                setFetchedDetails(updated); // Update local view
-                onUpdate(); // Update parent list
+                toast.success("Auction time updated successfully")
+                onUpdate()
             } else {
-                const err = await res.json().catch(() => ({ message: "Failed to update time" }));
-                setError(err.message);
+                const errData = await res.text()
+                setError(errData || "Failed to update time.")
             }
-        } catch (e) {
-            setError("Network error occurred");
+        } catch (e: any) {
+            setError("Network error occurred.")
         } finally {
-            setIsUpdatingTime(false);
+            setIsUpdatingTime(false)
         }
-    };
+    }
 
     const handleUpdateReserve = async () => {
-        const cleanPrice = newReservePrice.replace(/,/g, "");
-        if (!cleanPrice || isNaN(Number(cleanPrice))) {
-            setError("Please enter a valid price")
-            return
-        }
-        setIsUpdatingReserve(true)
         setError(null)
+        setIsUpdatingReserve(true)
         try {
-            const res = await fetch(
-                `${API_URL}/api/auctions/${displayData.id}/reserve-price`,
-                {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ reservePrice: parseFloat(cleanPrice) }),
-                }
-            )
+            const res = await fetch(`${API_URL}/api/auctions/${auction.id}/reserve-price`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ reservePrice: parseFloat(newReservePrice) }),
+            })
             if (res.ok) {
                 toast.success("Reserve price updated successfully")
+                setNewReservePrice("")
                 onUpdate()
-                setFetchedDetails({ ...fetchedDetails, reservePrice: parseFloat(cleanPrice) })
             } else {
-                const err = await res.text()
-                setError(err || "Failed to update reserve price")
+                const errData = await res.text()
+                setError(errData || "Failed to update reserve price.")
             }
-        } catch (err) {
-            setError("Network error occurred")
+        } catch (e: any) {
+            setError("Network error occurred.")
         } finally {
             setIsUpdatingReserve(false)
         }
     }
 
-    const handleEndAuction = async () => {
-        setIsEndingAuction(true)
+    const handleEndAuctionEarly = async () => {
         setError(null)
+        setIsEndingAuction(true)
         try {
-            const res = await fetch(
-                `${API_URL}/api/auctions/${displayData.id}/end-early`,
-                {
-                    method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            )
+            const res = await fetch(`${API_URL}/api/auctions/${auction.id}/end-early`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            })
             if (res.ok) {
-                toast.success("Auction ended and winner selected")
+                toast.success("Auction ended and winner selected!")
                 onUpdate()
-                onClose()
             } else {
-                const err = await res.json()
-                setError(err.message || "Failed to end auction")
+                const errData = await res.text()
+                setError(errData || "Failed to end auction.")
             }
-        } catch (err) {
-            setError("Network error occurred")
+        } catch (e: any) {
+            setError("Network error occurred.")
         } finally {
             setIsEndingAuction(false)
         }
     }
 
     const handleCancelAuction = async () => {
-        if (!confirm("Are you sure you want to cancel this auction? This cannot be undone.")) return
-        setIsCancelling(true)
         setError(null)
+        setIsCancelling(true)
         try {
-            const res = await fetch(
-                `${API_URL}/api/auctions/${displayData.id}/cancel`,
-                {
-                    method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            )
+            const res = await fetch(`${API_URL}/api/auctions/${auction.id}/cancel`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            })
             if (res.ok) {
                 toast.success("Auction cancelled successfully")
                 onUpdate()
-                onClose()
             } else {
-                const err = await res.json()
-                setError(err.message || "Failed to cancel auction")
+                const errData = await res.text()
+                setError(errData || "Failed to cancel auction.")
             }
-        } catch (err) {
-            setError("Network error occurred")
+        } catch (e: any) {
+            setError("Network error occurred.")
         } finally {
             setIsCancelling(false)
         }
     }
 
-    if (!displayData) return null
+    const isActive = auction.status === 'ACTIVE'
+    const isDraft = auction.status === 'DRAFT'
+    const isCompleted = auction.status === 'COMPLETED'
+    const isCancelled = auction.status === 'CANCELLED' || auction.status === 'EXPIRED'
+    const bids = detailedAuction?.topBids || []
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-LK', {
+            style: 'decimal',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount || 0);
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent
-                style={{ zIndex: 2147483647 }}
-                className="sm:max-w-4xl p-0 gap-0 bg-[#F8F9FA] rounded-2xl border border-gray-100 shadow-2xl !z-[99999] max-h-[90vh] flex flex-col"
-            >
-                {/* Header Section */}
-                <div className="bg-white p-6 border-b border-gray-100 flex justify-between items-start flex-shrink-0">
-                    <div className="flex gap-6">
-                        <div className="h-24 w-24 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden shrink-0">
-                            <img
-                                src={displayData.productImageUrl || "/placeholder.svg"}
-                                alt={displayData.productName}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <Badge className="bg-[#03230F] hover:bg-[#03230F] text-white uppercase tracking-wider text-[10px] font-bold px-2 py-0.5">
-                                    #{displayData.id}
-                                </Badge>
-                                <Badge variant="outline" className={`font-bold uppercase text-[10px] tracking-widest ${
-                                    isDraft ? "bg-gray-100 text-gray-600 border-gray-300" :
-                                        isActive ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                            "bg-green-50 text-green-700 border-green-200"
-                                }`}>
-                                    {displayData.status}
-                                </Badge>
+            {/* FIX: Forced maximum width and viewport width overrides to give elements breathing room */}
+            <DialogContent className="!max-w-[1200px] w-[95vw] md:w-[90vw] p-0 overflow-hidden bg-white border-none rounded-2xl shadow-2xl">
+                {/* Header */}
+                <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
+                        <DialogTitle className="text-xl font-bold text-[#03230F] flex items-center gap-2">
+                            <Gavel className="w-5 h-5 text-[#D4A017]" />
+                            {auction.productName}
+                        </DialogTitle>
+                        <Badge className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 ${
+                            isCompleted ? "bg-green-100 text-green-700 hover:bg-green-200" :
+                                isCancelled ? "bg-red-100 text-red-700 hover:bg-red-200" :
+                                    isDraft ? "bg-gray-100 text-gray-700 hover:bg-gray-200" :
+                                        "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        }`}>
+                            {auction.status}
+                        </Badge>
+                        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-gray-200 absolute right-4 top-4">
+                            <X className="w-5 h-5" />
+                        </Button>
+                    </div>
+                </DialogHeader>
+
+                {/* FIX: Adjusted to md:grid-cols-2 to prevent elements stacking on top of each other on laptop screens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 p-8 gap-10 max-h-[80vh] overflow-y-auto">
+
+                    {/* LEFT COLUMN: Details & Bid History */}
+                    <div className="space-y-6">
+                        {/* Image & Basic Info */}
+                        <div className="flex gap-5 items-start">
+                            <div className="w-32 h-32 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                <img
+                                    src={auction.productImageUrl || "/placeholder.svg"}
+                                    alt={auction.productName}
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
-
-                            <DialogTitle className="text-2xl font-black text-[#03230F] mb-1">
-                                {displayData.productName}
-                            </DialogTitle>
-
-                            <div className="flex items-center gap-4 text-sm text-[#697386] font-medium">
-                                <span className="flex items-center gap-1.5">
-                                  <TrendingUp className="w-4 h-4 text-[#D4A017]" />
-                                    {displayData.productQuantity}kg
-                                </span>
-                                {displayData.isDeliveryAvailable && (
-                                    <span className="flex items-center gap-1.5">
-                                    <Truck className="w-4 h-4 text-green-600" />
-                                    Delivery Available
-                                  </span>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Badge variant="secondary" className="bg-gray-100 px-3 py-1 text-sm">{auction.productQuantity} kg</Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Clock className="w-4 h-4 text-gray-400" />
+                                    <span className="font-medium text-orange-600 text-base">{timeLeft}</span>
+                                </div>
+                                {auction.isDeliveryAvailable && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <Truck className="w-4 h-4 text-green-600" />
+                                        <span className="text-base">Delivery available</span>
+                                    </div>
                                 )}
                             </div>
                         </div>
-                    </div>
 
-                    <div className="text-right">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#A3ACBA] mb-1">
-                            {isDraft ? "Starts In" : isActive ? "Time Remaining" : "Ended"}
-                        </p>
-                        <div className={`text-3xl font-black tabular-nums tracking-tight ${
-                            isDraft ? "text-gray-400" :
-                                isActive ? "text-[#D4A017]" : "text-green-600"
-                        }`}>
-                            {timeLeft}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100 overflow-y-auto">
-
-                    {/* LEFT COL: Bids & Schedule */}
-                    <div className="md:col-span-2 p-6 bg-white">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-[#03230F] mb-6 flex items-center gap-2">
-                            {isDraft ? (
-                                <>
-                                    <Calendar className="w-4 h-4 text-gray-500" />
-                                    Auction Schedule
-                                </>
-                            ) : (
-                                <>
-                                    <TrendingUp className="w-4 h-4" />
-                                    Recent Bids
-                                </>
-                            )}
-                        </h3>
-
-                        {isDraft ? (
-                            // --- DRAFT UI: Editable Inputs ---
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="p-5 rounded-2xl bg-orange-50/50 border border-orange-100">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                                            <Hourglass className="w-4 h-4" />
-                                        </div>
-                                        <p className="text-[11px] font-bold uppercase tracking-widest text-orange-700">Starts On</p>
-                                    </div>
-                                    <Input
-                                        type="datetime-local"
-                                        className="bg-white border-orange-200 focus:border-orange-400"
-                                        value={editStartTime}
-                                        onChange={(e) => setEditStartTime(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-100">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                            <Clock className="w-4 h-4" />
-                                        </div>
-                                        <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">Ends On</p>
-                                    </div>
-                                    <Input
-                                        type="datetime-local"
-                                        className="bg-white border-blue-200 focus:border-blue-400"
-                                        value={editEndTime}
-                                        onChange={(e) => setEditEndTime(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="sm:col-span-2 flex justify-end">
-                                    <Button
-                                        size="sm"
-                                        onClick={handleUpdateTime}
-                                        disabled={isUpdatingTime}
-                                        className="bg-[#03230F] text-white"
-                                    >
-                                        <Save className="w-4 h-4 mr-2" />
-                                        {isUpdatingTime ? "Saving..." : "Save Schedule Changes"}
-                                    </Button>
-                                </div>
+                        {/* Prices */}
+                        <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 space-y-5">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Starting Price</span>
+                                <span className="font-bold text-lg text-gray-900">Rs. {formatCurrency(auction.startingPrice)}</span>
                             </div>
-                        ) : (
-                            // --- ACTIVE UI: Bids + End Time Edit ---
-                            <div className="space-y-6">
-                                {/* Only Active Auctions can edit End Time */}
-                                {isActive && (
-                                    <div className="p-4 bg-blue-50/30 border border-blue-100 rounded-xl flex items-center justify-between gap-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                                <Clock className="w-4 h-4" />
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Reserve Price</span>
+                                <span className="font-bold text-lg text-gray-900">
+                                    {auction.reservePrice ? `Rs. ${formatCurrency(auction.reservePrice)}` : "Not Set"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                                <span className="text-sm font-bold text-[#D4A017] uppercase tracking-wider">Highest Bid</span>
+                                <span className="text-2xl font-black text-[#D4A017]">
+                                    Rs. {formatCurrency(detailedAuction?.currentHighestBidAmount || auction.currentHighestBidAmount || auction.startingPrice)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* LIVE BID HISTORY */}
+                        <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col max-h-[350px]">
+                            <h4 className="text-sm font-bold uppercase text-blue-600 tracking-wider mb-4">Live Bid History</h4>
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                                {loadingBids ? (
+                                    <div className="flex flex-col items-center justify-center py-6 text-blue-500">
+                                        <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                                        <p className="text-sm font-medium">Fetching bids...</p>
+                                    </div>
+                                ) : bids.length > 0 ? (
+                                    bids.map((bid: any, idx: number) => (
+                                        <div key={idx} className={`flex justify-between items-center text-base p-3 rounded-lg ${idx === 0 ? "bg-white shadow-md font-bold border border-blue-200" : "bg-white/60 text-gray-700 font-medium"}`}>
+                                            <div className="flex items-center gap-3">
+                                                {idx === 0 && <span className="text-[11px] bg-[#D4A017] text-white px-2 py-1 rounded uppercase font-black tracking-widest">Top</span>}
+                                                <span className="flex items-center gap-2">
+                                                    <User className="w-4 h-4 text-gray-400" />
+                                                    {bid.bidderName || `Bidder #${bid.bidderId}`}
+                                                </span>
                                             </div>
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">Ends On</p>
-                                                <p className="text-sm font-medium text-gray-600">Extend or shorten auction time</p>
-                                            </div>
+                                            <span className={idx === 0 ? "text-[#03230F] font-black" : ""}>Rs. {formatCurrency(bid.bidAmount)}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <AlertCircle className="w-10 h-10 text-blue-300 mx-auto mb-3" />
+                                        <p className="text-sm font-medium text-blue-500 italic">No bids have been placed for this auction yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* RIGHT COLUMN: Actions & Editing */}
+                    <div className="space-y-6">
+                        {(isDraft || isActive) && (
+                            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm">
+                                <h4 className="text-base font-bold flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3">
+                                    <Calendar className="w-5 h-5 text-[#D4A017]" />
+                                    Edit Auction Time
+                                </h4>
+
+                                <div className="space-y-4">
+                                    {isDraft && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
                                             <Input
                                                 type="datetime-local"
-                                                className="w-auto h-9 text-sm bg-white"
-                                                value={editEndTime}
-                                                onChange={(e) => setEditEndTime(e.target.value)}
+                                                value={editStartTime}
+                                                onChange={(e) => setEditStartTime(e.target.value)}
+                                                className="h-10 text-sm"
                                             />
-                                            <Button size="sm" variant="outline" onClick={handleUpdateTime} disabled={isUpdatingTime}>
-                                                {isUpdatingTime ? "..." : "Update"}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Bids List */}
-                                <div className="space-y-3">
-                                    {displayData.bids && displayData.bids.length > 0 ? (
-                                        displayData.bids.map((bid: any, index: number) => (
-                                            <div key={bid.id} className={`flex items-center justify-between p-4 rounded-xl border ${index === 0 ? "bg-yellow-50 border-[#FCE100]" : "bg-gray-50 border-gray-100"}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${index === 0 ? "bg-[#D4A017] text-[#03230F]" : "bg-gray-200 text-gray-500"}`}>
-                                                        {index + 1}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-[#03230F] text-sm">{bid.bidderName}</p>
-                                                        <p className="text-[11px] text-gray-500">{new Date(bid.bidTime).toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                                <p className={`font-black text-lg ${index === 0 ? "text-[#03230F]" : "text-gray-600"}`}>
-                                                    Rs. {bid.bidAmount.toLocaleString()}
-                                                </p>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            <p className="text-gray-400 font-medium">No bids placed yet.</p>
                                         </div>
                                     )}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time</label>
+                                        <Input
+                                            type="datetime-local"
+                                            value={editEndTime}
+                                            onChange={(e) => setEditEndTime(e.target.value)}
+                                            className="h-10 text-sm"
+                                        />
+                                    </div>
+                                    <Button
+                                        onClick={handleUpdateTime}
+                                        disabled={isUpdatingTime}
+                                        className="w-full h-10 text-sm bg-gray-900 text-white hover:bg-gray-800"
+                                    >
+                                        {isUpdatingTime ? "Saving..." : "Update Time"}
+                                    </Button>
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* RIGHT COL: Control Panel */}
-                    <div className="p-6 bg-[#F8F9FA] space-y-6">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-[#03230F] mb-2">
-                            Management
-                        </h3>
-
-                        {/* Current Stats */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#A3ACBA] mb-1">Current Highest Bid</p>
-                                <p className="text-2xl font-black text-[#03230F]">
-                                    Rs. {(displayData.currentHighestBidAmount || displayData.startingPrice).toLocaleString()}
-                                </p>
-                            </div>
-                            <div className="pt-4 border-t border-gray-100">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#A3ACBA] mb-1">Reserve Price</p>
-                                <p className="text-lg font-bold text-gray-600">
-                                    {displayData.reservePrice ? `Rs. ${displayData.reservePrice.toLocaleString()}` : "Not Set"}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        {isEditable && (
-                            <div className="space-y-3 pt-2">
-
-                                {/* NEW: Start Now Button (Draft Only) */}
-                                {isDraft && (
+                        {(isActive || isDraft) && (
+                            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
+                                <h4 className="text-base font-bold flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3">
+                                    <TrendingUp className="w-5 h-5 text-[#D4A017]" />
+                                    Lower Reserve Price
+                                </h4>
+                                <div className="flex gap-3">
+                                    <Input
+                                        type="number"
+                                        placeholder="New minimum..."
+                                        value={newReservePrice}
+                                        onChange={(e) => setNewReservePrice(e.target.value)}
+                                        className="h-10 text-sm flex-1"
+                                    />
                                     <Button
-                                        onClick={handleStartNow}
-                                        disabled={isStartingNow}
-                                        className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg uppercase tracking-widest transition-all"
+                                        onClick={handleUpdateReserve}
+                                        disabled={isUpdatingReserve || !newReservePrice}
+                                        className="h-10 text-sm px-8 bg-gray-900 text-white hover:bg-gray-800"
                                     >
-                                        <PlayCircle className="w-4 h-4 mr-2" />
-                                        {isStartingNow ? "Starting..." : "Start Auction Now"}
+                                        {isUpdatingReserve ? "..." : "Save"}
                                     </Button>
-                                )}
-
-                                <div className="bg-white p-3 rounded-xl border border-gray-200">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#697386] mb-2 block">
-                                        {displayData.reservePrice ? "Lower Reserve Price" : "Set Reserve Price"}
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            type="text"
-                                            inputMode="decimal"
-                                            placeholder="Amount"
-                                            className="h-9 text-sm"
-                                            value={newReservePrice}
-                                            onChange={handleReserveChange}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            onClick={handleUpdateReserve}
-                                            disabled={isUpdatingReserve}
-                                            className="bg-[#03230F] text-white hover:bg-[#0f4623]"
-                                        >
-                                            {isUpdatingReserve ? "..." : "Update"}
-                                        </Button>
-                                    </div>
                                 </div>
+                                <p className="text-xs text-gray-400 font-medium">Note: You can only lower the reserve price.</p>
+                            </div>
+                        )}
+
+                        {(isActive || isDraft) && (
+                            <div className="bg-red-50 border border-red-100 rounded-xl p-6 space-y-4">
+                                <h4 className="text-base font-bold flex items-center gap-2 text-red-900 mb-3">
+                                    <AlertCircle className="w-5 h-5" />
+                                    Danger Zone
+                                </h4>
 
                                 {isActive && (
                                     <Button
-                                        onClick={handleEndAuction}
-                                        disabled={isEndingAuction}
-                                        className="w-full h-11 bg-[#D4A017] hover:bg-[#C49007] text-[#03230F] font-bold rounded-lg uppercase tracking-widest transition-all"
+                                        onClick={handleEndAuctionEarly}
+                                        disabled={isEndingAuction || bids.length === 0}
+                                        className="w-full h-12 bg-[#D4A017] hover:bg-[#D4A017]/90 text-[#03230F] font-bold rounded-lg uppercase tracking-widest transition-all"
                                     >
-                                        {isEndingAuction ? "Ending Auction..." : "Select Winner"}
+                                        {isEndingAuction ? "Ending Auction..." : "Select Winner Now"}
                                     </Button>
                                 )}
 
@@ -595,7 +407,7 @@ export function AuctionDetailsModal({
                                     onClick={handleCancelAuction}
                                     disabled={isCancelling}
                                     variant="destructive"
-                                    className="w-full h-11 rounded-lg uppercase tracking-widest font-bold transition-all"
+                                    className="w-full h-12 rounded-lg uppercase tracking-widest font-bold transition-all text-sm"
                                 >
                                     {isCancelling ? "Cancelling..." : isActive ? "Cancel Auction" : "Delete Draft"}
                                 </Button>
@@ -603,9 +415,9 @@ export function AuctionDetailsModal({
                         )}
 
                         {error && (
-                            <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-[12px] font-bold uppercase tracking-widest text-red-600">
+                            <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
+                                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm font-bold uppercase tracking-widest text-red-600">
                                     {error}
                                 </p>
                             </div>

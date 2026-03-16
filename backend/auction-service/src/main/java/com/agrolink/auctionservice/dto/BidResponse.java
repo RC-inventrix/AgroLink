@@ -27,7 +27,8 @@ public class BidResponse {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime bidTime;
+    private Integer rank;
 
     private DeliveryAddress deliveryAddress;
-    private int rank; // Position in the bid ranking (1 = highest)
+    //private int rank; // Position in the bid ranking (1 = highest)
 }
