@@ -147,7 +147,7 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                             <span className="font-medium">Delivery available</span>
                             <span className="text-[#A3ACBA]">•</span>
                             <MapPin className="w-4 h-4 text-gray-400" />
-                            {/* FIX: Render the entire address instead of splitting by comma */}
+                            {/* FIX: Now correctly displaying the complete address from the DB */}
                             <span className="text-[#A3ACBA]">
                                 {auction.pickupAddress ? auction.pickupAddress : "Location N/A"}
                             </span>
