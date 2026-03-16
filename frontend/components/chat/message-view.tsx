@@ -83,7 +83,7 @@ export function MessageView({ conversation, messages, onSendMessage }: MessageVi
         ))}
       </div>
 
-      <div className="px-6 py-4 border-t border-gray-200">
+      <div className="px-6 py-4 w-3xl border-t border-gray-200">
         <div className="flex items-end gap-2">
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
           <Button variant="ghost" size="icon" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
