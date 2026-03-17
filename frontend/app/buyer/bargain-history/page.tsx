@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -39,8 +40,6 @@ export default function BuyerBargainPage() {
 
     useEffect(() => {
         const currentUserId = sessionStorage.getItem("id")
-        const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
-        setAddedToCartIds(storedAddedIds)
 
         if (!currentUserId) {
             console.error("No user ID found.")
@@ -48,12 +47,26 @@ export default function BuyerBargainPage() {
             return
         }
 
-        const fetchBargains = async () => {
+        const fetchBargainsAndCartState = async () => {
             try {
-                const response = await fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`)
+                // Fetch both the bargain history and the current user's cart in parallel
+                const [bargainsRes, cartRes] = await Promise.all([
+                    fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`),
+                    fetch(`${API_URL}/cart/${currentUserId}`)
+                ]);
 
-                if (response.ok) {
-                    const data = await response.json()
+                // 1. Map existing Cart Items to find which Bargains have already been converted to Cart Items
+                if (cartRes.ok) {
+                    const cartData = await cartRes.json();
+                    const cartBargainIds = cartData
+                        .filter((cartItem: any) => cartItem.bargainId != null)
+                        .map((cartItem: any) => cartItem.bargainId.toString());
+                    setAddedToCartIds(cartBargainIds);
+                }
+
+                // 2. Map Bargain History
+                if (bargainsRes.ok) {
+                    const data = await bargainsRes.json()
 
                     const mappedData: BargainItem[] = data.map((item: any) => ({
                         id: item.id.toString(),
@@ -88,7 +101,7 @@ export default function BuyerBargainPage() {
             }
         }
 
-        fetchBargains()
+        fetchBargainsAndCartState()
     }, [router])
 
     const showNotification = (message: string, type: 'success' | 'error') => {
@@ -135,9 +148,10 @@ export default function BuyerBargainPage() {
             return
         }
 
+        // Calculate the per-kg price that was successfully negotiated
         const bargainedPricePerKg = item.requestedPrice / item.requestedQuantityKg
 
-        // Safely parse the comma-separated address to extract City and Street
+        // Safely parse the comma-separated address to extract City and Street for the cart
         const addressParts = item.buyerAddress ? item.buyerAddress.split(',').map(s => s.trim()) : [];
         const streetAddress = addressParts.length > 0 ? addressParts[0] : "N/A";
         const city = addressParts.length > 1 ? addressParts[1] : "N/A";
@@ -156,15 +170,15 @@ export default function BuyerBargainPage() {
             sellerId: parseInt(item.seller),
             sellerName: "Farmer " + item.seller,
 
-            // Bargain Specific Data (NEW)
+            // Bargain Specific Data
             bargainId: parseInt(item.id),
             agreedPrice: item.requestedPrice,
-            productPrice: item.requestedPrice, // For backward compatibility with existing calculations
+            productPrice: item.requestedPrice,
             totalPrice: item.requestedPrice + item.deliveryFee,
 
-            // Delivery Specific Data (NEW & UPDATED)
+            // Delivery Specific Data mapped to CartItem entity
             deliveryFee: item.deliveryFee,
-            buyerAddress: item.buyerAddress, // Raw full string
+            buyerAddress: item.buyerAddress,
             buyerStreetAddress: streetAddress,
             buyerCity: city,
             buyerLatitude: item.buyerLatitude,
@@ -182,9 +196,8 @@ export default function BuyerBargainPage() {
             })
 
             if (res.ok) {
-                const newAddedIds = [...addedToCartIds, item.id]
-                setAddedToCartIds(newAddedIds)
-                localStorage.setItem("addedToCartBargains", JSON.stringify(newAddedIds))
+                // Update local state to immediately move it to the "Cart" tab
+                setAddedToCartIds(prev => [...prev, item.id])
                 showNotification(`Item successfully added to cart`, "success")
             } else {
                 showNotification("Failed to add item to cart", "error")
