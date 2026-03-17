@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
 import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 // Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
     name: string
     seller: string
-    sellerId: number
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -37,70 +39,70 @@ export default function BuyerBargainPage() {
     const router = useRouter()
 
     useEffect(() => {
-    const currentUserId = sessionStorage.getItem("id")
-    const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
-    setAddedToCartIds(storedAddedIds)
+        const currentUserId = sessionStorage.getItem("id")
 
-    if (!currentUserId) {
-        setIsLoading(false)
-        return
-    }
-
-    const fetchBargains = async () => {
-        try {
-            // 1. Fetch Bargain Requests
-            const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
-            if (!response.ok) throw new Error("Failed to fetch bargains")
-            const data = await response.json()
-
-            // 2. Extract unique Seller IDs
-            const sellerIds = Array.from(new Set(data.map((item: any) => item.sellerId))).filter(Boolean);
-
-            let nameMap: Record<number, string> = {};
-
-            // 3. Fetch Full Names from AuthController (Batch Request)
-            if (sellerIds.length > 0) {
-                const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${sellerIds.join(',')}`);
-                if (namesResponse.ok) {
-                    nameMap = await namesResponse.json();
-                }
-            }
-
-            // 4. Map Backend Entity to UI Interface
-            const mappedData: BargainItem[] = data.map((item: any) => ({
-                id: item.id.toString(),
-                name: item.vegetableName,
-                // Pass full name for display and raw ID for linking
-                seller: nameMap[item.sellerId] || `Farmer #${item.sellerId}`,
-                sellerId: item.sellerId,
-                image: item.vegetableImage || "/placeholder.svg",
-                pricePerHundredG: (item.originalPricePerKg || 0) / 10,
-                pricePerKg: item.originalPricePerKg || 0,
-                requestedQuantityKg: item.quantity,
-                actualPrice: (item.originalPricePerKg || 0) * item.quantity,
-                requestedPrice: item.suggestedPrice,
-                discount: item.originalPricePerKg
-                    ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
-                    : 0,
-                status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
-                vegetableId: item.vegetableId,
-                deliveryRequired: item.deliveryRequired || false,
-                buyerAddress: item.buyerAddress || "Pickup at Farm",
-                deliveryFee: item.deliveryFee || 0,
-                buyerLatitude: item.buyerLatitude || null,
-                buyerLongitude: item.buyerLongitude || null
-            }))
-
-            setItems(mappedData)
-        } catch (error) {
-            console.error("Error fetching bargains:", error)
-        } finally {
+        if (!currentUserId) {
+            console.error("No user ID found.")
             setIsLoading(false)
+            return
         }
-    }
 
-    fetchBargains()
-}, [router])
+        const fetchBargainsAndCartState = async () => {
+            try {
+                // Fetch both the bargain history and the current user's cart in parallel
+                const [bargainsRes, cartRes] = await Promise.all([
+                    fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`),
+                    fetch(`${API_URL}/cart/${currentUserId}`)
+                ]);
+
+                // 1. Map existing Cart Items to find which Bargains have already been converted to Cart Items
+                if (cartRes.ok) {
+                    const cartData = await cartRes.json();
+                    const cartBargainIds = cartData
+                        .filter((cartItem: any) => cartItem.bargainId != null)
+                        .map((cartItem: any) => cartItem.bargainId.toString());
+                    setAddedToCartIds(cartBargainIds);
+                }
+
+                // 2. Map Bargain History
+                if (bargainsRes.ok) {
+                    const data = await bargainsRes.json()
+
+                    const mappedData: BargainItem[] = data.map((item: any) => ({
+                        id: item.id.toString(),
+                        name: item.vegetableName,
+                        seller: item.sellerId,
+                        image: item.vegetableImage || "/placeholder.svg",
+                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                        pricePerKg: item.originalPricePerKg || 0,
+                        requestedQuantityKg: item.quantity,
+                        actualPrice: (item.originalPricePerKg || 0) * item.quantity,
+                        requestedPrice: item.suggestedPrice,
+                        discount: item.originalPricePerKg
+                            ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
+                            : 0,
+                        status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
+                        vegetableId: item.vegetableId,
+
+                        // Logistics & Coordinates Mapped Here
+                        deliveryRequired: item.deliveryRequired || false,
+                        buyerAddress: item.buyerAddress || "Pickup at Farm",
+                        deliveryFee: item.deliveryFee || 0,
+                        buyerLatitude: item.buyerLatitude || null,
+                        buyerLongitude: item.buyerLongitude || null
+                    }))
+
+                    setItems(mappedData)
+                }
+            } catch (error) {
+                console.error("Error fetching bargains:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchBargainsAndCartState()
+    }, [router])
 
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type })
@@ -119,7 +121,7 @@ export default function BuyerBargainPage() {
 
     const handleRemoveFromUI = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
+            const res = await fetch(`${API_URL}/api/bargains/${id}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -146,9 +148,10 @@ export default function BuyerBargainPage() {
             return
         }
 
+        // Calculate the per-kg price that was successfully negotiated
         const bargainedPricePerKg = item.requestedPrice / item.requestedQuantityKg
 
-        // Safely parse the comma-separated address to extract City and Street
+        // Safely parse the comma-separated address to extract City and Street for the cart
         const addressParts = item.buyerAddress ? item.buyerAddress.split(',').map(s => s.trim()) : [];
         const streetAddress = addressParts.length > 0 ? addressParts[0] : "N/A";
         const city = addressParts.length > 1 ? addressParts[1] : "N/A";
@@ -164,18 +167,18 @@ export default function BuyerBargainPage() {
             pricePerKg: bargainedPricePerKg,
             quantity: item.requestedQuantityKg,
             imageUrl: item.image,
-            sellerId: item.sellerId,
-            sellerName: item.seller,
+            sellerId: parseInt(item.seller),
+            sellerName: "Farmer " + item.seller,
 
-            // Bargain Specific Data (NEW)
+            // Bargain Specific Data
             bargainId: parseInt(item.id),
             agreedPrice: item.requestedPrice,
-            productPrice: item.requestedPrice, // For backward compatibility with existing calculations
+            productPrice: item.requestedPrice,
             totalPrice: item.requestedPrice + item.deliveryFee,
 
-            // Delivery Specific Data (NEW & UPDATED)
+            // Delivery Specific Data mapped to CartItem entity
             deliveryFee: item.deliveryFee,
-            buyerAddress: item.buyerAddress, // Raw full string
+            buyerAddress: item.buyerAddress,
             buyerStreetAddress: streetAddress,
             buyerCity: city,
             buyerLatitude: item.buyerLatitude,
@@ -183,7 +186,7 @@ export default function BuyerBargainPage() {
         }
 
         try {
-            const res = await fetch("http://localhost:8080/cart/add", {
+            const res = await fetch(`${API_URL}/cart/add`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -193,9 +196,8 @@ export default function BuyerBargainPage() {
             })
 
             if (res.ok) {
-                const newAddedIds = [...addedToCartIds, item.id]
-                setAddedToCartIds(newAddedIds)
-                localStorage.setItem("addedToCartBargains", JSON.stringify(newAddedIds))
+                // Update local state to immediately move it to the "Cart" tab
+                setAddedToCartIds(prev => [...prev, item.id])
                 showNotification(`Item successfully added to cart`, "success")
             } else {
                 showNotification("Failed to add item to cart", "error")

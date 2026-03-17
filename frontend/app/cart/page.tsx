@@ -5,10 +5,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X, ShoppingBag, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
-import Header from "@/components/header"
-import CartItem from "@/components/cart-item"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import CartItem from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
+import CartSummary from "@/components/cart-summary" // Assumed path
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -22,7 +22,7 @@ interface CartItemData {
     sellerName: string
     sellerId: number
     selected: boolean
-    deliveryFee: number
+    deliveryFee: number | null
     deliveryAddress: string
     distance: number
 }
@@ -38,7 +38,6 @@ export default function Cart() {
         type: 'success' | 'error' | 'info' | 'loading';
     } | null>(null);
 
-    // Auto-dismiss notifications (except loading state)
     useEffect(() => {
         if (notification && notification.type !== 'loading') {
             const timer = setTimeout(() => setNotification(null), 5000);
@@ -62,7 +61,7 @@ export default function Cart() {
                         quantity: item.quantity,
                         sellerName: item.sellerName,
                         selected: false,
-                        deliveryFee: item.deliveryFee || 0,
+                        deliveryFee: item.deliveryFee, // Preserves null if it's pickup
                         deliveryAddress: item.deliveryAddress || "",
                         distance: item.distance || 0,
                     }))
@@ -87,33 +86,31 @@ export default function Cart() {
     const handleDeleteItem = async (id: string) => {
         setDeletingId(id);
         try {
-            const res = await fetch(`${API_URL}/cart/delete/${id}`, {
-                method: 'DELETE',
-            });
-
+            const res = await fetch(`${API_URL}/cart/delete/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 setItems(prevItems => prevItems.filter(item => item.id.toString() !== id));
-                setNotification({ message: "Item removed from cart successfully.", type: 'success' });
+                setNotification({ message: "Item removed from cart.", type: 'success' });
             } else {
-                setNotification({ message: "Failed to remove item. Please try again.", type: 'error' });
+                setNotification({ message: "Failed to remove item.", type: 'error' });
             }
         } catch (error) {
-            setNotification({ message: "Network error. Could not remove item.", type: 'error' });
+            setNotification({ message: "Network error.", type: 'error' });
         } finally {
             setDeletingId(null);
         }
     }
 
     const selectedItems = items.filter((item) => item.selected)
+
+    // Delivery fees are only calculated for items where deliveryFee is not null
     const subtotal = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
-    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + item.deliveryFee, 0)
+    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + (item.deliveryFee || 0), 0)
     const totalPrice = subtotal + totalDeliveryFees
 
     const handleSelectAll = (checked: boolean) => {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
 
-    // --- UPDATED: Directly processes the order request, bypassing the checkout page ---
     const handleCheckout = async () => {
         if (selectedItems.length === 0) {
             setNotification({ message: "Select items in your cart to proceed.", type: 'info' });
@@ -125,8 +122,10 @@ export default function Cart() {
         const userId = sessionStorage.getItem("id") || "1";
         const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
+        // Grab ONLY the IDs of the items the user checked
+        const selectedItemIds = selectedItems.map(item => item.id);
+
         try {
-            // 1. Fetch user data securely to attach the address
             const userRes = await fetch(`${API_URL}/auth/user/${userId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
@@ -141,7 +140,7 @@ export default function Cart() {
                 contactPhone = userData.phone || contactPhone;
             }
 
-            // 2. Send Cash On Delivery Order Request
+            // PASS the selected cartItemIds in the body so the backend ONLY processes those!
             const response = await fetch(`${API_URL}/api/payment/cod?userId=${userId}`, {
                 method: "POST",
                 headers: {
@@ -150,20 +149,21 @@ export default function Cart() {
                 },
                 body: JSON.stringify({
                     deliveryAddress: deliveryAddress,
-                    contactPhone: contactPhone
+                    contactPhone: contactPhone,
+                    cartItemIds: selectedItemIds
                 })
             });
 
             if (response.ok) {
                 setNotification({
-                    message: "Order request has been sent to the farmer. Check your order management page to track progress.",
+                    message: "Order request sent! Check your order management page.",
                     type: 'success'
                 });
 
-                // Clear successfully ordered items from the cart state immediately
+                // Clear successfully ordered items from the UI cart state immediately
                 setItems(items.filter(item => !item.selected));
             } else {
-                setNotification({ message: "Failed to send order request. Please try again.", type: 'error' });
+                setNotification({ message: "Failed to send order request.", type: 'error' });
             }
         } catch (error) {
             setNotification({ message: "Network error. Could not send order request.", type: 'error' });
@@ -238,7 +238,9 @@ export default function Cart() {
                                                 seller: item.sellerName,
                                                 pricePerKg: item.pricePerKg,
                                                 quantity: item.quantity,
-                                                selected: item.selected
+                                                selected: item.selected,
+                                                deliveryFee: item.deliveryFee, // Pass to component
+                                                deliveryAddress: item.deliveryAddress
                                             }}
                                             onToggle={toggleItem}
                                             onDelete={handleDeleteItem}
@@ -249,7 +251,6 @@ export default function Cart() {
                         </div>
                     </div>
 
-                    {/* --- REPLACED: Inlined Cart Summary to safely modify labels without needing the missing component --- */}
                     <div className="lg:col-span-1">
                         <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
                             <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
@@ -270,7 +271,6 @@ export default function Cart() {
                                 </div>
                             </div>
 
-                            {/* NEW: Cash on Delivery Label Requirement */}
                             <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
                                 <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
                                     <AlertCircle className="w-4 h-4" />
@@ -278,7 +278,6 @@ export default function Cart() {
                                 </p>
                             </div>
 
-                            {/* NEW: Updated Button Label & Size Requirement */}
                             <Button
                                 onClick={handleCheckout}
                                 disabled={selectedItems.length === 0 || notification?.type === 'loading'}
