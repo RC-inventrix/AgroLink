@@ -154,6 +154,7 @@ export default function RequirementForm() {
                                     placeholder="e.g. 100"
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.quantity}
+                                    maxLength={10}
                                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                                 />
                             </div>
@@ -196,6 +197,7 @@ export default function RequirementForm() {
                                     placeholder="e.g. 0712345678"
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.contactNumber}
+                                    maxLength={10}
                                     onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
                                 />
                             </div>
