@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, FileText, ShieldAlert, Filter } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, FileText, ShieldAlert, Filter, ExternalLink, Calendar } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,10 +56,6 @@ export function ReportsSummary() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("all")
 
-  // Evidence Preview State
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1)
-
   // Resolution Modal State
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
@@ -67,15 +63,6 @@ export function ReportsSummary() {
     remarks: "",
     action: ""
   })
-
-  const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
-  const zoomIn = () => setZoom((z) => clamp(Number((z + 0.2).toFixed(2)), 0.2, 4))
-  const zoomOut = () => setZoom((z) => clamp(Number((z - 0.2).toFixed(2)), 0.2, 4))
-  const resetZoom = () => setZoom(1)
-
-  useEffect(() => {
-    if (previewUrl) setZoom(1)
-  }, [previewUrl])
 
   const API_BASE = process.env.NEXT_PUBLIC_MODERATION_API_BASE ?? "http://localhost:8080"
 
@@ -206,7 +193,6 @@ export function ReportsSummary() {
 
   return (
     <div className="space-y-6">
-      {/* RESOLUTION MODAL WINDOW */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -308,12 +294,21 @@ export function ReportsSummary() {
 
               {selectedReport.evidence && selectedReport.evidence.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Evidence</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Evidence (Click to view in new tab)</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {selectedReport.evidence.map((url, idx) => (
-                      <button key={idx} onClick={() => setPreviewUrl(url)} className="rounded-lg border overflow-hidden bg-muted/20">
-                        <img src={url} alt="Evidence" className="h-32 w-full object-cover hover:scale-105 transition-transform" />
-                      </button>
+                      <a 
+                        key={idx} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="group relative rounded-lg border overflow-hidden bg-muted/20 block"
+                      >
+                        <img src={url} alt="Evidence" className="h-32 w-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <ExternalLink className="text-white h-6 w-6" />
+                        </div>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -375,12 +370,24 @@ export function ReportsSummary() {
                   <div key={report.id} className="border-b pb-4 last:border-b-0 flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold">{report.reportedUser}</h4>
+                        <h4 className="font-semibold text-lg">{report.reportedUser}</h4>
                         <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
                         {report.riskLevel && <Badge className={getStatusColor(report.riskLevel)}>{report.riskLevel}</Badge>}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">Reporter: {report.reporter}</p>
-                      <p className="text-sm text-muted-foreground">Reason: {report.reason}</p>
+                      
+                      {/* DATE ADDED HERE */}
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                         <span className="flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {report.date}
+                         </span>
+                         <span className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5" />
+                            Reporter: {report.reporter}
+                         </span>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mt-1">Reason: {report.reason}</p>
                     </div>
                     <div className="flex flex-col gap-2 ml-4">
                       <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>View Details</Button>
@@ -401,44 +408,6 @@ export function ReportsSummary() {
           </Card>
         </div>
       )}
-
-      {/* Image Preview Sub-Dialog */}
-<Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-  {/* Changed max-w-4xl to max-w-6xl and added w-[95vw] for better responsiveness */}
-  <DialogContent className="max-w-7xl w-screen h-[90vh] flex flex-col">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
-        <FileText className="h-5 w-5 text-muted-foreground" />
-        Evidence Preview
-      </DialogTitle>
-    </DialogHeader>
-    
-    <div className="flex justify-between mb-4">
-      <div className="text-sm text-muted-foreground">
-        Zoom: <span className="font-medium text-foreground">{Math.round(zoom * 100)}%</span>
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={zoomOut}>-</Button>
-        <Button variant="outline" size="sm" onClick={zoomIn}>+</Button>
-        <Button variant="outline" size="sm" onClick={resetZoom}>Reset</Button>
-      </div>
-    </div>
-
-    {/* Added flex-1 and overflow-auto to handle large images within the fixed height */}
-    <div className="flex-1 overflow-auto flex justify-center items-center bg-muted/10 p-2 rounded border border-border">
-      <img 
-        src={previewUrl!} 
-        alt="Preview" 
-        style={{ 
-          transform: `scale(${zoom})`, 
-          transformOrigin: "center center",
-          transition: "transform 0.2s ease-in-out" 
-        }} 
-        className="max-w-full h-auto" 
-      />
-    </div>
-  </DialogContent>
-</Dialog>
     </div>
   )
 }

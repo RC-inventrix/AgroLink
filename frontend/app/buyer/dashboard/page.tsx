@@ -272,7 +272,7 @@ export default function BuyerDashboard() {
                                             pendingOrders.map((order, idx) => (
                                                 <div key={`${order.orderId}-${idx}`} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border bg-white">
                                                     <div className="h-16 w-16 rounded-lg overflow-hidden border flex-shrink-0">
-                                                        <img src={order.imageUrl || "/buyer-dashboard/red-tomatoes.jpg"} className="h-full w-full object-cover" />
+                                                        <img src={order.imageUrl || "/buyer-dashboard/vegetables.avif"} className="h-full w-full object-cover" />
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex justify-between items-start"><h3 className="font-semibold">{order.productName}</h3><span className="text-xs text-gray-400">#{order.orderId}</span></div>

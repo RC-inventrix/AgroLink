@@ -72,22 +72,39 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
     const buyerHasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
 
-    useEffect(() => {
-        const fetchBuyerName = async () => {
-            try {
-                const res = await fetch(`${API_URL}/auth/user/${order.userId}`);
-                if (res.ok) {
-                    const userData = await res.json();
-                    setBuyerName(userData.fullname || userData.username);
-                } else {
-                    setBuyerName(`Buyer #${order.userId}`);
+   useEffect(() => {
+    const fetchBuyerName = async () => {
+        try {
+            // Use the token for authorized access if your gateway/auth service requires it
+            const res = await fetch(`${API_URL}/auth/user/${order.userId}`, {
+                headers: { 
+                    "Authorization": `Bearer ${sessionStorage.getItem("token")}` 
                 }
-            } catch (error) {
-                setBuyerName("Unknown Buyer");
+            });
+
+            if (res.ok) {
+                const userData = await res.json();
+                // FIX: Explicitly check for 'fullname' or 'username' from the User model
+                if (userData.fullname) {
+                    setBuyerName(userData.fullname);
+                } else if (userData.username) {
+                    setBuyerName(userData.username);
+                } else {
+                    setBuyerName(`User #${order.userId}`);
+                }
+            } else {
+                setBuyerName(`User #${order.userId}`);
             }
-        };
-        if (order.userId) fetchBuyerName();
-    }, [order.userId]);
+        } catch (error) {
+            console.error("Error fetching name:", error);
+            setBuyerName("Unknown Buyer");
+        }
+    };
+
+    if (order.userId) {
+        fetchBuyerName();
+    }
+}, [order.userId, API_URL]); // Added API_URL to dependency array for safety
 
     const handleVerifyOtp = async () => {
         setError(null);
