@@ -1,3 +1,4 @@
+/* fileName: product-card.tsx */
 "use client"
 
 import { Pencil, Trash2, MapPin, Home, Package } from "lucide-react"
@@ -16,12 +17,12 @@ interface Product {
     pricingType: "FIXED" | "BIDDING"
     // Delivery
     deliveryAvailable: boolean
-    baseCharge?: number
-    extraRatePerKm?: number
+    baseCharge?: number | null
+    extraRatePerKm?: number | null
     // Location
-    pickupLatitude?: number
-    pickupLongitude?: number
-    pickupAddress?: string
+    pickupLatitude?: number | null
+    pickupLongitude?: number | null
+    pickupAddress?: string | null
 }
 
 interface ProductCardProps {
@@ -29,6 +30,7 @@ interface ProductCardProps {
     userDefaultAddress: string | null
     onEdit: (product: Product) => void
     onDelete: (id: string) => void
+    onUpdateQuantity: (product: Product) => void
 }
 
 export default function ProductCard({
@@ -36,6 +38,7 @@ export default function ProductCard({
                                         userDefaultAddress,
                                         onEdit,
                                         onDelete,
+                                        onUpdateQuantity,
                                     }: ProductCardProps) {
 
     const isDefaultAddress = userDefaultAddress && product.pickupAddress
@@ -45,73 +48,59 @@ export default function ProductCard({
     return (
         <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
             {/* Product Image */}
-            <div className="relative h-56 bg-muted overflow-hidden">
+            <div className="relative h-56 bg-muted overflow-hidden border-b border-border">
                 <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
-                    className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.src = "/placeholder.svg" }}
                 />
-                <div className="absolute top-2 right-2 flex gap-2">
-                    <button
-                        onClick={() => onEdit(product)}
-                        className="p-2 bg-white/90 text-primary rounded-full hover:bg-white shadow-sm transition-colors backdrop-blur-sm"
-                        aria-label="Edit product"
-                    >
-                        <Pencil size={16} />
-                    </button>
-                    <button
-                        onClick={() => onDelete(product.id)}
-                        className="p-2 bg-white/90 text-destructive rounded-full hover:bg-white shadow-sm transition-colors backdrop-blur-sm"
-                        aria-label="Delete product"
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                <div className="absolute top-3 right-3 flex gap-2">
+                    <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm hover:bg-white" onClick={() => onEdit(product)}>
+                        <Pencil className="w-4 h-4 text-foreground" />
+                    </Button>
+                    <Button size="icon" variant="destructive" className="h-8 w-8 shadow-sm" onClick={() => onDelete(product.id)}>
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                </div>
+                <div className="absolute bottom-3 left-3 flex gap-2">
+                    <span className="px-2.5 py-1 bg-background/90 backdrop-blur-sm text-xs font-bold rounded shadow-sm border border-border">
+                        {product.pricingType}
+                    </span>
                 </div>
             </div>
 
-            {/* Product Details - LINE BY LINE LAYOUT */}
-            <div className="p-5 flex-1 flex flex-col space-y-3">
-
-                {/* 1. Name */}
-                <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-xl text-foreground line-clamp-1">{product.name}</h3>
-                    {/* Category Badge */}
-                    <span className="text-[10px] uppercase font-semibold tracking-wider bg-primary/10 text-primary px-2 py-1 rounded-full">
-                {product.category}
-            </span>
+            {/* Product Details */}
+            <div className="p-5 flex flex-col flex-1">
+                <div className="mb-4">
+                    <h3 className="font-bold text-lg text-foreground mb-1 leading-tight">{product.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>
 
-                {/* 2. Description */}
-                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5em]">
-                    {product.description || "No description provided."}
-                </p>
-
-                {/* 3. Price & Quantity Block */}
-                <div className="bg-muted/20 p-3 rounded-md border border-border/50">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-muted-foreground">Price</span>
-                        <span className="font-bold text-lg text-primary">
-                    {product.pricingType === "FIXED"
-                        ? `LKR ${product.pricePerKg}`
-                        : `Bid: LKR ${product.biddingPrice}`}
-                            <span className="text-xs font-normal text-muted-foreground">/kg</span>
-                </span>
+                <div className="space-y-4 mt-auto">
+                    {/* 1. Category */}
+                    <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                        <span className="text-muted-foreground">Category</span>
+                        <span className="font-medium text-foreground">{product.category}</span>
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground flex items-center gap-1">
-                    <Package className="w-3 h-3"/> Available Stock
-                </span>
-                        <span className="font-semibold text-foreground">{product.quantity} kg</span>
+
+                    {/* 2. Quantity */}
+                    <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                        <span className="text-muted-foreground">Quantity</span>
+                        <span className="font-medium text-foreground">{product.quantity} kg</span>
                     </div>
-                </div>
 
-                {/* Spacer to push delivery/address to bottom if content is short */}
-                <div className="flex-1"></div>
+                    {/* 3. Price */}
+                    <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                        <span className="text-muted-foreground">Price</span>
+                        <span className="font-bold text-primary">
+                            {product.pricingType === "FIXED" ? `LKR ${product.pricePerKg}/kg` : "Auction Based"}
+                        </span>
+                    </div>
 
-                <div className="space-y-2 pt-2 border-t border-border/50">
                     {/* 4. Delivery Info */}
-                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground">
-                        <span className="text-base leading-none mt-0.5">🚚</span>
+                    <div className="flex items-start gap-2.5 text-sm text-muted-foreground border-b border-border/50 pb-2">
+                        <Package className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         <div>
                             {product.deliveryAvailable ? (
                                 <>
@@ -125,20 +114,30 @@ export default function ProductCard({
                     </div>
 
                     {/* 5. Address Info */}
-                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground">
+                    <div className="text-xs flex items-start gap-2.5 text-muted-foreground mb-4">
                         {isDefaultAddress ? (
                             <Home className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                         ) : (
                             <MapPin className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                         )}
                         <div className="overflow-hidden">
-                   <span className="font-medium text-foreground block">
-                      {isDefaultAddress ? "Home Location" : "Custom Location"}
-                   </span>
-                            <span className="opacity-80 truncate block w-full" title={product.pickupAddress}>
-                       {product.pickupAddress || "No address set"}
-                   </span>
+                            <span className="font-medium text-foreground block">
+                                {isDefaultAddress ? "Home Location" : "Custom Location"}
+                            </span>
+                            <span className="opacity-80 truncate block w-full" title={product.pickupAddress || ""}>
+                                {product.pickupAddress || "No address set"}
+                            </span>
                         </div>
+                    </div>
+
+                    {/* NEW: Visually striking, perfectly fitted Quantity Update Button */}
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                        <Button
+                            className="w-full bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold shadow-md transition-all text-sm h-11 rounded-lg"
+                            onClick={() => onUpdateQuantity(product)}
+                        >
+                            Update Quantity
+                        </Button>
                     </div>
                 </div>
             </div>

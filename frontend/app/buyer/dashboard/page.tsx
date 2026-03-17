@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react"
 import React from 'react';
 import {
-    Bell,
     ShoppingCart,
-    Heart,
     Package,
     MessageSquare,
     TrendingUp,
@@ -16,6 +14,8 @@ import {
     Phone,
     Megaphone,
     X,
+    CheckCircle2,
+    XCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,13 +28,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import Footer from "@/components/footer/Footer"
 
-// Re-added the bargains object to prevent "missing" errors
-const bargains = {
-    pending: [{ id: 1, product: "Organic Beans", image: "/buyer-dashboard/green-beans.jpg", offeredPrice: "LKR 800", quantity: "8 kg", status: "pending" }],
-    approved: [{ id: 2, product: "Cabbage", image: "/buyer-dashboard/fresh-cabbage.jpg", offeredPrice: "LKR 400", quantity: "5 kg", status: "approved" }],
-    rejected: [{ id: 3, product: "Potatoes", image: "/buyer-dashboard/fresh-potatoes.png", offeredPrice: "LKR 300", quantity: "10 kg", status: "rejected" }],
-}
-
 export default function BuyerDashboard() {
     const [firstName, setFirstName] = useState("User")
     const [isBanned, setIsBanned] = useState(false)
@@ -46,14 +39,18 @@ export default function BuyerDashboard() {
     const [isLoadingChats, setIsLoadingChats] = useState(true)
     const [realCartItems, setRealCartItems] = useState<any[]>([])
     const [isLoadingCart, setIsLoadingCart] = useState(true)
-    const [pendingOrders, setPendingOrders] = useState<any[]>([])
+
+    // Updated States for Orders and Bargains
+    const [ordersData, setOrdersData] = useState<any[]>([])
     const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+    const [bargainsData, setBargainsData] = useState<any[]>([])
+    const [isLoadingBargains, setIsLoadingBargains] = useState(true)
 
     const gatewayUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
-        const myId = sessionStorage.getItem("id") || "1"; 
+        const myId = sessionStorage.getItem("id") || "1";
         if (!token) return;
 
         const headers = { "Authorization": `Bearer ${token}` };
@@ -72,11 +69,10 @@ export default function BuyerDashboard() {
                     if (data.fullName) setFirstName(data.fullName.split(" ")[0]);
                 }
 
-                // Fetch announcements specifically for the BUYER role
                 const annRes = await fetch(`${gatewayUrl}/api/v1/announcements/my-announcements?role=BUYER`, { headers });
                 if (annRes.ok) {
                     const annData = await annRes.json();
-                    setAnnouncements(annData); 
+                    setAnnouncements(annData);
                 }
             } catch (err) {
                 console.error("User data or announcement fetch failed:", err);
@@ -94,15 +90,16 @@ export default function BuyerDashboard() {
             finally { setIsLoadingCart(false); }
         };
 
-        const fetchPendingOrders = async () => {
+        const fetchOrdersAndBargains = async () => {
+            // Fetch Orders
             try {
                 const res = await fetch(`${gatewayUrl}/api/buyer/orders/${myId}`, { headers });
                 if (res.ok) {
                     const backendOrders = await res.json();
-                    const pendingList: any[] = [];
+                    const processedList: any[] = [];
                     const sellerIds = new Set<string>();
 
-                    backendOrders.filter((o: any) => o.status !== "COMPLETED").forEach((order: any) => {
+                    backendOrders.forEach((order: any) => {
                         let items = [];
                         try {
                             if (order.itemsJson && order.itemsJson.startsWith("[")) {
@@ -115,7 +112,14 @@ export default function BuyerDashboard() {
                         items.forEach((item: any) => {
                             const sId = item.sellerId || order.sellerId;
                             if (sId) sellerIds.add(sId);
-                            pendingList.push({ ...item, orderId: order.id, sellerId: sId, status: "pending" });
+                            processedList.push({
+                                ...item,
+                                orderId: order.id,
+                                orderStatus: order.status,
+                                sellerId: sId,
+                                totalAmount: order.amount / 100, // Amount is stored in cents
+                                imageUrl: item.imageUrl || "/buyer-dashboard/vegetables.avif"
+                            });
                         });
                     });
 
@@ -125,13 +129,23 @@ export default function BuyerDashboard() {
                         if (nameRes.ok) nameMap = await nameRes.json();
                     }
 
-                    setPendingOrders(pendingList.map(item => ({
+                    setOrdersData(processedList.map(item => ({
                         ...item,
                         sellerName: nameMap[item.sellerId] || "AgroLink Seller"
                     })));
                 }
             } catch (err) { console.error("Orders fetch failed:", err); }
             finally { setIsLoadingOrders(false); }
+
+            // Fetch Bargains
+            try {
+                const res = await fetch(`${gatewayUrl}/api/bargains/buyer/${myId}`, { headers });
+                if (res.ok) {
+                    const bData = await res.json();
+                    setBargainsData(bData);
+                }
+            } catch (err) { console.error("Bargains fetch failed:", err); }
+            finally { setIsLoadingBargains(false); }
         };
 
         const syncDashboardData = async () => {
@@ -173,13 +187,13 @@ export default function BuyerDashboard() {
 
         fetchUserDataAndStatus();
         fetchCartItems();
-        fetchPendingOrders();
+        fetchOrdersAndBargains();
         syncDashboardData();
 
         const interval = setInterval(() => {
             syncDashboardData();
             fetchCartItems();
-            fetchPendingOrders();
+            fetchOrdersAndBargains();
         }, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -203,21 +217,69 @@ export default function BuyerDashboard() {
         );
     }
 
+    // Filter Logic for Orders
+    const pendingStatuses = ["CREATED", "PAID", "COD_CONFIRMED", "PROCESSING"];
+    const pendingOrders = ordersData.filter(o => pendingStatuses.includes(o.orderStatus));
+    const completedOrders = ordersData.filter(o => o.orderStatus === "COMPLETED");
+    const cancelledOrders = ordersData.filter(o => o.orderStatus === "CANCELLED");
+
+    // Filter Logic for Bargains
+    const pendingBargains = bargainsData.filter(b => b.status === "PENDING");
+    const acceptedBargains = bargainsData.filter(b => b.status === "ACCEPTED");
+    const rejectedBargains = bargainsData.filter(b => b.status === "REJECTED");
+
+    // Helper component to render order cards
+    const renderOrderCard = (order: any, idx: number, icon: any, badgeClass: string, badgeText: string) => (
+        <div key={`${order.orderId}-${idx}`} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div className="h-16 w-16 rounded-lg overflow-hidden border flex-shrink-0 bg-gray-50">
+                <img src={order.imageUrl} alt={order.productName} className="h-full w-full object-cover" />
+            </div>
+            <div className="flex-1">
+                <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-gray-900">{order.productName}</h3>
+                    <span className="text-xs text-gray-400 font-mono">#{order.orderId}</span>
+                </div>
+                <p className="text-xs text-primary font-medium mt-0.5">Seller: {order.sellerName}</p>
+                <div className="mt-2 flex items-center gap-3">
+                    <p className="text-sm font-bold text-[#2d5016]">
+                        LKR {(order.pricePerKg && order.quantity) ? (order.pricePerKg * order.quantity).toFixed(2) : order.totalAmount?.toFixed(2)}
+                    </p>
+                    {order.quantity && <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{order.quantity} kg</span>}
+                </div>
+            </div>
+            <Badge className={`flex items-center gap-1 ${badgeClass}`}>{icon} {badgeText}</Badge>
+        </div>
+    );
+
+    // Helper component to render bargain cards
+    const renderBargainCard = (b: any, badgeProps: any) => (
+        <div key={b.id} className="flex items-center gap-4 p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div className="h-12 w-12 rounded-lg overflow-hidden border flex-shrink-0 bg-gray-50">
+                <img src={b.vegetableImage || "/buyer-dashboard/vegetables.avif"} alt={b.vegetableName} className="h-full w-full object-cover" />
+            </div>
+            <div className="flex-1 text-left">
+                <p className="font-semibold text-gray-900 leading-tight">{b.vegetableName}</p>
+                <p className="text-xs text-gray-500 mb-1">{b.quantity} kg • Orig: LKR {b.originalPricePerKg}/kg</p>
+                <p className="text-sm text-yellow-600 font-bold">Offered: LKR {b.suggestedPrice?.toFixed(2)}</p>
+            </div>
+            <Badge {...badgeProps} />
+        </div>
+    );
+
     return (
         <ProtectedRoute>
-            {/* Added min-h-screen and flex-col for Footer layout */}
-            <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+            <div className="min-h-screen bg-background text-gray-800">
                 <BuyerHeader />
                 <div className="flex flex-1">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
-                        {/* Welcome Banner - Theme Colors */}
-                        <div className="relative mb-6 overflow-hidden rounded-xl bg-[#03230F] p-8 text-white shadow-lg">
-                            <h1 className="mb-2 text-3xl font-bold text-[#EEC044]">Welcome back, {firstName} 👋</h1>
-                            <p className="text-lg opacity-90 text-gray-300">Manage your orders, bargains, and requests in one place</p>
+                        {/* Welcome Banner */}
+                        <div className="relative mb-6 overflow-hidden rounded-2xl bg-[#03230F] p-8 text-white shadow-lg">
+                            <h1 className="mb-2 text-3xl font-bold tracking-tight">Welcome back, {firstName} 👋</h1>
+                            <p className="text-lg text-gray-300">Manage your orders, bargains, and requests in one place</p>
                         </div>
 
-                        {/* --- ANNOUNCEMENT BAR --- */}
+                        {/* Announcement Bar */}
                         {showAnnouncements && announcements.length > 0 && (
                             <div className="mb-6 bg-[#EEC044] rounded-xl px-6 py-4 flex justify-between items-center shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
                                 <div className="flex items-center gap-3">
@@ -276,7 +338,7 @@ export default function BuyerDashboard() {
                                     <CardTitle className="text-lg font-bold text-[#03230F]">My Cart</CardTitle>
                                     <ShoppingCart className="h-5 w-5 text-[#EEC044]" />
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="pt-6">
                                     {isLoadingCart ? (
                                         <div className="h-24 flex items-center justify-center animate-pulse bg-gray-50 rounded-lg text-[#03230F] font-semibold">Loading...</div>
                                     ) : (
@@ -291,38 +353,114 @@ export default function BuyerDashboard() {
                                             </div>
                                         </>
                                     )}
-                                    <Link href="/cart"><Button className="mt-4 w-full bg-[#EEC044] text-[#03230F] hover:bg-[#d9af3d] font-bold transition-colors">View Cart</Button></Link>
+                                    <Link href="/cart"><Button className="mt-5 w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold rounded-xl h-11">View Cart & Checkout</Button></Link>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <div className="grid gap-6 lg:grid-cols-2 lg:col-span-2">
-                            {/* Theme Colors Applied */}
-                            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-                                <CardHeader><CardTitle className="flex items-center gap-2 font-bold text-[#03230F]"><TrendingUp className="h-5 w-5 text-[#EEC044]" /> Bargain Status</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                    {bargains.pending.map((b) => (
-                                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-[#EEC044]/30 transition-colors">
-                                            <div className="flex-1 text-left"><p className="font-bold text-[#03230F]">{b.product}</p><p className="text-sm text-[#03230F]/80 font-semibold">{b.offeredPrice}</p></div>
-                                            <Badge variant="outline" className="bg-[#EEC044]/10 text-[#03230F] border-[#EEC044] font-bold">Pending</Badge>
-                                        </div>
-                                    ))}
+                        {/* Orders Section */}
+                        <Card className="mb-8 border-none shadow-sm rounded-2xl">
+                            <CardHeader className="bg-gray-50/50 border-b rounded-t-2xl">
+                                <CardTitle className="flex items-center gap-2 font-bold text-gray-800"><Package className="h-5 w-5 text-yellow-500" /> My Orders</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <Tabs defaultValue="pending" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 p-1 rounded-xl">
+                                        <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Pending ({pendingOrders.length})</TabsTrigger>
+                                        <TabsTrigger value="completed" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Completed ({completedOrders.length})</TabsTrigger>
+                                        <TabsTrigger value="cancelled" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Cancelled</TabsTrigger>
+                                    </TabsList>
+
+                                    <TabsContent value="pending" className="space-y-4 outline-none">
+                                        {isLoadingOrders ? (
+                                            <div className="py-10 text-center animate-pulse text-gray-400">Fetching orders...</div>
+                                        ) : pendingOrders.length > 0 ? (
+                                            pendingOrders.map((order, idx) => renderOrderCard(order, idx, <Clock className="mr-1.5 h-3.5 w-3.5" />, "bg-blue-50 text-blue-700 border-blue-200", order.orderStatus))
+                                        ) : (
+                                            <div className="py-12 text-center text-gray-400"><Package className="h-12 w-12 mx-auto mb-3 opacity-20" /><p>No pending orders</p></div>
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="completed" className="space-y-4 outline-none">
+                                        {completedOrders.length > 0 ? (
+                                            completedOrders.map((order, idx) => renderOrderCard(order, idx, <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />, "bg-green-50 text-green-700 border-green-200", "Completed"))
+                                        ) : (
+                                            <div className="py-12 text-center text-gray-400"><CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-20" /><p>No completed orders yet</p></div>
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="cancelled" className="space-y-4 outline-none">
+                                        {cancelledOrders.length > 0 ? (
+                                            cancelledOrders.map((order, idx) => renderOrderCard(order, idx, <XCircle className="mr-1.5 h-3.5 w-3.5" />, "bg-red-50 text-red-700 border-red-200", "Cancelled"))
+                                        ) : (
+                                            <div className="py-12 text-center text-gray-400"><XCircle className="h-12 w-12 mx-auto mb-3 opacity-20" /><p>No cancelled orders</p></div>
+                                        )}
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
+
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            {/* Bargains Section */}
+                            <Card className="border-none shadow-sm rounded-2xl h-fit">
+                                <CardHeader className="bg-gray-50/50 border-b rounded-t-2xl">
+                                    <CardTitle className="flex items-center gap-2 font-bold text-gray-800"><TrendingUp className="h-5 w-5 text-orange-500" /> Bargain Status</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    <Tabs defaultValue="pending" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 p-1 rounded-xl">
+                                            <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Pending</TabsTrigger>
+                                            <TabsTrigger value="accepted" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Accepted</TabsTrigger>
+                                            <TabsTrigger value="rejected" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Rejected</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="pending" className="space-y-3 outline-none">
+                                            {isLoadingBargains ? (
+                                                <div className="py-6 text-center animate-pulse text-gray-400">Loading...</div>
+                                            ) : pendingBargains.length > 0 ? (
+                                                pendingBargains.map((b) => renderBargainCard(b, { variant: "outline", children: "Pending", className: "text-blue-600 border-blue-200 bg-blue-50" }))
+                                            ) : (
+                                                <div className="py-8 text-center text-gray-400 text-sm">No pending bargains</div>
+                                            )}
+                                        </TabsContent>
+
+                                        <TabsContent value="accepted" className="space-y-3 outline-none">
+                                            {acceptedBargains.length > 0 ? (
+                                                acceptedBargains.map((b) => renderBargainCard(b, { variant: "outline", children: "Accepted", className: "text-green-600 border-green-200 bg-green-50" }))
+                                            ) : (
+                                                <div className="py-8 text-center text-gray-400 text-sm">No accepted bargains</div>
+                                            )}
+                                        </TabsContent>
+
+                                        <TabsContent value="rejected" className="space-y-3 outline-none">
+                                            {rejectedBargains.length > 0 ? (
+                                                rejectedBargains.map((b) => renderBargainCard(b, { variant: "outline", children: "Rejected", className: "text-red-600 border-red-200 bg-red-50" }))
+                                            ) : (
+                                                <div className="py-8 text-center text-gray-400 text-sm">No rejected bargains</div>
+                                            )}
+                                        </TabsContent>
+                                    </Tabs>
                                 </CardContent>
                             </Card>
 
-                            {/* Theme Colors Applied */}
-                            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-                                <CardHeader><CardTitle className="flex items-center gap-2 font-bold text-[#03230F]"><MessageSquare className="h-5 w-5 text-[#EEC044]" /> Recent Chats</CardTitle></CardHeader>
-                                <CardContent className="space-y-3">
+                            {/* Message Center (Untouched functionality, updated styles slightly to match) */}
+                            <Card className="border-none shadow-sm rounded-2xl h-fit">
+                                <CardHeader className="bg-gray-50/50 border-b rounded-t-2xl">
+                                    <CardTitle className="flex items-center gap-2 font-bold text-gray-800"><MessageSquare className="h-5 w-5 text-yellow-500" /> Recent Chats</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-3">
                                     {isLoadingChats ? (
-                                        <div className="py-4 text-center text-sm font-semibold text-[#03230F] animate-pulse">Syncing...</div>
+                                        <div className="py-4 text-center text-sm text-gray-400 animate-pulse">Syncing chats...</div>
                                     ) : liveChats.length > 0 ? (
                                         liveChats.map((chat) => (
                                             <Link key={chat.id} href="/buyer/chat">
-                                                <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 hover:border-[#EEC044]/30 transition-colors cursor-pointer">
-                                                    <Avatar className="h-10 w-10 border border-gray-200"><AvatarImage src={chat.avatar} /><AvatarFallback className="bg-[#03230F] text-[#EEC044] font-bold">{chat.farmer[0]}</AvatarFallback></Avatar>
-                                                    <div className="flex-1 text-left min-w-0"><p className="font-bold text-[#03230F] truncate">{chat.farmer}</p><p className="text-xs text-gray-500 font-medium truncate">{chat.lastMessage}</p></div>
-                                                    {chat.unread > 0 && <Badge className="bg-[#EEC044] text-[#03230F] font-black">{chat.unread}</Badge>}
+                                                <div className="flex items-center gap-4 p-3.5 rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                                                    <Avatar className="h-11 w-11 border-2 border-gray-100"><AvatarImage src={chat.avatar} /><AvatarFallback className="bg-[#2d5016] text-white">{chat.farmer[0]}</AvatarFallback></Avatar>
+                                                    <div className="flex-1 text-left min-w-0">
+                                                        <p className="font-semibold text-gray-900 truncate">{chat.farmer}</p>
+                                                        <p className="text-xs text-gray-500 truncate mt-0.5">{chat.lastMessage}</p>
+                                                    </div>
+                                                    {chat.unread > 0 && <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-sm">{chat.unread}</Badge>}
                                                 </div>
                                             </Link>
                                         ))

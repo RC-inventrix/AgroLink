@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,12 +6,12 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import {
-    Plus, TrendingUp, Package, Wallet, Carrot, Sparkles,
-    Bell, ChevronRight, AlertCircle, LogOut, Mail, Phone, Megaphone, X, ShieldAlert
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+// Added the missing icon imports here (LogOut, Mail, Phone, ShieldAlert, Megaphone, X)
+import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2, LogOut, Mail, Phone, ShieldAlert, Megaphone, X } from "lucide-react";
+// Added missing UI component imports
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -19,6 +20,10 @@ import Example from "@/components/footer/Footer";
 import Footer2 from "@/components/footer/Footer";
 
 
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
+
+// Hoisted to global scope so all components in this file can access them
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
@@ -32,7 +37,7 @@ export default function SellerDashboard() {
     const [warnings, setWarnings] = useState<any[]>([]);
     const [showAnnouncements, setShowAnnouncements] = useState(true);
 
-    // State for Orders and Analytics
+    // State for Orders, Analytics, and Banner Logic
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
         totalCompletedIncome: 0,
@@ -41,6 +46,10 @@ export default function SellerDashboard() {
         activeListingsCount: 0
     });
 
+    // --- INVENTORY BANNER STATES ---
+    const [hasFixedPriceProducts, setHasFixedPriceProducts] = useState(false);
+    const [bannerState, setBannerState] = useState<"ALERT" | "CLICKED">("ALERT");
+
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
@@ -48,10 +57,9 @@ export default function SellerDashboard() {
 
         const fetchDashboardData = async () => {
             try {
-                const headers = { "Authorization": `Bearer ${token}` };
-
-                // 1. Fetch User Data / Ban Check
-                const userRes = await fetch(`${baseUrl}/auth/me`, { headers });
+                const userRes = await fetch(`${baseUrl}/auth/me`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
                 if (userRes.ok) {
                     const userData = await userRes.json();
                     if (userData.isBanned) {
@@ -61,33 +69,23 @@ export default function SellerDashboard() {
                     setUserName(userData.fullName?.split(' ')[0].toLowerCase() || "User");
                 }
 
-                // 2. Fetch Private Warnings (Report System)
-                const warnRes = await fetch(`${baseUrl}/api/v1/moderation/user/notifications/${myId}`, { headers });
-                if (warnRes.ok) {
-                    const warnData = await warnRes.json();
-                    // Filter out already read warnings
-                    setWarnings(warnData.filter((w: any) => !w.read));
-                }
+                const statsRes = await fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
 
-                // 3. Fetch System Announcements (Communication System)
-                const annRes = await fetch(`${baseUrl}/api/v1/announcements/my-announcements?role=FARMER`, { headers });
-                if (annRes.ok) {
-                    const annData = await annRes.json();
-                    setAnnouncements(annData);
-                }
-                // 4. Fetch Stats, Orders, and Products
-                const [statsRes, ordersRes, productsRes] = await Promise.all([
-                    fetch(`${baseUrl}/api/seller/orders/${myId}/analytics`, { headers }),
-                    fetch(`${baseUrl}/api/seller/orders/${myId}`, { headers }),
-                    fetch(`${baseUrl}/products/farmer/${myId}`, { headers })
-                ]);
+                const ordersRes = await fetch(`${baseUrl}/api/seller/orders/${myId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                const productsRes = await fetch(`${baseUrl}/products/farmer/${myId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
 
                 if (statsRes.ok && ordersRes.ok && productsRes.ok) {
                     const statsData = await statsRes.json();
                     const allOrders: any[] = await ordersRes.json();
                     const allProducts: any[] = await productsRes.json();
 
-                    // Filter orders
                     const filteredPending = allOrders.filter((o) =>
                         ["PAID", "COD_CONFIRMED", "CREATED", "PENDING"].includes(o.status?.toUpperCase())
                     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -99,6 +97,10 @@ export default function SellerDashboard() {
                         totalPendingOrders: filteredPending.length,
                         activeListingsCount: allProducts.length
                     });
+
+                    // Logic: Check if user has FIXED price items to trigger the banner
+                    const hasFixed = allProducts.some(p => p.pricingType === "FIXED");
+                    setHasFixedPriceProducts(hasFixed);
                 }
             } catch (err) {
                 console.error("Dashboard primary sync error:", err);
@@ -126,7 +128,6 @@ export default function SellerDashboard() {
         fetchDashboardData();
         syncGlobalUnread();
 
-        // WebSocket for real-time chat badges
         const socket = new SockJS(`${chatUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
@@ -140,6 +141,28 @@ export default function SellerDashboard() {
         client.activate();
         return () => { void client.deactivate(); };
     }, []);
+
+    // --- PROTECTED BANNER TIMER LOGIC ---
+    useEffect(() => {
+        const clickedAtStr = localStorage.getItem("inventoryBannerClickedAt");
+        if (clickedAtStr) {
+            const clickedAtTime = parseInt(clickedAtStr, 10);
+            const timeDiff = Date.now() - clickedAtTime;
+            const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+            if (timeDiff < TWELVE_HOURS) {
+                setBannerState("CLICKED");
+            } else {
+                localStorage.removeItem("inventoryBannerClickedAt");
+                setBannerState("ALERT");
+            }
+        }
+    }, []);
+
+    const handleBannerClick = () => {
+        localStorage.setItem("inventoryBannerClickedAt", Date.now().toString());
+        setBannerState("CLICKED");
+    };
 
     // Function to dismiss private warning
     const handleDismissWarning = async (id: number) => {
@@ -200,7 +223,7 @@ export default function SellerDashboard() {
 
                 <main className="flex-1 p-8 overflow-hidden">
                     {/* Welcome Header */}
-                    <header className="bg-[#03230F] rounded-3xl p-8 mb-8 flex justify-between items-center shadow-lg">
+                    <header className="bg-[#03230F] rounded-3xl p-8 mb-6 flex justify-between items-center shadow-lg">
                         <div>
                             <h1 className="text-white text-3xl font-bold flex items-center gap-2">
                                 Welcome back, {userName} 👋
@@ -213,6 +236,62 @@ export default function SellerDashboard() {
                             </button>
                         </Link>
                     </header>
+
+                    {/* BEAUTIFIED CONDITIONAL INVENTORY REMINDER BANNER */}
+                    {hasFixedPriceProducts && (
+                        <Link href="/seller/my-products" onClick={handleBannerClick}>
+                            <div className={`mb-8 p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between shadow-md cursor-pointer hover:shadow-xl group relative overflow-hidden ${
+                                bannerState === "ALERT"
+                                    ? "bg-[#03230F] border-[#EEC044]/40 hover:border-[#EEC044]"
+                                    : "bg-white border-green-200 hover:border-green-300"
+                            }`}>
+
+                                {/* Decorative background blob for ALERT state */}
+                                {bannerState === "ALERT" && (
+                                    <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-[#EEC044]/10 blur-3xl pointer-events-none"></div>
+                                )}
+
+                                <div className="flex items-start md:items-center gap-5 relative z-10">
+                                    <div className={`p-4 rounded-2xl flex-shrink-0 ${
+                                        bannerState === "ALERT"
+                                            ? "bg-[#EEC044]/10 text-[#EEC044]"
+                                            : "bg-green-50 text-green-600"
+                                    }`}>
+                                        {bannerState === "ALERT" ? (
+                                            <Package className="w-8 h-8" />
+                                        ) : (
+                                            <CheckCircle2 className="w-8 h-8" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-black text-xl mb-1.5 tracking-tight ${
+                                            bannerState === "ALERT" ? "text-white" : "text-[#03230F]"
+                                        }`}>
+                                            {bannerState === "ALERT" ? "Action Needed: Check Your Stock!" : "Inventory Up to Date"}
+                                        </h4>
+                                        <p className={`text-sm font-medium leading-relaxed max-w-3xl ${
+                                            bannerState === "ALERT" ? "text-gray-300" : "text-gray-500"
+                                        }`}>
+                                            {bannerState === "ALERT"
+                                                ? "Don't miss out on potential sales! Ensure your fixed-price products are fully stocked. Click here to quickly adjust your available quantities."
+                                                : "Great job keeping your listings fresh. If you recently harvested more crops and need to update a product, click here to adjust your stock levels."}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 md:mt-0 relative z-10 flex-shrink-0">
+                                    <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all group-hover:scale-105 shadow-sm ${
+                                        bannerState === "ALERT"
+                                            ? "bg-[#EEC044] text-[#03230F]"
+                                            : "bg-green-50 text-green-700 border border-green-200"
+                                    }`}>
+                                        {bannerState === "ALERT" ? "Update Quantities" : "Manage Stock"}
+                                        <ChevronRight className="w-4 h-4" />
+                                    </span>
+                                </div>
+                            </div>
+                        </Link>
+                    )} {/* <-- FIX: This closing bracket was missing in your original code! */}
 
                     {/* --- 1. PRIVATE WARNINGS SECTION --- */}
                     {warnings.length > 0 && (
@@ -253,9 +332,9 @@ export default function SellerDashboard() {
                                     <div
                                         key={ann.id}
                                         className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
-                                            ann.priority === 'URGENT' 
-                                            ? 'bg-red-50 border-red-500' 
-                                            : 'bg-[#EEC044] border-[#03230F]'
+                                            ann.priority === 'URGENT'
+                                                ? 'bg-red-50 border-red-500'
+                                                : 'bg-[#EEC044] border-[#03230F]'
                                         }`}
                                     >
                                         <div className="flex items-start gap-4">
@@ -300,10 +379,6 @@ export default function SellerDashboard() {
                     {/* Main Content Layout */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-8">
-                            {/* AI Insights Card */}
-                            
-                            {/* Pending Orders List */}
-                            {/* --- INTEGRATED AI CROP RECOMMENDATION COMPONENT --- */}
                             <CropRecommendationCard />
 
                             {/* Pending Orders Section */}
@@ -373,6 +448,7 @@ export default function SellerDashboard() {
     );
 }
 
+// Helper Components
 function StatCard({ label, value, Icon, highlight, color }: { label: string, value: string | number, Icon: any, highlight?: boolean, color?: string }) {
     return (
         <div className={`p-6 rounded-4xl shadow-sm border transition-transform hover:scale-[1.02] ${highlight ? 'bg-[#EEC044] border-[#EEC044]' : 'bg-white border-gray-100'}`}>
@@ -385,7 +461,6 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
     );
 }
 
-// New AI Crop Recommendation Sub-component
 function CropRecommendationCard() {
     const [temperature, setTemperature] = useState("");
     const [humidity, setHumidity] = useState("");
@@ -415,12 +490,9 @@ function CropRecommendationCard() {
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to get crop prediction");
-            }
+            if (!response.ok) throw new Error("Failed to get crop prediction");
 
             const data = await response.json();
-            // Assuming your backend returns a field named 'crop'
             setResult(data.crop);
         } catch (err: any) {
             setError(err.message || "Something went wrong. Please try again.");
@@ -439,61 +511,33 @@ function CropRecommendationCard() {
                 <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">Powered by ML</span>
             </div>
 
-            {/* Input Form Area */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature (°C)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 28"
-                        value={temperature}
-                        onChange={e => setTemperature(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 28" value={temperature} onChange={e => setTemperature(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Humidity (%)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 70"
-                        value={humidity}
-                        onChange={e => setHumidity(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 70" value={humidity} onChange={e => setHumidity(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Rainfall (mm)</label>
-                    <input
-                        type="number"
-                        placeholder="e.g. 120"
-                        value={rainfall}
-                        onChange={e => setRainfall(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"
-                    />
+                    <input type="number" placeholder="e.g. 120" value={rainfall} onChange={e => setRainfall(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
                 </div>
             </div>
 
             <div className="flex justify-end mb-6">
-                <button
-                    onClick={handlePredict}
-                    disabled={loading}
-                    className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
+                <button onClick={handlePredict} disabled={loading} className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                     {loading ? "Analyzing Weather..." : "Recommend Crop"}
                 </button>
             </div>
 
-            {/* Results Display */}
             {(result || error) ? (
                 <div className={`flex items-center gap-6 p-4 rounded-2xl transition-all ${error ? 'bg-red-50' : 'bg-green-50'}`}>
                     <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
                     <div>
-                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>
-                            {error ? 'Analysis Error' : `Best to grow: ${result}`}
-                        </h4>
-                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>
-                            {error ? error : "Based on the weather conditions you provided."}
-                        </p>
+                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>{error ? 'Analysis Error' : `Best to grow: ${result}`}</h4>
+                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : "Based on the weather conditions you provided."}</p>
                     </div>
                 </div>
             ) : (
