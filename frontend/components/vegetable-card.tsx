@@ -32,6 +32,7 @@ interface Vegetable {
     currentBid?: number
     startingPrice?: number
     endTime?: string
+    handlingTime?: number
     bidCount?: number
 }
 
@@ -154,26 +155,37 @@ export default function VegetableCard({
                 <CardDescription className="mb-4 line-clamp-2 text-xs">{vegetable.description}</CardDescription>
 
                 <div className="mb-4 space-y-2 text-sm bg-muted/40 p-2 rounded-lg border border-border/50">
-                    <div className="flex items-start gap-2">
-                        {vegetable.deliveryAvailable ? (
-                            <>
-                                <Truck className="h-4 w-4 text-green-700 shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-medium text-green-700 block">Delivery Available</span>
-                                    {!vegetable.isAuction && vegetable.baseCharge && (
-                                        <span className="text-xs text-muted-foreground block">
-                                            Base: Rs.{vegetable.baseCharge} {vegetable.extraRatePerKm ? `+ Rs.${vegetable.extraRatePerKm}/km` : ''}
-                                        </span>
-                                    )}
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <MapPin className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
-                                <span className="font-medium text-orange-600">Pickup Only</span>
-                            </>
-                        )}
-                    </div>
+                    {/* Inside the delivery info section in vegetable-card.tsx */}
+<div className="flex items-start gap-2">
+    {vegetable.deliveryAvailable ? (
+        <>
+            <Truck className="h-4 w-4 text-green-700 shrink-0 mt-0.5" />
+            <div>
+                <span className="font-medium text-green-700 block">Delivery Available</span>
+                {/* Display delivery days */}
+                <span className="text-xs font-bold py-2 text-muted-foreground block">
+                    Arrives within {vegetable.handlingTime || 1} {vegetable.handlingTime === 1 ? 'day' : 'days'}
+                </span>
+                {!vegetable.isAuction && vegetable.baseCharge && (
+                    <span className="text-xs text-muted-foreground block">
+                        Base: Rs.{vegetable.baseCharge} {vegetable.extraRatePerKm ? `+ Rs.${vegetable.extraRatePerKm}/km` : ''}
+                    </span>
+                )}
+            </div>
+        </>
+    ) : (
+        <>
+            <MapPin className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+            <div>
+                <span className="font-medium text-orange-600">Pickup Only</span>
+                {/* Display pickup deadline */}
+                <span className="text-xs font-bold py-2 text-muted-foreground block">
+                    Collect within {vegetable.handlingTime || 1} {vegetable.handlingTime === 1 ? 'day' : 'days'}
+                </span>
+            </div>
+        </>
+    )}
+</div>
 
                     {/* NEW: Product Location Display */}
                     <div className="flex items-center gap-2">

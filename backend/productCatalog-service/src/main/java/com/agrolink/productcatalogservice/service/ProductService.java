@@ -75,6 +75,7 @@ public class ProductService {
         if (request.getDeliveryFeeFirst3Km() != null) product.setDeliveryFeeFirst3Km(request.getDeliveryFeeFirst3Km());
         if (request.getDeliveryFeePerKm() != null) product.setDeliveryFeePerKm(request.getDeliveryFeePerKm());
 
+        if (request.getHandlingTime() != null) product.setHandlingTime(request.getHandlingTime());
         // Address
         if (request.getPickupAddress() != null) product.setPickupAddress(request.getPickupAddress());
         if (request.getPickupLatitude() != null) product.setPickupLatitude(request.getPickupLatitude());

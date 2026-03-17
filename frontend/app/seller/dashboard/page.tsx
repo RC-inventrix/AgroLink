@@ -2,15 +2,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2, Mail, Phone, LogOut, Shield, Megaphone, X } from "lucide-react";
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
-import "./SellerDashboard.css";
 import Footer from "@/components/footer/Footer";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 // Hoisted to global scope so all components in this file can access them
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -22,9 +22,9 @@ export default function SellerDashboard() {
     const [isBanned, setIsBanned] = useState<boolean>(false);
 
     // States for Notices
-    const [announcements, setAnnouncements] = useState<any[]>([]);
     const [warnings, setWarnings] = useState<any[]>([]);
     const [showAnnouncements, setShowAnnouncements] = useState(true);
+    const [announcements] = useState<any[]>([]);
 
 
     // State for Orders, Analytics, and Banner Logic
@@ -242,7 +242,7 @@ export default function SellerDashboard() {
                                 )}
 
                                 <div className="flex items-start md:items-center gap-5 relative z-10">
-                                    <div className={`p-4 rounded-2xl flex-shrink-0 ${
+                                    <div className={`p-4 rounded-2xl shrink-0 ${
                                         bannerState === "ALERT"
                                             ? "bg-[#EEC044]/10 text-[#EEC044]"
                                             : "bg-green-50 text-green-600"
@@ -269,7 +269,7 @@ export default function SellerDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="mt-5 md:mt-0 relative z-10 flex-shrink-0">
+                                <div className="mt-5 md:mt-0 relative z-10 shrink-0">
                                     <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all group-hover:scale-105 shadow-sm ${
                                         bannerState === "ALERT"
                                             ? "bg-[#EEC044] text-[#03230F]"
@@ -281,6 +281,7 @@ export default function SellerDashboard() {
                                 </div>
                             </div>
                         </Link>
+                    )}
                     {/* --- 1. PRIVATE WARNINGS SECTION --- */}
                     {warnings.length > 0 && (
                         <div className="space-y-3 mb-8">
@@ -288,8 +289,8 @@ export default function SellerDashboard() {
                                 <div key={warn.id} className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex justify-between items-center shadow-sm animate-in fade-in slide-in-from-left duration-300">
                                     <div className="flex items-center gap-4 text-red-800">
                                         <div className="bg-red-100 p-2 rounded-full">
-                                            <ShieldAlert size={24} className="text-red-600" />
-                                        </div>
+                                                <Shield size={24} className="text-red-600" />
+                                            </div>
                                         <div>
                                             <p className="font-bold text-xs uppercase tracking-widest">Administrative Warning</p>
                                             <p className="text-sm font-medium">{warn.message}</p>
@@ -326,7 +327,7 @@ export default function SellerDashboard() {
                                         }`}
                                     >
                                         <div className="flex items-start gap-4">
-                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
+                                            <div className={`p-2.5 rounded-xl shrink-0 ${ann.priority === 'URGENT' ? 'bg-red-100' : 'bg-[#03230F]/10'}`}>
                                                 <Bell size={22} className={ann.priority === 'URGENT' ? 'text-red-600' : 'text-[#03230F]'} />
                                             </div>
                                             <div className="flex-1 min-w-0">
