@@ -33,6 +33,9 @@ interface Vegetable {
     pickupAddress?: string
     pickupLatitude?: number
     pickupLongitude?: number
+    handlingTime?: number;
+
+    // --- AUCTION SPECIFIC FIELDS ---
     isAuction?: boolean
     currentBid?: number
     startingPrice?: number
@@ -156,6 +159,7 @@ export default function VegetableListings() {
                     pickupAddress: item.pickupAddress,
                     pickupLatitude: item.pickupLatitude,
                     pickupLongitude: item.pickupLongitude,
+                    handlingTime: item.handlingTime,
                     isAuction: false
                 }));
 

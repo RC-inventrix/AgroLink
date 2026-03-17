@@ -28,4 +28,6 @@ public class ProductRequestDTO {
     // CHANGED: From List<MultipartFile> to List<String>
     // The frontend will send the S3 URLs here
     private List<String> imageUrls;
+
+    private Integer handlingTime;
 }
