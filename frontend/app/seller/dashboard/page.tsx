@@ -6,7 +6,12 @@ import React from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
+// Added the missing icon imports here (LogOut, Mail, Phone, ShieldAlert, Megaphone, X)
+import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2, LogOut, Mail, Phone, ShieldAlert, Megaphone, X } from "lucide-react";
+// Added missing UI component imports
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
@@ -25,7 +30,6 @@ export default function SellerDashboard() {
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [warnings, setWarnings] = useState<any[]>([]);
     const [showAnnouncements, setShowAnnouncements] = useState(true);
-
 
     // State for Orders, Analytics, and Banner Logic
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -281,6 +285,8 @@ export default function SellerDashboard() {
                                 </div>
                             </div>
                         </Link>
+                    )} {/* <-- FIX: This closing bracket was missing in your original code! */}
+
                     {/* --- 1. PRIVATE WARNINGS SECTION --- */}
                     {warnings.length > 0 && (
                         <div className="space-y-3 mb-8">
@@ -320,9 +326,9 @@ export default function SellerDashboard() {
                                     <div
                                         key={ann.id}
                                         className={`flex-none w-full snap-center p-6 rounded-2xl shadow-sm border-l-4 transition-all duration-300 ${
-                                            ann.priority === 'URGENT' 
-                                            ? 'bg-red-50 border-red-500' 
-                                            : 'bg-[#EEC044] border-[#03230F]'
+                                            ann.priority === 'URGENT'
+                                                ? 'bg-red-50 border-red-500'
+                                                : 'bg-[#EEC044] border-[#03230F]'
                                         }`}
                                     >
                                         <div className="flex items-start gap-4">
