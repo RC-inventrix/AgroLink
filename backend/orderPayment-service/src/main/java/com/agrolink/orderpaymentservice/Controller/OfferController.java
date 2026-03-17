@@ -81,7 +81,8 @@ public class OfferController {
                                         "productName", requirement.getCropName(),
                                         "quantity", offer.getSupplyQty(),
                                         "pricePerKg", offer.getUnitPrice(),
-                                        "sellerId", offer.getSellerId()
+                                        "sellerId", offer.getSellerId(),
+                                        "deliveryType", offer.getDeliveryOption()
                                 ));
                                 itemsJson = objectMapper.writeValueAsString(items);
                             } catch (Exception e) {
