@@ -1,17 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, XCircle } from "lucide-react"
+import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
 import BuyerHeader from "./headers/BuyerHeader"
 import Link from "next/link"
 import ReportProblemModalBuyer from "./buyers/reportProblemModelBuyer"
+import { DashboardNav } from "@/components/dashboard-nav"
+import Footer2 from "@/components/footer/Footer"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -27,7 +28,7 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
                     className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-transform active:scale-90`}
                 >
                     <Star
-                        className={`w-4 h-4 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                        className={`w-5 h-5 ${star <= rating ? "fill-[#EEC044] text-[#EEC044]" : "text-gray-200"}`}
                     />
                 </button>
             ))}
@@ -94,6 +95,7 @@ interface OrderItem {
 export function OrderHistoryClient() {
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
+    const [navUnread, setNavUnread] = useState(0)
     const gatewayUrl = API_URL
 
     useEffect(() => {
@@ -174,51 +176,72 @@ export function OrderHistoryClient() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50/30">
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
             <Toaster position="top-center" richColors />
             <BuyerHeader />
-            <div className="max-w-6xl mx-auto p-8">
-                <h1 className="text-3xl font-bold tracking-tight mb-6 text-[#03230F]">Order History</h1>
-                <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="bg-white border shadow-sm">
-                        <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
-                        <TabsTrigger value="completed">Completed ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
-                        <TabsTrigger value="pending">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
-                        <TabsTrigger value="cancelled">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
-                    </TabsList>
+            
+            <div className="flex flex-1">
+                
+                <DashboardNav unreadCount={navUnread} />
+                
+                <main className="flex-1 w-full overflow-x-hidden flex flex-col">
+                    <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 w-full flex-1">
+                        
+                        
+                        <div className="mb-8">
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Order History</h1>
+                            <p className="text-[#A3ACBA] font-medium">View your past transactions, active orders, and provide feedback.</p>
+                        </div>
 
-                    <div className="mt-6">
-                        <TabsContent value="all">
-                            <OrderList orders={orders} loading={loading} onRefresh={fetchOrders} />
-                        </TabsContent>
-                        <TabsContent value="completed">
-                            <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders} />
-                        </TabsContent>
-                        <TabsContent value="pending">
-                            <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders} />
-                        </TabsContent>
-                        {/* THIS WAS MISSING: The content for the cancelled tab */}
-                        <TabsContent value="cancelled">
-                            <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders} />
-                        </TabsContent>
+                        <Tabs defaultValue="all" className="w-full">
+                            <TabsList className="bg-gray-100 border border-gray-200 shadow-sm rounded-xl p-1 mb-6">
+                                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">All ({orders.length})</TabsTrigger>
+                                <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Completed ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
+                                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+                                <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
+                            </TabsList>
+
+                            <div className="mt-2">
+                                <TabsContent value="all">
+                                    <OrderList orders={orders} loading={loading} onRefresh={fetchOrders} />
+                                </TabsContent>
+                                <TabsContent value="completed">
+                                    <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders} />
+                                </TabsContent>
+                                <TabsContent value="pending">
+                                    <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders} />
+                                </TabsContent>
+                                <TabsContent value="cancelled">
+                                    <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders} />
+                                </TabsContent>
+                            </div>
+                        </Tabs>
                     </div>
-                </Tabs>
+                </main>
             </div>
+            
+            <Footer2 />
         </div>
     )
 }
 
 function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loading: boolean, onRefresh: () => void }) {
-    if (loading) return <div className="text-center py-20 text-gray-400 font-medium">Loading your AgroLink history...</div>
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
+            <p className="text-[#03230F] font-bold">Loading your order history...</p>
+        </div>
+    )
     if (orders.length === 0) return (
-        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200">
-            <Package className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-            <p className="text-gray-400">No orders found.</p>
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+            <Package className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-[#03230F] font-bold text-lg">No orders found</p>
+            <p className="text-gray-500 text-sm mt-1">You don't have any orders in this category.</p>
         </div>
     )
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {orders.map((order) => (
                 <OrderCardItem key={order.id} order={order} onRefresh={onRefresh} />
             ))}
@@ -257,65 +280,65 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
     };
 
     return (
-        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md ${order.status === 'cancelled' ? 'border-l-red-500 opacity-90' : 'border-l-[#EEC044]'}`}>
+        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md rounded-2xl border-gray-200 ${order.status === 'cancelled' ? 'border-l-red-500 opacity-90' : 'border-l-[#03230F]'}`}>
             <div className="p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-50 border flex-shrink-0">
+                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0 shadow-sm">
                         <img src={order.image} className="object-cover w-full h-full" alt={order.name} />
                     </div>
                     <div className="flex-1 w-full">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
-                                <h3 className="font-bold text-xl text-[#03230F]">{order.name}</h3>
-                                <p className="text-sm font-semibold text-[#2d5016]">
-                                    Sold by <Link href={`/user/${order.sellerId}?role=SELLER`} className="hover:underline">{order.sellerName}</Link>
+                                <p className="text-[10px] font-black text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
+                                <h3 className="font-black text-xl text-[#03230F]">{order.name}</h3>
+                                <p className="text-sm font-semibold text-gray-500 mt-0.5">
+                                    Sold by <Link href={`/user/${order.sellerId}?role=SELLER`} className="text-[#03230F] hover:text-[#EEC044] hover:underline transition-colors">{order.sellerName}</Link>
                                 </p>
                             </div>
-                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold ${order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-100' : ''}`}>
+                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold px-3 py-1 text-[10px] tracking-widest uppercase ${
+                                order.status === 'completed' ? 'bg-[#03230F] text-[#EEC044]' :
+                                order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-none' : 
+                                'bg-[#EEC044]/20 text-[#03230F] border-none'
+                            }`}>
                                 {order.status}
                             </Badge>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
-                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Qty</p><p className="font-bold text-gray-800">{order.quantity} kg</p></div>
-                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Rate</p><p className="font-bold text-gray-800">Rs. {order.pricePerKg}</p></div>
-                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Date</p><p className="font-bold text-gray-800">{format(order.orderDate, "MMM d, yyyy")}</p></div>
-                            <div><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Total</p><p className="font-bold text-[#2d5016]">Rs. {order.totalPrice.toFixed(2)}</p></div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100">
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Qty</p><p className="font-bold text-[#03230F]">{order.quantity} kg</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Rate</p><p className="font-bold text-[#03230F]">Rs. {order.pricePerKg}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Date</p><p className="font-bold text-[#03230F]">{format(order.orderDate, "MMM d, yyyy")}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Total</p><p className="font-black text-lg text-[#03230F]">Rs. {order.totalPrice.toFixed(2)}</p></div>
                         </div>
 
                         {order.status === "pending" && order.otp && (
-                            <div className="mt-6 p-4 bg-green-50 border-2 border-dashed border-[#03230F]/10 rounded-2xl flex justify-between items-center">
+                            <div className="mt-6 p-4 bg-[#EEC044]/10 border-2 border-dashed border-[#EEC044]/50 rounded-2xl flex justify-between items-center">
                                 <div>
-                                    <p className="flex items-center gap-2 text-[10px] font-black uppercase text-[#03230F]">
-                                        <KeyRound className="w-3 h-3 text-[#EEC044]" /> Delivery Handover OTP
+                                    <p className="flex items-center gap-2 text-xs font-black uppercase text-[#03230F]">
+                                        <KeyRound className="w-4 h-4 text-[#EEC044]" /> Delivery Handover OTP
                                     </p>
-                                    <p className="text-[10px] text-gray-400 font-medium">Provide this code to the seller to confirm delivery</p>
+                                    <p className="text-[11px] text-gray-500 font-medium mt-1">Provide this code to the seller to confirm delivery</p>
                                 </div>
-                                <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-4 py-1 rounded-lg border shadow-sm">
+                                <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-5 py-2 rounded-xl border border-[#EEC044]/30 shadow-sm">
                                     {order.otp}
                                 </div>
                             </div>
                         )}
 
-
                         {order.status === "cancelled" && (
                             <div className="mt-4">
                                 <CancelledReasonBlock orderId={order.displayOrderId} />
-
-                                <div className=" mt-2">
+                                <div className="mt-4">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setShowReportModal(true)}
-                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest transition-colors rounded-lg"
                                     >
-                                        <AlertCircle size={12} className="mr-1" />
+                                        <AlertCircle size={12} className="mr-1.5" />
                                         Report a Problem
                                     </Button>
                                 </div>
-
-
                                 <ReportProblemModalBuyer
                                     orderId={order.displayOrderId}
                                     isOpen={showReportModal}
@@ -328,31 +351,31 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
             </div>
 
             {order.status === "completed" && (
-                <div className="bg-[#F8FAFC] border-t border-gray-100 p-6">
+                <div className="bg-gray-50 border-t border-gray-100 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
                             {hasReviewed ? (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
                                         <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm font-black uppercase text-green-600">Your Feedback to Seller</span>
+                                        <span className="text-xs font-black uppercase tracking-widest text-green-600">Your Feedback to Seller</span>
                                     </div>
                                     <StarRating rating={order.orderReview.buyerRating} />
-                                    <p className="text-sm text-[#4A5568] italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                    <p className="text-sm text-gray-600 italic bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium">
                                         "{order.orderReview.buyerComment}"
                                     </p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <MessageSquare className="w-4 h-4 text-[#03230F]" />
-                                        <h4 className="text-[13px] font-black uppercase tracking-widest text-[#03230F]">Rate your experience</h4>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <MessageSquare className="w-4 h-4 text-[#EEC044]" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">Rate your experience</h4>
                                     </div>
                                     <div className="flex flex-col gap-3">
                                         <StarRating rating={rating} setRating={setRating} interactive={true} />
                                         <textarea
                                             placeholder="How was the crop quality and transaction?"
-                                            className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/20"
+                                            className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/50 transition-all font-medium text-[#03230F]"
                                             rows={3}
                                             value={comment}
                                             onChange={(e) => setComment(e.target.value)}
@@ -360,7 +383,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                         <Button
                                             onClick={handleSubmitReview}
                                             disabled={isSubmitting}
-                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2 rounded-xl uppercase tracking-widest transition-all hover:bg-black"
+                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2.5 rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-black shadow-md mt-1"
                                         >
                                             {isSubmitting ? "Submitting..." : "Submit Review"}
                                         </Button>
@@ -369,23 +392,23 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             )}
                         </div>
 
-                        <div className="space-y-4 border-l-0 md:border-l md:pl-8 border-gray-200">
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-[#03230F]" />
-                                <h4 className="text-sm font-black uppercase tracking-widest text-[#03230F]">Seller's Feedback for You</h4>
+                        <div className="space-y-4 border-l-0 md:border-l md:border-gray-200 md:pl-8">
+                            <div className="flex items-center gap-2 mb-2">
+                                <User className="w-4 h-4 text-[#EEC044]" />
+                                <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">Seller's Feedback for You</h4>
                             </div>
                             {sellerHasReviewed ? (
                                 <div className="space-y-3">
                                     <StarRating rating={order.orderReview.sellerRating} />
-                                    <p className="text-sm text-[#4A5568] leading-relaxed bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                    <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium italic">
                                         "{order.orderReview.sellerComment}"
                                     </p>
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white/50 rounded-xl border border-dashed border-gray-200">
+                                <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
                                     <Clock className="w-8 h-8 text-gray-300 mb-2" />
-                                    <p className="text-xs text-gray-400 font-medium px-4">
-                                        The seller hasn't left a review yet.
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-4">
+                                        Pending Review
                                     </p>
                                 </div>
                             )}

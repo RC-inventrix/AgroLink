@@ -14,9 +14,9 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import '../dashboard/SellerDashboard.css';
+import Footer2 from "@/components/footer/Footer"; 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
 
 interface Requirement {
     id: number;
@@ -212,16 +212,18 @@ const ItemRequestsPage = () => {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 relative font-sans">
+        
+        <div className="min-h-screen flex flex-col bg-gray-50 relative font-sans">
             <SellerHeader />
-            <div className='flex'>
+            
+            <div className='flex flex-1'>
                 <SellerSidebar unreadCount={0} activePage='item-requests' />
 
                 <main className="flex-1 p-8">
-                    <div className="mb-10 flex justify-between items-end">
+                    <div className="mb-10 flex justify-between items-end max-w-6xl mx-auto">
                         <div>
-                            <h1 className="text-2xl font-bold text-[#03230F] ">Buyer Crop Needs</h1>
-                            <p className="text-gray-500 font-medium">Browse and respond to bulk buyer requirements</p>
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Buyer Crop Needs</h1>
+                            <p className="text-[#A3ACBA] font-medium">Browse and respond to bulk buyer requirements</p>
                         </div>
 
                         <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
@@ -237,7 +239,7 @@ const ItemRequestsPage = () => {
                     {loading ? (
                         <div className="flex justify-center p-20"><Loader2 className="animate-spin text-[#EEC044] w-10 h-10" /></div>
                     ) : (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl mx-auto">
                             {displayedRequests.map((req) => (
                                 <Card key={req.id} className="overflow-hidden border border-gray-200 shadow-md rounded-lg bg-white relative flex flex-col transition-all hover:shadow-xl">
                                     <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
@@ -319,6 +321,9 @@ const ItemRequestsPage = () => {
                     )}
                 </main>
             </div>
+            
+            
+            <Footer2 />
 
             {/* Offer Modal */}
             {isOfferModalOpen && selectedReq && (

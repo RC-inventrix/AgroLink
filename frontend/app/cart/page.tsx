@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
-import { X, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react"
-import Header from "@/components/header"
+import { X, ShoppingBag, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import CartItem from "@/components/cart-item"
 import CartSummary from "@/components/cart-summary"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import { DashboardNav } from "@/components/dashboard-nav"
+import Footer2 from "@/components/footer/Footer"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -21,7 +22,6 @@ interface CartItemData {
     sellerName: string
     sellerId: number
     selected: boolean
-    // New fields
     deliveryFee: number
     deliveryAddress: string
     distance: number
@@ -61,7 +61,6 @@ export default function Cart() {
                         quantity: item.quantity,
                         sellerName: item.sellerName,
                         selected: false,
-                        // New fields
                         deliveryFee: item.deliveryFee || 0,
                         deliveryAddress: item.deliveryAddress || "",
                         distance: item.distance || 0,
@@ -130,23 +129,18 @@ export default function Cart() {
         }
     }
 
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-            <div className="w-10 h-10 border-4 border-[#03230F] border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading your fresh picks...</p>
-        </div>
-    )
-
     return (
-        <div className="min-h-screen bg-gray-50 relative">
+        
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <BuyerHeader/>
 
+            {/* Notification Bar */}
             {notification && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
                     <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
                         notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
                             notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
-                                "bg-[#03230F] border-gray-700 text-white"
+                                "bg-[#03230F] border-[#EEC044] text-white"
                     }`}>
                         {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                         {notification.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
@@ -159,70 +153,96 @@ export default function Cart() {
                 </div>
             )}
 
-            <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-                <h1 className="mb-2 text-3xl font-bold text-gray-900">Your Cart</h1>
-                <p className="text-gray-500 mb-8">Manage your selected agricultural products</p>
+            <div className="flex flex-1">
+                
+                <DashboardNav unreadCount={0} />
 
-                <div className="grid gap-8 lg:grid-cols-3">
-                    <div className="lg:col-span-2">
-                        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                            <div className="bg-gray-50/50 px-6 py-4 flex items-center gap-3 border-b border-gray-200">
-                                <Checkbox
-                                    id="select-all"
-                                    checked={items.length > 0 && selectedItems.length === items.length}
-                                    onCheckedChange={handleSelectAll}
-                                />
-                                <label htmlFor="select-all" className="cursor-pointer font-bold text-gray-700 text-sm uppercase tracking-wider">
-                                    Select All Items ({items.length})
-                                </label>
-                            </div>
-
-                            <div className="p-6 space-y-4">
-                                {items.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500 font-medium">Your cart is feeling light. Add some fresh produce!</p>
-                                    </div>
-                                ) : (
-                                    items.map((item) => (
-                                        <CartItem
-                                            key={item.id}
-                                            item={{
-                                                id: item.id.toString(),
-                                                name: item.productName,
-                                                image: item.imageUrl,
-                                                seller: item.sellerName,
-                                                pricePerKg: item.pricePerKg,
-                                                quantity: item.quantity,
-                                                selected: item.selected
-                                            }}
-                                            onToggle={toggleItem}
-                                            onDelete={handleDeleteItem}
-                                        />
-                                    ))
-                                )}
-                            </div>
+                <main className="flex-1 w-full overflow-hidden flex flex-col p-8">
+                    <div className="max-w-6xl mx-auto w-full">
+                        
+                        
+                        <div className="mb-8">
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Your Cart</h1>
+                            <p className="text-[#A3ACBA] font-medium">Manage your selected agricultural products</p>
                         </div>
-                    </div>
 
-                    <CartSummary
-                        selectedItems={selectedItems.map(item => ({
-                            id: item.id.toString(),
-                            name: item.productName,
-                            image: item.imageUrl,
-                            pricePerKg: item.pricePerKg,
-                            quantity: item.quantity,
-                            seller: item.sellerName,
-                            selected: item.selected,
-                            deliveryFee: item.deliveryFee
-                        }))}
-                        totalPrice={totalPrice}
-                        subtotal={subtotal}
-                        totalDeliveryFees={totalDeliveryFees}
-                        onCheckout={handleCheckout}
-                    />
-                </div>
-            </main>
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-32">
+                                <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
+                                <p className="text-[#03230F] font-bold">Loading your fresh picks...</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-8 lg:grid-cols-3">
+                                <div className="lg:col-span-2">
+                                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="bg-white px-6 py-5 flex items-center gap-3 border-b border-gray-100">
+                                            <Checkbox
+                                                id="select-all"
+                                                checked={items.length > 0 && selectedItems.length === items.length}
+                                                onCheckedChange={handleSelectAll}
+                                                className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F]"
+                                            />
+                                            <label htmlFor="select-all" className="cursor-pointer font-black text-[#03230F] text-sm uppercase tracking-widest">
+                                                Select All Items ({items.length})
+                                            </label>
+                                        </div>
+
+                                        <div className="p-6 space-y-4 bg-gray-50/30">
+                                            {items.length === 0 ? (
+                                                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                    <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                                    <p className="text-[#03230F] font-bold text-lg">Your cart is feeling light</p>
+                                                    <p className="text-gray-500 text-sm mt-1">Add some fresh produce from the marketplace!</p>
+                                                </div>
+                                            ) : (
+                                                items.map((item) => (
+                                                    <CartItem
+                                                        key={item.id}
+                                                        item={{
+                                                            id: item.id.toString(),
+                                                            name: item.productName,
+                                                            image: item.imageUrl,
+                                                            seller: item.sellerName,
+                                                            pricePerKg: item.pricePerKg,
+                                                            quantity: item.quantity,
+                                                            selected: item.selected
+                                                        }}
+                                                        onToggle={toggleItem}
+                                                        onDelete={handleDeleteItem}
+                                                    />
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-1">
+                                    
+                                    <CartSummary
+                                        selectedItems={selectedItems.map(item => ({
+                                            id: item.id.toString(),
+                                            name: item.productName,
+                                            image: item.imageUrl,
+                                            pricePerKg: item.pricePerKg,
+                                            quantity: item.quantity,
+                                            seller: item.sellerName,
+                                            selected: item.selected,
+                                            deliveryFee: item.deliveryFee
+                                        }))}
+                                        totalPrice={totalPrice}
+                                        subtotal={subtotal}
+                                        totalDeliveryFees={totalDeliveryFees}
+                                        onCheckout={handleCheckout}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
+            
+        
+            <Footer2 />
         </div>
     )
 }

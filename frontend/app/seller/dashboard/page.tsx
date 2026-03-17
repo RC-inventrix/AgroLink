@@ -15,6 +15,12 @@ import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
 import Footer from "@/components/footer/Footer";
+import Example from "@/components/footer/Footer";
+import Footer2 from "@/components/footer/Footer";
+
+
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
@@ -26,7 +32,6 @@ export default function SellerDashboard() {
     const [warnings, setWarnings] = useState<any[]>([]);
     const [showAnnouncements, setShowAnnouncements] = useState(true);
 
-
     // State for Orders and Analytics
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [analytics, setAnalytics] = useState({
@@ -35,9 +40,6 @@ export default function SellerDashboard() {
         totalCompletedOrders: 0,
         activeListingsCount: 0
     });
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
@@ -366,7 +368,7 @@ export default function SellerDashboard() {
                     </div>
                 </main>
             </div>
-            <Footer />
+            <Footer2 />
         </div>
     );
 }

@@ -142,7 +142,7 @@ export default function BuyerRegistration() {
                         {/* Scrollbar and Layout Container */}
                         <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                             <div className="mb-6">
-                                <h1 className="text-4xl font-bold text-white mb-2">Buyer Registration</h1>
+                                <h1 className="text-4xl md:text-4xl font-bold text-white mb-2 leading-tight">Buyer Registration</h1>
                                 <p className="text-[#EEC044] text-sm font-medium">Step 2: Finish Profile</p>
                             </div>
 
