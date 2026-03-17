@@ -1,72 +1,163 @@
 "use client"
 
-import { useState } from "react"
-import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, Calendar, FileText, ShieldAlert } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, FileText, ShieldAlert, Filter, ExternalLink, Calendar } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator" // Note: Separator eka nathnam div ekak use karamu ( පහල code eke man div ekak damme safe wenna)
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-// Report type eka define karamu (Typescript nisa)
+type ApiReport = {
+  id: number
+  orderId?: number | null
+  reporterId: number
+  reportedId: number
+  issueType: string
+  description: string
+  evidenceUrls?: string[] | null
+  status: string
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH"
+  createdAt?: string
+  resolvedAt?: string | null
+  adminId?: number | null
+  adminRemarks?: string | null
+  actionTaken?: string | null
+}
+
 interface Report {
-  id: number;
-  reporter: string;
-  reportedUser: string;
-  reason: string;
-  status: string;
-  date: string;
-  details: string;
-  // Thawa extra details onanam methana danna puluwan
-  evidence?: string; 
+  id: number
+  reporter: string
+  reportedUser: string
+  reason: string
+  status: "pending" | "in-progress" | "resolved"
+  date: string
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH"
+  details: string
+  evidence?: string[]
+}
+
+function normalizeStatus(s: string): Report["status"] {
+  const v = (s || "").toUpperCase()
+  if (v === "RESOLVED") return "resolved"
+  if (v === "IN_PROGRESS" || v === "IN-PROGRESS") return "in-progress"
+  return "pending"
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return ""
+  return iso.slice(0, 10)
 }
 
 export function ReportsSummary() {
-  const [reports, setReports] = useState<Report[]>([
-    {
-      id: 1,
-      reporter: "John Farmer",
-      reportedUser: "Suspicious Buyer",
-      reason: "Fraudulent payment",
-      status: "pending",
-      date: "2024-12-22",
-      details: "User attempted to pay with invalid card. I have attached the screenshots of the chat.",
-      evidence: "Chat_Screenshot_01.jpg",
-    },
-    {
-      id: 2,
-      reporter: "Market Admin",
-      reportedUser: "Aggressive Seller",
-      reason: "Abusive language",
-      status: "resolved",
-      date: "2024-12-21",
-      details: "User used inappropriate language in chat section regarding a price negotiation.",
-      evidence: "Chat_Log_Export.txt",
-    },
-    {
-      id: 3,
-      reporter: "Buyer Network",
-      reportedUser: "Product Quality Issue",
-      reason: "Unverified product quality",
-      status: "in-progress",
-      date: "2024-12-20",
-      details: "Product photos appear to be fake and downloaded from Google images.",
-      evidence: "Image_Comparison.pdf",
-    },
-  ])
-
-  // Select karapu report eka thiyaganna state ekak
+  const [reports, setReports] = useState<Report[]>([])
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
 
-  const handleResolveReport = (reportId: number) => {
-    if (confirm("Mark this issue as resolved?")) {
-      setReports(reports.map((report) => 
-        report.id === reportId ? { ...report, status: "resolved" } : report
-      ));
-      
-      // Update selected report as well if it's open
-      if (selectedReport && selectedReport.id === reportId) {
-        setSelectedReport({ ...selectedReport, status: "resolved" });
+  // Resolution Modal State
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
+  const [resolvingId, setResolvingId] = useState<number | null>(null)
+  const [resolutionData, setResolutionData] = useState({
+    remarks: "",
+    action: ""
+  })
+
+  const API_BASE = process.env.NEXT_PUBLIC_MODERATION_API_BASE ?? "http://localhost:8080"
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const token = sessionStorage.getItem("token"); 
+
+        const res = await fetch(`${API_BASE}/api/v1/moderation/all`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+        });
+        if (!res.ok) throw new Error(`Failed to load reports (${res.status})`);
+        const data: ApiReport[] = await res.json();
+
+        const userIds = Array.from(new Set([
+          ...data.map(r => r.reporterId),
+          ...data.map(r => r.reportedId)
+        ]));
+
+        const AUTH_API_BASE = "http://localhost:8080/auth"; 
+        const nameRes = await fetch(`${AUTH_API_BASE}/fullnames?ids=${userIds.join(',')}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+        });
+        
+        let nameMap: Record<number, string> = {};
+        if (nameRes.ok) {
+          nameMap = await nameRes.json();
+        }
+
+        const mapped: Report[] = data.map((r) => ({
+          id: r.id,
+          reporter: nameMap[r.reporterId] || `User #${r.reporterId}`,
+          reportedUser: nameMap[r.reportedId] || `User #${r.reportedId}`,
+          reason: r.issueType?.replaceAll("_", " ") ?? "Unknown",
+          status: normalizeStatus(r.status),
+          date: formatDate(r.createdAt) || "",
+          details: r.description ?? "",
+          evidence: (r.evidenceUrls ?? []).filter(Boolean).map(String),
+        }));
+
+        if (!cancelled) setReports(mapped);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Something went wrong");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [API_BASE]);
+
+  const handleResolveReport = async () => {
+    if (!resolvingId) return
+
+    try {
+      const adminId = 1 
+      const token = sessionStorage.getItem("token")
+
+      const res = await fetch(
+        `http://localhost:8080/api/v1/moderation/resolve/${resolvingId}?adminId=${adminId}&remarks=${encodeURIComponent(resolutionData.remarks)}&action=${encodeURIComponent(resolutionData.action)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      if (!res.ok) throw new Error(`Resolve failed (${res.status})`)
+
+      setReports((prev) => prev.map((r) => (r.id === resolvingId ? { ...r, status: "resolved" } : r)))
+      if (selectedReport?.id === resolvingId) {
+        setSelectedReport({ ...selectedReport, status: "resolved" })
+      }
+
+      setIsResolveDialogOpen(false)
+      setResolutionData({ remarks: "", action: "" })
+      setResolvingId(null)
+    } catch (e: any) {
+      alert(e?.message ?? "Resolve failed")
     }
   }
 
@@ -88,199 +179,235 @@ export function ReportsSummary() {
     }
   }
 
-  // --- DETAIL VIEW COMPONENT ---
-  if (selectedReport) {
-    return (
-      <div className="space-y-6">
-        {/* Back Button */}
-        <Button 
-            variant="ghost" 
-            className="pl-0 hover:bg-transparent hover:text-primary mb-2" 
-            onClick={() => setSelectedReport(null)}
-        >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Reports List
-        </Button>
+  const filteredReports = useMemo(() => {
+    if (activeTab === "all") return reports;
+    return reports.filter(r => r.status === activeTab);
+  }, [reports, activeTab]);
 
-        <Card className="border-border bg-card">
-            <CardHeader className="border-b border-border pb-4">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
-                           <ShieldAlert className="h-5 w-5 text-muted-foreground"/>
-                           Report #{selectedReport.id} Details
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Reported on {selectedReport.date}
-                        </p>
-                    </div>
-                    <Badge className={`${getStatusColor(selectedReport.status)} px-3 py-1 text-sm`}>
-                        <span className="flex items-center gap-2">
-                            {getStatusIcon(selectedReport.status)}
-                            {selectedReport.status.charAt(0).toUpperCase() + selectedReport.status.slice(1)}
-                        </span>
-                    </Badge>
-                </div>
-            </CardHeader>
-            
-            <CardContent className="pt-6 space-y-6">
-                {/* User Details Section */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                        <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-muted-foreground">
-                            <User className="h-4 w-4" /> Reported User (Suspect)
-                        </div>
-                        <div className="text-lg font-medium text-foreground">{selectedReport.reportedUser}</div>
-                        <div className="text-sm text-red-500 mt-1">Account Status: Under Review</div>
-                    </div>
+  const pendingCount = useMemo(() => reports.filter((r) => r.status === "pending").length, [reports])
+  const progressCount = useMemo(() => reports.filter((r) => r.status === "in-progress").length, [reports])
+  const resolvedCount = useMemo(() => reports.filter((r) => r.status === "resolved").length, [reports])
 
-                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                        <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-muted-foreground">
-                            <User className="h-4 w-4" /> Reported By
-                        </div>
-                        <div className="text-lg font-medium text-foreground">{selectedReport.reporter}</div>
-                        <div className="text-sm text-green-600 mt-1">Verified User</div>
-                    </div>
-                </div>
-
-                {/* Reason & Details */}
-                <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Report Reason</h3>
-                    <div className="text-foreground font-medium text-lg border-l-4 border-primary pl-4 py-1">
-                        {selectedReport.reason}
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-2">
-                        <FileText className="h-4 w-4"/> Full Description
-                    </h3>
-                    <div className="bg-muted/30 p-4 rounded-lg border border-border text-foreground leading-relaxed">
-                        {selectedReport.details}
-                    </div>
-                </div>
-                
-                {/* Evidence (Dummy) */}
-                {selectedReport.evidence && (
-                    <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">Attached Evidence</h3>
-                        <div className="flex items-center gap-3 p-3 border border-border rounded bg-muted/20 w-fit">
-                            <div className="h-8 w-8 bg-blue-100 text-blue-600 rounded flex items-center justify-center font-bold text-xs">IMG</div>
-                            <span className="text-sm underline cursor-pointer hover:text-primary">{selectedReport.evidence}</span>
-                        </div>
-                    </div>
-                )}
-            </CardContent>
-
-            <CardFooter className="bg-muted/10 border-t border-border p-6 flex justify-end gap-3">
-                 <Button variant="outline" onClick={() => setSelectedReport(null)}>
-                    Close
-                 </Button>
-                 
-                 {selectedReport.status !== 'resolved' && (
-                    <Button 
-                        className="bg-green-600 hover:bg-green-700 text-white min-w-[150px]"
-                        onClick={() => handleResolveReport(selectedReport.id)}
-                    >
-                        <Check className="h-4 w-4 mr-2" />
-                        Mark as Resolved
-                    </Button>
-                 )}
-            </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  // --- MAIN LIST VIEW (Parana code eka tikak update karala) ---
-  
-  // Calculate dynamic stats based on current state
-  const pendingCount = reports.filter(r => r.status === 'pending').length;
-  const progressCount = reports.filter(r => r.status === 'in-progress').length;
-  const resolvedCount = reports.filter(r => r.status === 'resolved').length;
+  if (loading) return <Card><CardContent className="pt-6 text-sm text-muted-foreground">Loading reports...</CardContent></Card>
+  if (error) return <Card><CardContent className="pt-6 text-sm text-red-600">Error: {error}</CardContent></Card>
 
   return (
     <div className="space-y-6">
-      {/* Report Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          { label: "Pending Reports", value: pendingCount, icon: Clock, color: "text-orange-600" },
-          { label: "In Progress", value: progressCount, icon: AlertCircle, color: "text-blue-600" },
-          { label: "Resolved", value: resolvedCount, icon: CheckCircle, color: "text-green-600" },
-        ].map((item, idx) => {
-          const Icon = item.icon
-          return (
-            <Card key={idx} className="border-border bg-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
-                    <p className="text-2xl font-bold text-foreground">{item.value}</p>
-                  </div>
-                  <Icon className={`h-8 w-8 ${item.color}`} />
+      <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Resolve Report #{resolvingId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Action Taken</label>
+              <select 
+                className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                value={resolutionData.action}
+                onChange={(e) => setResolutionData({...resolutionData, action: e.target.value})}
+              >
+                <option value="">Select an action...</option>
+                <option value="WARNING_ISSUED">Warning Issued</option>
+                <option value="USER_BANNED">User Banned</option>
+                <option value="CONTENT_REMOVED">Content Removed</option>
+                <option value="NO_ACTION_NEEDED">No Action Needed</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Admin Remarks</label>
+              <textarea
+                className="w-full min-h-[100px] p-2 rounded-md border border-input bg-background text-sm"
+                placeholder="Describe the resolution steps..."
+                value={resolutionData.remarks}
+                onChange={(e) => setResolutionData({...resolutionData, remarks: e.target.value})}
+              />
+            </div>
+          </div>
+          <CardFooter className="px-0 pb-0 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsResolveDialogOpen(false)}>Cancel</Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={!resolutionData.action || !resolutionData.remarks}
+              onClick={handleResolveReport}
+            >
+              Confirm Resolution
+            </Button>
+          </CardFooter>
+        </DialogContent>
+      </Dialog>
+
+      {selectedReport ? (
+        <div className="space-y-6">
+          <Button variant="ghost" className="pl-0 mb-2" onClick={() => setSelectedReport(null)}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Reports List
+          </Button>
+
+          <Card className="border-border bg-card">
+            <CardHeader className="border-b pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+                    Report #{selectedReport.id} Details
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Reported on {selectedReport.date}</p>
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                <Badge className={`${getStatusColor(selectedReport.status)} px-3 py-1 text-sm`}>
+                  <span className="flex items-center gap-2">
+                    {getStatusIcon(selectedReport.status)}
+                    {selectedReport.status.charAt(0).toUpperCase() + selectedReport.status.slice(1)}
+                  </span>
+                </Badge>
+              </div>
+            </CardHeader>
 
-      {/* Reports Table List */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle>Recent Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {reports.map((report) => (
-              <div key={report.id} className="border-b border-border pb-4 last:border-b-0">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-foreground">{report.reportedUser}</h4>
-                      <Badge className={getStatusColor(report.status)}>
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(report.status)}
-                          {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                        </span>
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      <span className="font-medium">Reporter:</span> {report.reporter}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium">Reason:</span> {report.reason}
-                    </p>
+            <CardContent className="pt-6 space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-muted-foreground">
+                    <User className="h-4 w-4" /> Reported User
                   </div>
-                  
-                  {/* --- ACTION BUTTONS --- */}
-                  <div className="flex flex-col gap-2 ml-4">
-                     <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => setSelectedReport(report)} // Me line eken thama athulata yanne
-                     >
-                        View Details
-                    </Button>
-
-                    {report.status !== 'resolved' && (
-                        <Button 
-                            size="sm" 
-                            className="bg-green-600 hover:bg-green-700 text-white w-full"
-                            onClick={() => handleResolveReport(report.id)}
-                        >
-                            <Check className="h-4 w-4 mr-1" />
-                            Resolve
-                        </Button>
-                    )}
+                  <div className="text-lg font-medium">{selectedReport.reportedUser}</div>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-muted-foreground">
+                    <User className="h-4 w-4" /> Reported By
                   </div>
+                  <div className="text-lg font-medium">{selectedReport.reporter}</div>
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Reason</h3>
+                <div className="text-lg border-l-4 border-primary pl-4 py-1">{selectedReport.reason}</div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="h-4 w-4" /> Description
+                </h3>
+                <div className="bg-muted/30 p-4 rounded-lg border leading-relaxed">{selectedReport.details}</div>
+              </div>
+
+              {selectedReport.evidence && selectedReport.evidence.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Evidence (Click to view in new tab)</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {selectedReport.evidence.map((url, idx) => (
+                      <a 
+                        key={idx} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="group relative rounded-lg border overflow-hidden bg-muted/20 block"
+                      >
+                        <img src={url} alt="Evidence" className="h-32 w-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <ExternalLink className="text-white h-6 w-6" />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+
+            <CardFooter className="bg-muted/10 border-t p-6 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
+              {selectedReport.status !== "resolved" && (
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 text-white min-w-[150px]"
+                  onClick={() => { setResolvingId(selectedReport.id); setIsResolveDialogOpen(true); }}
+                >
+                  <Check className="h-4 w-4 mr-2" /> Mark as Resolved
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Pending", value: pendingCount, icon: Clock, color: "text-orange-600" },
+              { label: "In Progress", value: progressCount, icon: AlertCircle, color: "text-blue-600" },
+              { label: "Resolved", value: resolvedCount, icon: CheckCircle, color: "text-green-600" }
+            ].map((item, idx) => (
+              <Card key={idx}>
+                <CardContent className="pt-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className="text-2xl font-bold">{item.value}</p>
+                  </div>
+                  <item.icon className={`h-8 w-8 ${item.color}`} />
+                </CardContent>
+              </Card>
             ))}
           </div>
-        </CardContent>
-      </Card>
+
+          <Card className="border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle>Reports Management</CardTitle>
+              <Tabs defaultValue="all" className="w-[300px]" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="resolved">Resolved</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {filteredReports.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                  <Filter className="mb-2 h-10 w-10 opacity-20" />
+                  <p>No {activeTab !== "all" ? activeTab : ""} reports found.</p>
+                </div>
+              ) : (
+                filteredReports.map((report) => (
+                  <div key={report.id} className="border-b pb-4 last:border-b-0 flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-lg">{report.reportedUser}</h4>
+                        <Badge className={getStatusColor(report.status)}>{report.status}</Badge>
+                        {report.riskLevel && <Badge className={getStatusColor(report.riskLevel)}>{report.riskLevel}</Badge>}
+                      </div>
+                      
+                      {/* DATE ADDED HERE */}
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                         <span className="flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {report.date}
+                         </span>
+                         <span className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5" />
+                            Reporter: {report.reporter}
+                         </span>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mt-1">Reason: {report.reason}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>View Details</Button>
+                      {report.status !== "resolved" && (
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700 text-white" 
+                          onClick={() => { setResolvingId(report.id); setIsResolveDialogOpen(true); }}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Resolve
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

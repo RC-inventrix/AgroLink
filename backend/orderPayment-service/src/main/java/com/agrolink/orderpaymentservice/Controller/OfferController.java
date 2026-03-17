@@ -1,7 +1,7 @@
 package com.agrolink.orderpaymentservice.Controller;
 
-
 import com.agrolink.orderpaymentservice.model.*;
+import com.agrolink.orderpaymentservice.repository.CancelledOrderNotificationRepository; // Use existing Repo
 import com.agrolink.orderpaymentservice.repository.NotificationRepository;
 import com.agrolink.orderpaymentservice.repository.OfferRepository;
 import com.agrolink.orderpaymentservice.repository.RequirementRepository;
@@ -9,6 +9,7 @@ import com.agrolink.orderpaymentservice.service.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,18 +27,37 @@ public class OfferController {
     private final OrderService orderService;
     private final ObjectMapper objectMapper;
     private final NotificationRepository notificationRepository;
+    private final CancelledOrderNotificationRepository buyerNotificationRepository;
 
     @PostMapping("/create")
+    @Transactional
     public ResponseEntity<?> createOffer(@RequestBody BuyerOffer offer) {
         try {
-            // In a real scenario, you would handle image saving to S3/Local here
-            return ResponseEntity.ok(offerRepository.save(offer));
+            BuyerOffer savedOffer = offerRepository.save(offer);
+
+            // Fetch requirement to get Buyer ID and Crop Name
+            requirementRepository.findById(offer.getRequirementId()).ifPresent(req -> {
+                String msg = "New Offer: A seller has responded to your request for " + req.getCropName() + ".";
+
+                // Save to the table the BuyerHeader polls
+                CancelledOrderNotification buyerNotif = CancelledOrderNotification.builder()
+                        .buyerId(req.getBuyerId())
+                        .orderId(req.getId()) // Requirement ID reference
+                        .message(msg)
+                        .read(false)
+                        .build();
+
+                buyerNotificationRepository.save(buyerNotif);
+            });
+
+            return ResponseEntity.ok(savedOffer);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error creating offer: " + e.getMessage());
         }
     }
 
     @PutMapping("/{id}/status")
+    @Transactional
     public ResponseEntity<?> updateOfferStatus(@PathVariable Long id, @RequestBody Map<String, String> statusUpdate) {
         try {
             Optional<BuyerOffer> optionalOffer = offerRepository.findById(id);
@@ -52,18 +72,17 @@ public class OfferController {
 
                     if ("ACCEPTED".equalsIgnoreCase(newStatus)) {
                         requirementRepository.findById(offer.getRequirementId()).ifPresent(requirement -> {
-                            // 1. Close Requirement
                             requirement.setStatus(RequirementStatus.FULFILLED);
                             requirementRepository.save(requirement);
 
-                            // 2. Prepare Order Logic (Existing)
                             String itemsJson = "";
                             try {
                                 List<Map<String, Object>> items = List.of(Map.of(
                                         "productName", requirement.getCropName(),
                                         "quantity", offer.getSupplyQty(),
                                         "pricePerKg", offer.getUnitPrice(),
-                                        "sellerId", offer.getSellerId()
+                                        "sellerId", offer.getSellerId(),
+                                        "deliveryType", offer.getDeliveryOption()
                                 ));
                                 itemsJson = objectMapper.writeValueAsString(items);
                             } catch (Exception e) {
@@ -82,7 +101,6 @@ public class OfferController {
 
                             orderService.createOrder(newOrder);
 
-                            // 3. CREATE NOTIFICATION FOR SELLER
                             Notification sellerNotification = Notification.builder()
                                     .userId(offer.getSellerId())
                                     .message("Your offer for " + requirement.getCropName() + " has been accepted! An order has been created.")
@@ -104,10 +122,8 @@ public class OfferController {
 
     @GetMapping("/seller/{sellerId}")
     public ResponseEntity<List<BuyerOffer>> getOffersBySeller(@PathVariable Long sellerId) {
-
         return ResponseEntity.ok(offerRepository.findBySellerId(sellerId));
     }
-
 
     @GetMapping("/notifications/seller/{sellerId}")
     public ResponseEntity<List<Notification>> getSellerNotifications(@PathVariable Long sellerId) {
@@ -118,6 +134,4 @@ public class OfferController {
     public ResponseEntity<?> getOffersByRequirement(@PathVariable Long reqId) {
         return ResponseEntity.ok(offerRepository.findByRequirementId(reqId));
     }
-
-
 }

@@ -41,6 +41,16 @@ public class BuyerOffer {
 
     private LocalDateTime createdAt;
 
+    // Inside BuyerOffer.java
+    @Column(name = "pickup_latitude")
+    private Double pickupLatitude;
+
+    @Column(name = "pickup_longitude")
+    private Double pickupLongitude;
+
+    @Column(name = "pickup_address")
+    private String pickupAddress;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

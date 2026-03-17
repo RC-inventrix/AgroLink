@@ -38,5 +38,24 @@ public class Requirement {
     }
 
     private String description;
+
+    // Add these fields to Requirement.java
+
+    @Enumerated(EnumType.STRING)
+    private DeliveryMethod deliveryMethod; // PICKUP or DELIVERY
+
+    private String province;
+    private String district;
+    private String city;
+
+    private Double latitude;
+    private Double longitude;
+
+    // Define the Enum
+    public enum DeliveryMethod {
+        PICKUP, DELIVERY
+    }
+
+    private String contactNumber;
 }
 

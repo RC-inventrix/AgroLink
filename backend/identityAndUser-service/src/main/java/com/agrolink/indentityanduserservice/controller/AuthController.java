@@ -5,12 +5,14 @@ import com.agrolink.indentityanduserservice.dto.LoginRequest;
 import com.agrolink.indentityanduserservice.dto.RegisterRequest;
 import com.agrolink.indentityanduserservice.dto.UserUpdateDTO;
 import com.agrolink.indentityanduserservice.model.User;
+import com.agrolink.indentityanduserservice.repository.UserRepository;
 import com.agrolink.indentityanduserservice.services.AuthService;
 import com.agrolink.indentityanduserservice.services.JwtService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -36,6 +39,9 @@ public class AuthController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping("/count/farmers")
     public ResponseEntity<Long> getFarmerCount() {
@@ -125,8 +131,18 @@ public class AuthController {
             return ResponseEntity.status(401).body("Not authenticated");
         }
         String email = authentication.getName();
-        String fullName = service.getFullNameByEmail(email);
-        return ResponseEntity.ok(java.util.Map.of("fullName", fullName));
+
+        User user = service.findByEmail(email);
+
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "fullName", user.getFullname(),
+                "isBanned", user.isBanned() // Adding the flag here
+        ));
     }
 
     @GetMapping("/fullnames")
@@ -142,7 +158,16 @@ public class AuthController {
 
     @PutMapping("/profile/update")
     public ResponseEntity<?> updateProfile(@RequestBody UserUpdateDTO updateDTO, HttpServletRequest request) {
-        Long userId = (Long) request.getAttribute("userId");
+        Object userIdAttr = request.getAttribute("userId");
+        Long userId = null;
+
+        if (userIdAttr instanceof Integer) {
+            userId = ((Integer) userIdAttr).longValue();
+        } else if (userIdAttr instanceof Long) {
+            userId = (Long) userIdAttr;
+        } else if (userIdAttr instanceof String) {
+            userId = Long.parseLong((String) userIdAttr);
+        }
         return ResponseEntity.ok(service.updateUserDetails(userId, updateDTO));
     }
 
@@ -178,5 +203,26 @@ public class AuthController {
         }
     }
 
+    // Add this to AuthController.java
+    @PatchMapping("/user/{id}/ban")
+    public ResponseEntity<?> banUser(@PathVariable Long id, @RequestParam boolean status) {
+        try {
+            // Attempt to find and update the user through the service
+            User updatedUser = service.updateUserBannedStatus(id, status);
+            return ResponseEntity.ok(Map.of(
+                    "message", "User ban status updated successfully",
+                    "isBanned", updatedUser.isBanned()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Server error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/count/banned")
+    public ResponseEntity<Long> countBannedUsers() {
+        return ResponseEntity.ok(userRepository.countByIsBannedTrue());
+    }
 
 }

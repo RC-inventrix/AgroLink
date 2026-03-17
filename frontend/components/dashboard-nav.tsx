@@ -1,7 +1,6 @@
-/* fileName: dashboard-nav.tsx */
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -25,9 +24,46 @@ interface DashboardNavProps {
     unreadCount?: number;
 }
 
-export function DashboardNav({ unreadCount = 0 }: DashboardNavProps) {
-    const pathname = usePathname()
+export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProps) {
+  const pathname = usePathname()
     const [showInstructions, setShowInstructions] = useState(false);
+  const [liveUnreadCount, setLiveUnreadCount] = useState(initialCount)
+  const CHAT_SERVICE_URL = "http://localhost:8083"
+
+  // Polling Logic: Fetch total unread count every 3 seconds
+  useEffect(() => {
+    const fetchTotalUnread = async () => {
+      const token = sessionStorage.getItem("token");
+      const myId = sessionStorage.getItem("id");
+
+      if (!token || !myId) return;
+
+      try {
+        // Calling the endpoint you have in ChatController.java
+        const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/total-unread`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (res.ok) {
+          const count = await res.json();
+          setLiveUnreadCount(count);
+        }
+      } catch (err) {
+        console.error("Polling failed:", err);
+      }
+    };
+
+    // Initial fetch
+    fetchTotalUnread();
+
+    // Set up the interval
+    const interval = setInterval(fetchTotalUnread, 3000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [pathname]); // Refresh interval if path changes
 
     return (
         <>

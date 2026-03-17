@@ -28,7 +28,7 @@ interface LocationPickerProps {
 }
 
 // --- INTERNAL COMPONENT: MAP CONTROLLER ---
-// Handles programmatic map movement (FlyTo)
+// Handles programmatic map movement (FlyTo) safely without destroying the map
 function MapController({ center }: { center: [number, number] | null }) {
     const map = useMap()
     useEffect(() => {
@@ -43,11 +43,11 @@ function MapController({ center }: { center: [number, number] | null }) {
 // --- INTERNAL COMPONENT: INTERACTIVE MARKER ---
 // Handles clicks and drags
 function InteractiveMarker({
-                               position,
-                               onPositionChange,
-                               onError,
-                               cityCenter,
-                           }: {
+    position,
+    onPositionChange,
+    onError,
+    cityCenter,
+}: {
     position: [number, number] | null
     onPositionChange: (pos: [number, number]) => void
     onError: (msg: string) => void
@@ -68,7 +68,7 @@ function InteractiveMarker({
     return position ? (
         <Marker
             position={position}
-            draggable
+            draggable={true}
             eventHandlers={{
                 dragend: (e: DragEndEvent) => {
                     const marker = e.target
@@ -86,16 +86,15 @@ function InteractiveMarker({
 }
 
 // --- INTERNAL COMPONENT: ATOMIC MAP INSTANCE ---
-// This component is strictly managed by its parent key.
-// No manual ID generation or aggressive cleanup is needed.
+// This component stays mounted to preserve drag/zoom responsiveness.
 const LeafletMapInstance = ({
-                                center,
-                                markerPosition,
-                                targetCenter,
-                                cityCenter,
-                                onPositionChange,
-                                onError
-                            }: any) => {
+    center,
+    markerPosition,
+    targetCenter,
+    cityCenter,
+    onPositionChange,
+    onError
+}: any) => {
 
     useEffect(() => {
         // Safe, run-once initialization for Leaflet icons in Next.js
@@ -119,6 +118,7 @@ const LeafletMapInstance = ({
             zoom={13}
             style={{ height: "100%", width: "100%", zIndex: 0 }}
             scrollWheelZoom={true}
+            dragging={true}
         >
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -137,13 +137,13 @@ const LeafletMapInstance = ({
 
 // --- MAIN COMPONENT ---
 export default function LocationPickerMap({
-                                              value,
-                                              onChange,
-                                              variant = "light",
-                                              showStreetAddress = true,
-                                              required = false,
-                                              label = "Location",
-                                          }: LocationPickerProps) {
+    value,
+    onChange,
+    variant = "light",
+    showStreetAddress = true,
+    required = false,
+    label = "Location",
+}: LocationPickerProps) {
 
     // Data State
     const [provinces] = useState<any[]>(citiesData.provinces);
@@ -288,8 +288,8 @@ export default function LocationPickerMap({
                     </p>
 
                     <div className="border-2 border-border rounded-lg overflow-hidden h-80 relative z-0 bg-muted/10 flex items-center justify-center">
+                        {/* THE FIX IS HERE: The `key` prop was removed so React doesn't destroy the map. */}
                         <LeafletMapInstance
-                            key={`map-${value.province}-${value.district}-${value.city}`}
                             center={initialCenter}
                             targetCenter={targetCenter}
                             markerPosition={markerPosition}

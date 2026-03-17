@@ -32,18 +32,18 @@ public class SellerOrderController {
         return ResponseEntity.ok(orderRepository.findAll());
     }
 
-
     @GetMapping("/{sellerId}")
     public ResponseEntity<List<Order>> getOrdersBySeller(@PathVariable Long sellerId) {
         List<Order> sellerOrders = orderRepository.findBySellerId(sellerId);
         return ResponseEntity.ok(sellerOrders);
     }
 
-    // 2. Update Order Status
-
+    /**
+     * UPDATED: Now generates a notification when an order is accepted (PROCESSING).
+     */
     @PutMapping("/{orderId}/status")
+    @Transactional
     public ResponseEntity<?> updateStatus(@PathVariable Long orderId, @RequestParam String status) {
-        // 1. Check if Order exists
         Optional<Order> orderOptional = orderRepository.findById(orderId);
 
         if (orderOptional.isEmpty()) {
@@ -52,17 +52,30 @@ public class SellerOrderController {
 
         Order order = orderOptional.get();
 
-        // 2. Try to update status
         try {
-            order.setStatus(OrderStatus.valueOf(status));
+            OrderStatus newStatus = OrderStatus.valueOf(status);
+            order.setStatus(newStatus);
             Order updatedOrder = orderRepository.save(order);
+
+            // Trigger notification for the Buyer when Seller accepts the order
+            if (newStatus == OrderStatus.PROCESSING) {
+                String msg = "Your Order #" + order.getId() + " has been accepted by the seller and is now being processed.";
+
+                CancelledOrderNotification notification = CancelledOrderNotification.builder()
+                        .buyerId(order.getUserId())
+                        .orderId(order.getId())
+                        .message(msg)
+                        .read(false)
+                        .build();
+
+                notificationRepository.save(notification);
+            }
+
             return ResponseEntity.ok(updatedOrder);
         } catch (IllegalArgumentException e) {
-            // Return 400 Bad Request if the status string is invalid
             return ResponseEntity.badRequest().body("Invalid status provided");
         }
     }
-
 
     @PostMapping("/{orderId}/verify-otp")
     public ResponseEntity<?> verifyOrderOtp(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
@@ -79,13 +92,9 @@ public class SellerOrderController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-
-
     @GetMapping("/{sellerId}/analytics")
     public ResponseEntity<SellerAnalyticsDTO> getSellerAnalytics(@PathVariable Long sellerId) {
-
         SellerAnalyticsDTO analytics = orderRepository.getSellerAnalytics(sellerId);
-
 
         if (analytics.getTotalCompletedIncome() == null) {
             analytics.setTotalCompletedIncome(0L);
@@ -93,8 +102,6 @@ public class SellerOrderController {
 
         return ResponseEntity.ok(analytics);
     }
-
-
 
     @PostMapping("/{orderId}/cancel")
     @Transactional
