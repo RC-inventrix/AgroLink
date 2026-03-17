@@ -156,7 +156,8 @@ export default function DashboardHeader() {
     const totalUnreadCount = unreadChatCount + orderNotifs.filter(n => !n.read).length;
 
     return (
-        <header className="w-full flex justify-around bg-[#03230F] text-white shadow-md sticky top-0 z-[50]">
+        <header className="w-full bg-[#03230F] text-white shadow-md sticky top-0 z-[100]">
+            {/* Notification Toast */}
             {logoutSuccess && (
                 <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900 animate-in slide-in-from-right-10 duration-500">
                     <Check className="w-5 h-5 mr-3 text-green-500" />
@@ -164,29 +165,29 @@ export default function DashboardHeader() {
                 </div>
             )}
 
-            <div className="container px-4 h-20 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 {/* Logo Section */}
-                <div className="shrink-0">
+                <div className="flex-shrink-0">
                     <Link href="/buyer/dashboard">
-                        <Image src="/images/Group-6.png" alt="AgroLink Logo" width={150} height={50} className="object-contain cursor-pointer" priority />
+                        <Image src="/images/Group-6.png" alt="AgroLink Logo" width={150} height={50} className="w-auto h-12 cursor-pointer object-contain" priority />
                     </Link>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-6">
+                <div className="flex items-center gap-4 sm:gap-8">
                     {/* Notification Section */}
                     <div className="relative" ref={notifRef}>
-                        <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 hover:bg-white/10 rounded-full transition-colors relative">
-                            <Bell className="w-5 h-5 text-white" />
+                        <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 relative flex items-center justify-center">
+                            <Bell className="w-6 h-6 text-white" />
                             {totalUnreadCount > 0 && (
-                                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
+                                <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
                                     {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                                 </span>
                             )}
                         </button>
 
                         {isNotifOpen && (
-                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-                                <div className="px-4 py-2 border-b font-bold text-xs text-gray-400 uppercase">Notifications</div>
+                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">Notifications</div>
                                 <div className="max-h-[400px] overflow-y-auto">
                                     {orderNotifs.map((notif) => {
                                         const msg = notif.message.toLowerCase();
@@ -221,17 +222,17 @@ export default function DashboardHeader() {
                     </div>
 
                     {/* Cart Icon */}
-                    <Link href="/cart" className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                        <ShoppingCart className="w-5 h-5 text-white" />
+                    <Link href="/cart" className="p-2 relative flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
+                        <ShoppingCart className="w-6 h-6 text-white" />
                     </Link>
 
                     {/* Profile Section */}
                     <div className="relative" ref={dropdownRef}>
-                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 pl-4 border-l border-white/20 hover:opacity-80 transition-opacity focus:outline-none">
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 pl-6 border-l border-white/20">
                             <div className="w-10 h-10 rounded-full border-2 border-[#EEC044] overflow-hidden bg-white/10 flex items-center justify-center">
                                 <User className="w-6 h-6 text-[#EEC044]" />
                             </div>
-                            <p className="hidden sm:block text-sm font-bold uppercase tracking-tight">My Account</p>
+                            <p className="hidden md:block text-sm font-bold">My Account</p>
                         </button>
 
                         {isMenuOpen && (

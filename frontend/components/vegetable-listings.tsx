@@ -7,12 +7,13 @@ import VegetableCard from "./vegetable-card"
 import AuctionBidPopup from "./auction-bid-popup"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DashboardNav } from "@/components/dashboard-nav"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
-// 1. Updated Interface to include Auction fields
 interface Vegetable {
     id: string
     name: string
@@ -32,8 +33,6 @@ interface Vegetable {
     pickupAddress?: string
     pickupLatitude?: number
     pickupLongitude?: number
-
-    // --- AUCTION SPECIFIC FIELDS ---
     isAuction?: boolean
     currentBid?: number
     startingPrice?: number
@@ -105,8 +104,8 @@ export default function VegetableListings() {
     const [vegetables, setVegetables] = useState<Vegetable[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
+    const [navUnread, setNavUnread] = useState(0) 
 
-    // Popup state
     const [selectedAuction, setSelectedAuction] = useState<Vegetable | null>(null)
 
     useEffect(() => {
@@ -115,18 +114,14 @@ export default function VegetableListings() {
                 const token = sessionStorage.getItem("token");
                 const headers: HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
 
-                // 1. Run fetches in parallel
                 const [productsRes, auctionsRes] = await Promise.all([
                     fetch(`${API_URL}/products`),
-                    // Assuming API Gateway routes /api/auctions to the Auction Service
                     fetch(`${API_URL}/api/auctions/active`, { headers })
                 ]);
 
-                // handle responses
                 const productsData = productsRes.ok ? await productsRes.json() : [];
                 const auctionsData = auctionsRes.ok ? await auctionsRes.json() : [];
 
-                // 2. Handle Farmer Names for Products (Auctions already have farmerName)
                 const uniqueProductFarmerIds = [...new Set(productsData.map((item: any) => item.farmerId))];
                 let fullNameMap: Record<string, string> = {};
 
@@ -142,7 +137,6 @@ export default function VegetableListings() {
                     }
                 }
 
-                // 3. Map Products
                 const mappedProducts: Vegetable[] = productsData.map((item: any) => ({
                     id: item.id?.toString() || "unique-id",
                     name: item.vegetableName,
@@ -165,7 +159,6 @@ export default function VegetableListings() {
                     isAuction: false
                 }));
 
-                // 4. Map Auctions
                 const mappedAuctions: Vegetable[] = auctionsData.map((item: any) => ({
                     id: item.id?.toString(),
                     name: item.productName,
@@ -193,7 +186,6 @@ export default function VegetableListings() {
                     bidCount: item.bidCount
                 }));
 
-                // 5. Merge Data
                 setVegetables([...mappedAuctions, ...mappedProducts]);
 
             } catch (err) {
@@ -204,7 +196,30 @@ export default function VegetableListings() {
             }
         };
 
+        const fetchUnreadCount = async () => {
+            try {
+                const token = sessionStorage.getItem("token");
+                if (!token) return;
+                const contactsRes = await fetch(`${CHAT_URL}/api/chat/contacts`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (contactsRes.ok) {
+                    const ids: number[] = await contactsRes.json();
+                    const counts = await Promise.all(ids.map(async (id) => {
+                        const res = await fetch(`${CHAT_URL}/api/chat/unread-count/${id}`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+                        return res.ok ? await res.json() : 0;
+                    }));
+                    setNavUnread(counts.reduce((a, b) => a + b, 0));
+                }
+            } catch (e) {
+                console.warn("Could not fetch unread count", e);
+            }
+        };
+
         fetchData();
+        fetchUnreadCount();
     }, []);
 
     const filteredVegetables = useMemo(() => {
@@ -224,14 +239,14 @@ export default function VegetableListings() {
     }, [searchQuery, selectedCategory, priceRange, selectedProvince, selectedDistrict, selectedCity, vegetables])
 
     return (
-        <div className="min-h-screen bg-background relative">
-            {/* Header Section */}
-            <div className="bg-[#f8f8f8] py-12">
-                <div className="container mx-auto px-4">
-                    <h1 className="text-4xl font-bold mb-4">Fresh Vegetables Marketplace</h1>
-                    <p className="text-xl opacity-90">Discover fresh, locally sourced vegetables and live auctions directly from farmers.</p>
+        <div className="flex min-h-screen bg-[#F8F9FA]">
+            <DashboardNav unreadCount={navUnread} />
+            
+            <main className="flex-1 w-full overflow-x-hidden flex flex-col">
+                <div className="mb-8 p-8">
+                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Fresh Vegetables Marketplace</h1>
+                    <p className="text-[#A3ACBA] font-medium">Discover fresh, locally sourced vegetables and live auctions directly from farmers.</p>
                 </div>
-            </div>
 
             <div className="container mx-auto px-4 py-8">
 
@@ -351,7 +366,6 @@ export default function VegetableListings() {
                             />
                         </div>
                     </div>
-                </div>
 
                 {/* --- DISPLAY SECTION --- */}
                 {loading ? (
@@ -412,16 +426,7 @@ export default function VegetableListings() {
                         )}
                     </>
                 )}
-            </div>
-
-            {/* Auction Popup */}
-            {selectedAuction && (
-                <AuctionBidPopup
-                    isOpen={!!selectedAuction}
-                    onClose={() => setSelectedAuction(null)}
-                    vegetable={selectedAuction}
-                />
-            )}
+            </main>
         </div>
     )
 }

@@ -15,6 +15,8 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import { DashboardNav } from "@/components/dashboard-nav"
+import Footer2 from "@/components/footer/Footer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -64,6 +66,7 @@ export default function MyRequirementsPage() {
     const [showDeletePopup, setShowDeletePopup] = useState(false)
     const [itemToDelete, setItemToDelete] = useState<number | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [navUnread, setNavUnread] = useState(0) 
 
     const [userId, setUserId] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -171,26 +174,33 @@ export default function MyRequirementsPage() {
         finally { setIsDeleting(false); setItemToDelete(null); }
     };
 
-    if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-[#EEC044]" /></div>
-
     return (
-        <div className="relative min-h-screen bg-gray-50 text-[#03230F]">
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <BuyerHeader />
 
             {/* DELETE POPUP */}
             {showDeletePopup && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-lg bg-white text-center">
-                        <div className="bg-red-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><AlertTriangle className="w-10 h-10 text-red-500" /></div>
-                        <h2 className="text-2xl font-black uppercase mb-2">Delete Request?</h2>
-                        <div className="flex flex-col gap-3 mt-8">
-                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-[#03230F] text-[#EEC044] font-black py-7 rounded-md uppercase shadow-xl">{isDeleting ? <Loader2 className="animate-spin" /> : "Yes, Delete"}</Button>
-                            <button onClick={() => setShowDeletePopup(false)} className="w-full font-bold text-gray-400 py-4 uppercase text-[10px]">Cancel</button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-2xl bg-white text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
+                        <div className="bg-red-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <AlertTriangle className="w-10 h-10 text-red-500" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">Delete Request?</h2>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">This action cannot be undone.</p>
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-6 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all">
+                                {isDeleting ? <Loader2 className="animate-spin" /> : "Yes, Delete"}
+                            </Button>
+                            <button onClick={() => setShowDeletePopup(false)} className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors">Cancel</button>
                         </div>
                     </Card>
                 </div>
             )}
             
+            <div className="flex flex-1">
+            
+                <DashboardNav unreadCount={navUnread} />
             <div className="max-w-5xl mx-auto py-10 px-4">
                 <div className="mb-10 flex justify-between items-center text-[#03230F]">
                     <div>
@@ -202,10 +212,21 @@ export default function MyRequirementsPage() {
                     </Link>
                 </div>
 
-                <div className="grid gap-8">
-                    {requirements.map((req) => {
-                        const reqOffers = offers[req.id] || [];
-                        const isExpanded = expandedReqId === req.id;
+                <main className="flex-1 w-full overflow-x-hidden flex flex-col p-6 lg:p-8">
+                    <div className="max-w-6xl mx-auto w-full">
+                        
+                        {/* Theme Colors Applied: Clean Header Style from 1st Image */}
+                        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4">
+                            <div>
+                                <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">My Item Requests</h1>
+                                <p className="text-[#A3ACBA] font-medium">Manage your requirements and accept seller proposals</p>
+                            </div>
+                            <Link href="/buyer/requests/new-request" className="w-full md:w-auto">
+                                <button className="w-full bg-[#03230F] text-[#EEC044] rounded-full px-8 py-3.5 font-bold uppercase text-xs tracking-widest shadow-md hover:bg-black transition-all flex items-center justify-center gap-2">
+                                    <AlignLeft className="w-4 h-4" /> New Request
+                                </button>
+                            </Link>
+                        </div>
 
                         return (
                             <Card key={req.id} className="p-0 overflow-hidden border border-gray-200 shadow-md rounded-lg bg-white relative min-h-[260px] flex flex-col justify-center">
@@ -397,18 +418,21 @@ export default function MyRequirementsPage() {
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    ))
+                                                        )}
+                                                    </div>
                                                 )}
-                                            </div>
-                                        )}
-                                    </div>
+                                            </Card>
+                                        );
+                                    })
                                 )}
-                            </Card>
-                        );
-                    })}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
+            
+            
+            <Footer2 />
 
             {/* View Location Modal */}
             <Dialog open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>

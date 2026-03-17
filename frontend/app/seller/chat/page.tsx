@@ -6,8 +6,10 @@ import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { ConversationList, type Conversation } from "@/components/chat/conversation-list"
 import { MessageView, type Message } from "@/components/chat/message-view"
+import { Loader2, MessageCircle } from "lucide-react"
 import SellerHeader from "@/components/headers/SellerHeader"
 import SellerSidebar from "../../seller/dashboard/SellerSideBar"
+import Footer2 from "@/components/footer/Footer"
 
 function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: number) => void }) {
     const searchParams = useSearchParams();
@@ -21,15 +23,27 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
     const CHAT_SERVICE_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083"; 
     
     const selectedIdRef = useRef("");
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Sync total unread count to parent component
     useEffect(() => {
         const total = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
         onTotalUnreadChange(total);
     }, [conversations, onTotalUnreadChange]);
 
+    // Keep ref in sync for WebSocket closures
     useEffect(() => {
         selectedIdRef.current = selectedConversationId;
     }, [selectedConversationId]);
+
+    // Auto scroll to bottom
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     const syncReadStatus = useCallback(async (senderId: string) => {
         const token = sessionStorage.getItem("token");
@@ -78,10 +92,10 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
                             { 
                                 ...newMessage, 
                                 id: newMessage.id?.toString() || Date.now().toString(),
-                                imageUrl: newMessage.imageUrl || null, // Safety for TS
+                                imageUrl: newMessage.imageUrl || null,
                                 isCurrentUser: false, 
                                 isRead: true 
-                            } as Message // Fixed the TS Error here
+                            } as Message
                         ]);
                         syncReadStatus(senderIdStr); 
                     }
@@ -123,7 +137,7 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
                 setMessages(history.map((m: any) => ({ 
                     ...m,
                     id: m.id.toString(), 
-                    imageUrl: m.imageUrl || null, // Map null correctly
+                    imageUrl: m.imageUrl || null,
                     isCurrentUser: m.senderId.toString() === myId 
                 } as Message)));
             }
@@ -136,7 +150,6 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
             const myId = sessionStorage.getItem("id");
             const currentTime = new Date().toISOString();
             
-            // Create the local message object first to avoid the "null" type mismatch
             const chatMessage: Message = { 
                 id: Date.now().toString(),
                 senderId: Number(myId), 
@@ -147,7 +160,6 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
                 isRead: false 
             };
 
-            // Publish to backend
             const payload = {
                 senderId: chatMessage.senderId,
                 recipientId: Number(selectedConversationId),
@@ -173,64 +185,77 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
     };
 
     // Load initial contacts
-    // --- 3. FETCH INITIAL DATA ---
-useEffect(() => {
-    const fetchContacts = async () => {
-        const token = sessionStorage.getItem("token"); 
-        if (!token) return;
-        try {
-            const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
-            if (res.ok) {
-                const ids: number[] = await res.json();
-                if (ids.length === 0) { setIsLoading(false); return; }
+    useEffect(() => {
+        const fetchContacts = async () => {
+            const token = sessionStorage.getItem("token"); 
+            if (!token) return;
+            try {
+                const res = await fetch(`${CHAT_SERVICE_URL}/api/chat/contacts`, { headers: { "Authorization": `Bearer ${token}` } });
+                if (res.ok) {
+                    const ids: number[] = await res.json();
+                    if (ids.length === 0) { setIsLoading(false); return; }
 
-                const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
-                const nameMap = nameRes.ok ? await nameRes.json() : {};
+                    const nameRes = await fetch(`${AUTH_SERVICE_URL}/auth/fullnames?ids=${ids.join(',')}`, { headers: { "Authorization": `Bearer ${token}` } });
+                    const nameMap = nameRes.ok ? await nameRes.json() : {};
 
-                const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
-                    const unreadRes = await fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
-                    const unreadCount = await unreadRes.json();
-                    return {
-                        id: id.toString(), 
-                        name: nameMap[id] || `User ${id}`,
-                        lastMessage: "Click to chat", 
-                        // FIX: Ensure this path matches your project structure
-                        avatar: "/buyer-dashboard/farmer-portrait.png", 
-                        online: false, 
-                        timestamp: new Date().toISOString(), 
-                        unread: unreadCount > 0, 
-                        unreadCount: unreadCount, 
-                        starred: false
-                    };
-                }));
-                setConversations(mapped);
-            }
-        } finally { setIsLoading(false); }
-    };
-    fetchContacts();
-}, [CHAT_SERVICE_URL, AUTH_SERVICE_URL]);
+                    const mapped: Conversation[] = await Promise.all(ids.map(async (id) => {
+                        const unreadRes = await fetch(`${CHAT_SERVICE_URL}/api/chat/unread-count/${id}`, { headers: { "Authorization": `Bearer ${token}` } });
+                        const unreadCount = await unreadRes.json();
+                        return {
+                            id: id.toString(), 
+                            name: nameMap[id] || `User ${id}`,
+                            lastMessage: "Click to chat", 
+                            avatar: "/buyer-dashboard/farmer-portrait.png", 
+                            online: false, 
+                            timestamp: new Date().toISOString(), 
+                            unread: unreadCount > 0, 
+                            unreadCount: unreadCount, 
+                            starred: false
+                        };
+                    }));
+                    
+                    // Sort descending by timestamp
+                    setConversations(mapped.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+                }
+            } finally { setIsLoading(false); }
+        };
+        fetchContacts();
+    }, [CHAT_SERVICE_URL, AUTH_SERVICE_URL]);
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
+        <div className="flex w-full h-full divide-x divide-gray-100">
             {isLoading ? (
-                <div className="flex-1 flex items-center justify-center animate-pulse text-[#2d5016] font-bold">
-                    Loading chats...
+                <div className="flex-1 flex flex-col items-center justify-center p-10">
+                    <Loader2 className="w-12 h-12 animate-spin text-[#EEC044] mb-4" />
+                    <div className="text-[#03230F] font-bold text-lg">Loading chats...</div>
                 </div>
             ) : (
                 <>
-                    <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={() => {}} />
-                    <div className="flex-1 flex flex-col relative bg-white">
+                    <div className="w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col bg-gray-50/50 overflow-y-auto">
+                        <ConversationList 
+                            conversations={conversations} 
+                            selectedId={selectedConversationId} 
+                            onSelect={setSelectedConversationId} 
+                            onDelete={() => {}} 
+                        />
+                    </div>
+                    <div className="hidden md:flex flex-1 flex-col relative bg-white">
                         {selectedConversationId ? (
-                            <div className="flex-1 flex flex-col overflow-y-auto p-4">
+                            <div className="flex-1 flex flex-col h-full overflow-hidden p-0 m-0">
                                 <MessageView 
                                     conversation={conversations.find(c => c.id === selectedConversationId)!} 
                                     messages={messages} 
                                     onSendMessage={handleSendMessage} 
                                 />
+                                <div ref={messagesEndRef} className="h-1 shrink-0" />
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-muted-foreground uppercase text-xs">
-                                Select a contact to start messaging
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-white">
+                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-200">
+                                    <MessageCircle className="w-10 h-10 text-[#EEC044]" />
+                                </div>
+                                <p className="font-black text-xl text-[#03230F] uppercase tracking-tight mb-1">Your Messages</p>
+                                <p className="text-sm font-medium text-gray-500">Select a contact from the list to start chatting.</p>
                             </div>
                         )}
                     </div>
@@ -244,14 +269,42 @@ export default function ChatPage() {
     const [totalUnread, setTotalUnread] = useState(0);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <SellerHeader />
-            <div className="flex">
+            
+            <div className="flex flex-1 overflow-hidden">
+                {/* Sidebar */}
                 <SellerSidebar unreadCount={totalUnread} activePage="chat" />
-                <Suspense fallback={<div className="p-10 font-bold">Loading interface...</div>}>
-                    <ChatContent onTotalUnreadChange={setTotalUnread} />
-                </Suspense>
+                
+                {/* Main Content Area */}
+                <main className="flex-1 w-full overflow-hidden flex flex-col p-4 lg:p-8">
+                    
+                    {/* Theme Colors Applied: Dark Green Header Box */}
+                    <div className="bg-[#03230F] rounded-t-[2rem] p-6 lg:p-8 text-white shadow-md z-10 shrink-0">
+                        <div className="max-w-7xl mx-auto flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-black text-[#EEC044] tracking-tight mb-1">Message Center</h1>
+                                <p className="text-gray-300 font-medium">Communicate directly with your buyers.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Box Area */}
+                    <div className="bg-white rounded-b-[2rem] border border-t-0 border-gray-200 shadow-md flex-1 flex overflow-hidden">
+                        <Suspense fallback={
+                            <div className="flex flex-col items-center justify-center w-full h-full">
+                                <Loader2 className="w-12 h-12 animate-spin text-[#EEC044] mb-4" />
+                                <div className="text-[#03230F] font-bold text-lg">Loading interface...</div>
+                            </div>
+                        }>
+                            <ChatContent onTotalUnreadChange={setTotalUnread} />
+                        </Suspense>
+                    </div>
+                </main>
             </div>
+            
+            
+            <Footer2 />
         </div>
     );
 }

@@ -16,6 +16,12 @@ import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import "./SellerDashboard.css";
 import Footer from "@/components/footer/Footer";
+import Example from "@/components/footer/Footer";
+import Footer2 from "@/components/footer/Footer";
+
+
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
 // Hoisted to global scope so all components in this file can access them
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -437,7 +443,7 @@ export default function SellerDashboard() {
                     </div>
                 </main>
             </div>
-            <Footer />
+            <Footer2 />
         </div>
     );
 }
