@@ -1,3 +1,4 @@
+/* fileName: vegetable-purchase-form.tsx */
 "use client"
 
 import type React from "react"
@@ -92,7 +93,8 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
             const token = sessionStorage.getItem("token")
             if (userId) {
                 try {
-                    const res = await fetch(`${API_URL}/api/users/${userId}/address`, {
+                    // FIX: Removed the incorrect '/api' prefix to match the UserController mapping
+                    const res = await fetch(`${API_URL}/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (res.ok) {
@@ -106,7 +108,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                             })
                         }
                     }
-                } catch (error) { console.error("Failed to fetch address") }
+                } catch (error) { console.error("Failed to fetch address", error) }
             }
         }
         fetchUserData()
