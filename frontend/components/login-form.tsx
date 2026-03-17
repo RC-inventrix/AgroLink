@@ -102,7 +102,7 @@ export default function LoginForm() {
 
             {/* Login Card */}
             <div className="w-full">
-                <h2 className="text-3xl font-bold text-white mb-2">Login</h2>
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-2 leading-tight">Login</h2>
                 <p className="text-sm mb-8" style={{ color: "#EEC044" }}>
                     Enter your credentials to continue
                 </p>
@@ -187,15 +187,6 @@ export default function LoginForm() {
                     >
                         {isLoading ? "Signing in..." : "Login"}
                     </button>
-
-                    <div className="relative my-6">
-                        {/*<div className="absolute inset-0 flex items-center">*/}
-                        {/*    <div className="w-full border-t border-gray-600"></div>*/}
-                        {/*</div>*/}
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="px-2 text-gray-400">New to AgroLink?</span>
-                        </div>
-                    </div>
 
                     <div className="text-center">
                         <p className="text-sm text-gray-300">

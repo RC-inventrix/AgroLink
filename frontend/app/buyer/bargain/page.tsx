@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import type React from "react"
@@ -14,7 +15,11 @@ import {
     Loader2,
     Info,
     Navigation,
-    X
+    X,
+    Package,
+    AlertCircle,
+    Check,
+    HandCoins
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,7 +30,6 @@ import LocationPicker from "@/components/LocationPicker"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// 1. Updated Interface
 interface Vegetable {
     id: string
     name: string
@@ -47,7 +51,7 @@ interface Vegetable {
 
 // Haversine formula for straight-line distance
 const getHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -70,6 +74,7 @@ export default function BargainPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
     const [isLoading, setIsLoading] = useState(true)
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Location & Delivery States
     const [userDefaultAddress, setUserDefaultAddress] = useState<{ address: string; lat: number; lng: number } | null>(null)
@@ -94,6 +99,14 @@ export default function BargainPage() {
         e.currentTarget.blur()
     }
 
+    // Auto-hide notifications
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
     useEffect(() => {
         const storedVegetable = sessionStorage.getItem("selectedVegetable")
         if (storedVegetable) {
@@ -101,7 +114,6 @@ export default function BargainPage() {
                 const parsedVegetable = JSON.parse(storedVegetable) as Vegetable
                 setVegetable(parsedVegetable)
             } catch (error) {
-                console.error("Error parsing vegetable data:", error)
                 router.push("/")
             }
         } else {
@@ -145,7 +157,7 @@ export default function BargainPage() {
         return () => { document.body.style.overflow = 'unset'; }
     }, [isAddressModalOpen]);
 
-    // --- FIX: Advanced Distance Calculation with OSRM Sanity Guard ---
+    // Distance Calculation Logic
     useEffect(() => {
         if (!vegetable || !vegetable.deliveryAvailable) {
             setDeliveryFee(0)
@@ -169,19 +181,14 @@ export default function BargainPage() {
                 setIsCalculatingDistance(true)
 
                 try {
-                    // 1. Force strict numbers to prevent string concatenation bugs
                     const fLat = Number(vegetable.pickupLatitude);
                     const fLng = Number(vegetable.pickupLongitude);
                     const tLat = Number(targetLat);
                     const tLng = Number(targetLng);
 
-                    // 2. Get true straight-line distance
                     const straightLineDistance = getHaversineDistance(fLat, fLng, tLat, tLng);
-
-                    // Base estimate for road distance (1.3x straight line)
                     let finalCalculatedDistance = straightLineDistance * 1.3;
 
-                    // 3. Request OSRM Routing (Note: OSRM format is always longitude,latitude)
                     const start = `${fLng},${fLat}`
                     const end = `${tLng},${tLat}`
                     const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=false`
@@ -190,17 +197,12 @@ export default function BargainPage() {
                     const data = await response.json()
 
                     if (data.code === "Ok" && data.routes && data.routes.length > 0) {
-                        const osrmDistance = data.routes[0].distance / 1000; // Convert meters to km
-
-                        // SANITY GUARD: If OSRM returns an absurd detour (e.g. > 2.5x straight line + 5km buffer), ignore it.
+                        const osrmDistance = data.routes[0].distance / 1000;
                         if (osrmDistance <= (straightLineDistance * 2.5) + 5) {
                             finalCalculatedDistance = osrmDistance;
-                        } else {
-                            console.warn(`OSRM suggested an impossible detour (${osrmDistance}km) for a ${straightLineDistance}km straight gap. Using estimation.`);
                         }
                     }
 
-                    // 4. Update states
                     const cleanDistance = parseFloat(finalCalculatedDistance.toFixed(1));
                     setDistance(cleanDistance)
 
@@ -212,9 +214,6 @@ export default function BargainPage() {
                     setDeliveryFee(Math.round(fee))
 
                 } catch (error) {
-                    console.error("Distance calculation error:", error)
-
-                    // Fallback block with forced numbers
                     const fLat = Number(vegetable.pickupLatitude);
                     const fLng = Number(vegetable.pickupLongitude);
                     const tLat = Number(targetLat);
@@ -262,6 +261,9 @@ export default function BargainPage() {
     const priceDifference = suggestedTotalNum - existingPriceForTotal
     const discountPercentage = existingPriceForTotal > 0 ? (priceDifference / existingPriceForTotal) * 100 : 0
 
+    // Quantity Validation Logic
+    const isQuantityExceeded = vegetable ? totalQuantityKg > vegetable.quantity : false;
+
     const handleCancel = () => {
         setQuantityKg("")
         setQuantityGrams("")
@@ -275,12 +277,17 @@ export default function BargainPage() {
         if (!vegetable) return
 
         if (totalQuantityKg <= 0 || suggestedTotalNum <= 0) {
-            alert("Please enter valid quantity and price")
+            setNotification({ message: "Please enter a valid quantity and your requested price.", type: 'error' });
             return
         }
 
+        if (isQuantityExceeded) {
+            setNotification({ message: `You cannot request more than the available stock (${vegetable.quantity} kg).`, type: 'error' });
+            return;
+        }
+
         if (vegetable.deliveryAvailable && addressOption === "custom" && !confirmedCustomLocation) {
-            alert("Please select a custom delivery address")
+            setNotification({ message: "Please select a custom delivery address.", type: 'error' });
             return
         }
 
@@ -293,7 +300,6 @@ export default function BargainPage() {
             ? (addressOption === "default" ? userDefaultAddress?.address : confirmedCustomLocation?.address)
             : "Pickup by Buyer";
 
-        // Derive buyer coordinates from the selected delivery option
         const buyerCoords = vegetable.deliveryAvailable
             ? (addressOption === "default" ? userDefaultAddress : confirmedCustomLocation)
             : null;
@@ -347,16 +353,15 @@ export default function BargainPage() {
         }
     }
 
-    // Fixed Google Maps URL Link
     const googleMapsUrl = vegetable?.pickupLatitude && vegetable?.pickupLongitude
         ? `https://www.google.com/maps?q=${vegetable.pickupLatitude},${vegetable.pickupLongitude}`
         : null;
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-green-800 text-xl flex items-center gap-2">
-                    <Loader2 className="animate-spin w-6 h-6" /> Loading vegetable details...
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-[#03230F] text-xl flex items-center gap-2 font-bold">
+                    <Loader2 className="animate-spin w-6 h-6" /> Loading product details...
                 </div>
             </div>
         )
@@ -364,10 +369,10 @@ export default function BargainPage() {
 
     if (!vegetable) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-red-600 text-xl mb-4">No vegetable selected</p>
-                    <Button onClick={() => router.push("/VegetableList")} className="bg-green-700 hover:bg-green-800">
+                    <p className="text-red-600 text-xl mb-4 font-bold">No product selected</p>
+                    <Button onClick={() => router.push("/VegetableList")} className="bg-[#03230F] text-white hover:bg-[#03230F]/90">
                         Go Back to Listings
                     </Button>
                 </div>
@@ -376,30 +381,46 @@ export default function BargainPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white p-8 relative">
+        <div className="min-h-screen bg-gray-50 p-6 md:p-10 relative">
 
+            {/* Custom Notification */}
+            {notification && (
+                <div className={`fixed top-5 right-5 z-[9999] flex items-center p-4 rounded-xl shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
+                    notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" : "bg-red-950 border-red-500 text-white"
+                }`}>
+                    <div className="flex items-center gap-3">
+                        {notification.type === 'success' ? <Check className="w-5 h-5 text-green-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+                        <p className="font-medium pr-4">{notification.message}</p>
+                    </div>
+                    <button onClick={() => setNotification(null)} className="ml-auto hover:bg-white/10 p-1 rounded transition-colors">
+                        <X className="w-4 h-4 opacity-70" />
+                    </button>
+                </div>
+            )}
+
+            {/* Success/Error Overlay */}
             {submitStatus !== 'idle' && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <Card className={`w-full max-w-md shadow-2xl border-0 bg-white`}>
+                    <Card className={`w-full max-w-md shadow-2xl border-0 bg-white rounded-3xl overflow-hidden`}>
                         <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-4">
                             {submitStatus === 'success' ? (
                                 <>
-                                    <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-2 animate-bounce">
-                                        <CheckCircle className="h-12 w-12 text-green-600" />
+                                    <div className="h-24 w-24 rounded-full bg-[#03230F]/5 flex items-center justify-center mb-2 animate-bounce">
+                                        <CheckCircle className="h-14 w-14 text-[#03230F]" />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-green-800">Bargain Sent!</h2>
-                                    <p className="text-green-700">
-                                        Your offer of <span className="font-bold">Rs. {formatCurrency(suggestedTotalNum)}</span> has been sent to the seller.
+                                    <h2 className="text-3xl font-black text-[#03230F]">Bargain Sent!</h2>
+                                    <p className="text-gray-600 font-medium">
+                                        Your offer of <span className="font-bold text-[#03230F]">Rs. {formatCurrency(suggestedTotalNum)}</span> has been securely sent to the seller.
                                     </p>
-                                    <p className="text-sm text-gray-500 mt-4">Redirecting you to listings...</p>
+                                    <p className="text-sm text-gray-400 mt-4">Redirecting you to listings...</p>
                                 </>
                             ) : (
                                 <>
-                                    <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mb-2">
-                                        <XCircle className="h-12 w-12 text-red-600" />
+                                    <div className="h-24 w-24 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                                        <XCircle className="h-14 w-14 text-red-600" />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-red-800">Request Failed</h2>
-                                    <p className="text-gray-600">
+                                    <h2 className="text-3xl font-black text-red-800">Request Failed</h2>
+                                    <p className="text-gray-600 font-medium">
                                         We couldn't reach the server. Please check your connection or try again.
                                     </p>
                                     <p className="text-sm text-gray-400 mt-4">Reloading form...</p>
@@ -411,17 +432,23 @@ export default function BargainPage() {
             )}
 
             <div className="max-w-4xl mx-auto">
-                <h1 className="text-4xl font-bold text-green-800 mb-8 text-center">Bargain Request</h1>
+                <div className="mb-10 text-center">
+                    <h1 className="text-4xl md:text-5xl font-black text-[#03230F] tracking-tight mb-3">Bargain Request</h1>
+                    <p className="text-gray-500 font-medium">Propose a fair price to the seller for your desired quantity.</p>
+                </div>
 
-                <Card className="bg-white border-green-200 shadow-lg mb-8">
-                    <CardContent className="p-8">
-                        <form onSubmit={handleSubmit} className="space-y-8">
+                <Card className="bg-white border-0 shadow-xl rounded-3xl overflow-hidden mb-8">
+                    <CardContent className="p-8 md:p-10">
+                        <form onSubmit={handleSubmit} className="space-y-10">
 
+                            {/* Section 1: Product Details */}
                             <div>
-                                <h2 className="text-xl font-bold text-green-800 mb-6">Product Details</h2>
+                                <h2 className="text-xl font-bold text-[#03230F] mb-6 flex items-center gap-2 border-b pb-3">
+                                    <Package className="w-5 h-5 text-[#EEC044]" /> Product Details
+                                </h2>
                                 <div className="flex flex-col md:flex-row gap-8">
                                     <div className="flex-shrink-0 mx-auto md:mx-0">
-                                        <div className="relative h-48 w-48 rounded-lg overflow-hidden bg-gray-100 border border-green-200">
+                                        <div className="relative h-48 w-48 rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-200">
                                             <img
                                                 src={vegetable.image || "/placeholder.svg"}
                                                 alt={vegetable.name}
@@ -432,48 +459,59 @@ export default function BargainPage() {
 
                                     <div className="flex-1 space-y-4">
                                         <div>
-                                            <h3 className="text-3xl font-bold text-green-800">{vegetable.name}</h3>
-                                            <p className="text-sm text-green-700 mt-2">{vegetable.description}</p>
+                                            <h3 className="text-3xl font-bold text-[#03230F]">{vegetable.name}</h3>
+                                            <p className="text-sm text-gray-500 mt-2 font-medium">{vegetable.description}</p>
                                         </div>
 
-                                        <div>
-                                            <p className="text-sm text-green-800">
-                                                <span className="font-semibold">Seller: </span>
-                                                <span>{vegetable.seller}</span>
-                                            </p>
+                                        <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg inline-flex border border-gray-100">
+                                            <span className="font-semibold text-[#03230F]">Seller:</span>
+                                            <span>{vegetable.seller}</span>
                                         </div>
 
-                                        <div className="bg-green-50/50 p-4 rounded-lg border border-green-100 shadow-sm">
-                                            <h3 className="text-sm font-bold text-green-900 mb-2 flex items-center gap-2">
-                                                <MapPin className="w-4 h-4 text-green-700" /> Farmer's Location
-                                            </h3>
-                                            <p className="text-sm text-green-800 mb-2">
-                                                {vegetable.pickupAddress || "Address not provided by farmer"}
-                                            </p>
-                                            {googleMapsUrl && (
-                                                <a
-                                                    href={googleMapsUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 text-xs font-medium text-green-700 hover:text-green-900 hover:underline transition-colors"
-                                                >
-                                                    <Map className="w-3 h-3" /> View on Google Maps <ExternalLink className="w-3 h-3" />
-                                                </a>
-                                            )}
+                                        {/* AVAILABLE QUANTITY & LOCATION */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="bg-[#03230F]/5 p-4 rounded-xl border border-[#03230F]/10">
+                                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                    <Package className="w-4 h-4 text-[#03230F]" /> Available Stock
+                                                </h3>
+                                                <p className="text-2xl font-black text-[#03230F]">
+                                                    {vegetable.quantity} <span className="text-sm font-semibold text-gray-500">kg</span>
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-[#03230F]/5 p-4 rounded-xl border border-[#03230F]/10">
+                                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                    <MapPin className="w-4 h-4 text-[#03230F]" /> Farmer's Location
+                                                </h3>
+                                                <p className="text-sm text-[#03230F] font-medium truncate mb-2" title={vegetable.pickupAddress || ""}>
+                                                    {vegetable.pickupAddress || "Address not provided"}
+                                                </p>
+                                                {googleMapsUrl && (
+                                                    <a
+                                                        href={googleMapsUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#EEC044] bg-[#03230F] px-2.5 py-1 rounded-md hover:bg-[#03230F]/90 transition-colors"
+                                                    >
+                                                        <Map className="w-3 h-3" /> View Map
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                                            <p className="text-xs text-green-700 font-medium mb-3">Store Prices</p>
-                                            <div className="grid grid-cols-2 gap-4">
+                                        {/* Store Prices */}
+                                        <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+                                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-4 border-b pb-2">Store Retail Prices</p>
+                                            <div className="grid grid-cols-2 gap-6 divide-x divide-gray-100">
                                                 <div>
-                                                    <p className="text-xs text-green-700">Per 100g</p>
-                                                    <p className="text-xl font-bold text-green-800">
+                                                    <p className="text-xs text-gray-500 font-medium mb-1">Per 100g</p>
+                                                    <p className="text-2xl font-black text-[#03230F]">
                                                         Rs. {vegetable.price100g.toLocaleString()}
                                                     </p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-green-700">Per 1kg</p>
-                                                    <p className="text-xl font-bold text-green-800">
+                                                <div className="pl-6">
+                                                    <p className="text-xs text-gray-500 font-medium mb-1">Per 1kg</p>
+                                                    <p className="text-2xl font-black text-[#03230F]">
                                                         Rs. {vegetable.price1kg.toLocaleString()}
                                                     </p>
                                                 </div>
@@ -483,16 +521,18 @@ export default function BargainPage() {
                                 </div>
                             </div>
 
-                            <div className="border-t border-green-200"></div>
-
+                            {/* Section 2: Your Offer */}
                             <div>
-                                <h2 className="text-xl font-bold text-green-800 mb-6">Your Offer</h2>
-                                <div className="space-y-5 bg-green-50 border border-green-200 p-6 rounded-lg">
+                                <h2 className="text-xl font-bold text-[#03230F] mb-6 flex items-center gap-2 border-b pb-3">
+                                    <Percent className="w-5 h-5 text-[#EEC044]" /> Your Custom Offer
+                                </h2>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label htmlFor="quantityKg" className="block text-sm font-semibold text-green-800 mb-2">
-                                                Quantity (Kilograms)
+                                <div className="space-y-6 bg-gray-50 border border-gray-200 p-6 md:p-8 rounded-2xl shadow-inner">
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label htmlFor="quantityKg" className="block text-sm font-bold text-gray-700">
+                                                Quantity Needed (Kilograms)
                                             </label>
                                             <input
                                                 id="quantityKg"
@@ -504,13 +544,13 @@ export default function BargainPage() {
                                                 onWheel={handleWheel}
                                                 disabled={isSubmitting}
                                                 placeholder="0"
-                                                className="w-full px-4 py-2 bg-white border border-green-300 text-green-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-50"
+                                                className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:border-transparent transition-all disabled:opacity-50"
                                             />
                                         </div>
 
-                                        <div>
-                                            <label htmlFor="quantityGrams" className="block text-sm font-semibold text-green-800 mb-2">
-                                                Quantity (Grams)
+                                        <div className="space-y-2">
+                                            <label htmlFor="quantityGrams" className="block text-sm font-bold text-gray-700">
+                                                Quantity Needed (Grams)
                                             </label>
                                             <input
                                                 id="quantityGrams"
@@ -523,21 +563,29 @@ export default function BargainPage() {
                                                 onWheel={handleWheel}
                                                 disabled={isSubmitting}
                                                 placeholder="0"
-                                                className="w-full px-4 py-2 bg-white border border-green-300 text-green-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-50"
+                                                className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:border-transparent transition-all disabled:opacity-50"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="p-4 bg-white rounded border border-green-100 flex justify-between items-center">
-                                        <span className="text-sm font-semibold text-green-800">Total Weight:</span>
-                                        <span className="text-lg font-bold text-green-800">
+                                    {/* Real-time Validation Error */}
+                                    {isQuantityExceeded && (
+                                        <div className="flex items-center gap-2 bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg border border-red-200">
+                                            <AlertCircle className="w-5 h-5 shrink-0" />
+                                            <p>Error: Requested quantity ({totalQuantityKg.toFixed(3)} kg) exceeds available stock ({vegetable.quantity} kg).</p>
+                                        </div>
+                                    )}
+
+                                    <div className="p-5 bg-white rounded-xl border border-gray-200 flex justify-between items-center shadow-sm">
+                                        <span className="text-sm font-bold text-gray-600 uppercase tracking-wider">Total Requested Weight:</span>
+                                        <span className={`text-xl font-black ${isQuantityExceeded ? 'text-red-600' : 'text-[#03230F]'}`}>
                                             {totalQuantityKg.toFixed(3)} kg
                                         </span>
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="suggestedTotal" className="block text-sm font-semibold text-green-800 mb-2">
-                                            I want to pay this Amount for the Product (Rs.) <span className="text-red-500">*</span>
+                                    <div className="space-y-2">
+                                        <label htmlFor="suggestedTotal" className="block text-sm font-bold text-gray-700">
+                                            Your Proposed Price (Rs.) <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             id="suggestedTotal"
@@ -549,29 +597,29 @@ export default function BargainPage() {
                                             onWheel={handleWheel}
                                             disabled={isSubmitting}
                                             placeholder="e.g. 1500"
-                                            className="w-full px-4 py-2 bg-white border border-green-300 text-green-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-50"
+                                            className="w-full px-4 py-4 bg-white border-2 border-gray-300 text-gray-900 font-bold text-lg rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:border-[#EEC044] transition-all disabled:opacity-50"
                                         />
                                     </div>
 
-                                    <div className="bg-white rounded p-4 border border-green-100 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-green-800">Store Price for this weight:</span>
-                                            <span className="text-sm font-semibold text-green-800">
+                                    <div className="bg-[#03230F] rounded-xl p-5 border border-[#03230F] space-y-3 shadow-lg relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+
+                                        <div className="flex justify-between items-center relative z-10">
+                                            <span className="text-sm text-gray-300 font-medium">Original Retail Price (for {totalQuantityKg.toFixed(3)} kg):</span>
+                                            <span className="text-sm font-bold text-white">
                                                 Rs. {formatCurrency(existingPriceForTotal)}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center border-t border-gray-100 pt-2">
-                                            <span className="text-sm text-green-800 font-medium">Your Discount Request:</span>
+                                        <div className="flex justify-between items-center border-t border-white/10 pt-3 relative z-10">
+                                            <span className="text-sm text-white font-bold tracking-wide uppercase">Your Custom Deal:</span>
                                             <div className="flex items-center gap-2">
-                                                <Percent className="h-4 w-4 text-green-700" />
-                                                <span
-                                                    className={`text-sm font-semibold ${
-                                                        discountPercentage < 0 ? "text-green-700" : "text-orange-600"
-                                                    }`}
+                                                <span className={`text-base font-black px-3 py-1 rounded-md ${
+                                                    discountPercentage < 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                                                }`}
                                                 >
                                                     {discountPercentage < 0
-                                                        ? `${Math.abs(discountPercentage).toFixed(1)}% OFF`
-                                                        : `${discountPercentage.toFixed(1)}% MORE`
+                                                        ? `${Math.abs(discountPercentage).toFixed(1)}% DISCOUNT`
+                                                        : `${discountPercentage.toFixed(1)}% HIGHER`
                                                     }
                                                 </span>
                                             </div>
@@ -580,121 +628,133 @@ export default function BargainPage() {
                                 </div>
                             </div>
 
+                            {/* Section 3: Delivery */}
                             <div>
-                                <h2 className="text-xl font-bold text-green-800 mb-6">Delivery Options</h2>
+                                <h2 className="text-xl font-bold text-[#03230F] mb-6 flex items-center gap-2 border-b pb-3">
+                                    <Truck className="w-5 h-5 text-[#EEC044]" /> Delivery Options
+                                </h2>
 
                                 {vegetable.deliveryAvailable ? (
-                                    <div className="p-6 bg-blue-50/50 rounded-lg border border-blue-100">
-                                        <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2">
-                                            <Truck className="w-4 h-4" /> Select Delivery Location
-                                        </h3>
-
-                                        <RadioGroup value={addressOption} onValueChange={(v: any) => setAddressOption(v)} className="space-y-3">
-                                            <div className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                                addressOption === "default" ? "bg-white border-blue-500 ring-1 ring-blue-500" : "bg-transparent border-transparent hover:bg-white"
+                                    <div className="p-6 md:p-8 bg-blue-50/40 rounded-2xl border border-blue-100 shadow-inner">
+                                        <RadioGroup value={addressOption} onValueChange={(v: any) => setAddressOption(v)} className="space-y-4">
+                                            <div className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                                addressOption === "default" ? "bg-white border-[#03230F] shadow-md" : "bg-transparent border-gray-200 hover:bg-white"
                                             }`}>
                                                 <RadioGroupItem value="default" id="opt-default" className="mt-1" />
                                                 <div className="flex-1">
-                                                    <Label htmlFor="opt-default" className="cursor-pointer font-medium text-gray-900">
-                                                        Use Registered Address
+                                                    <Label htmlFor="opt-default" className="cursor-pointer font-bold text-gray-900 text-base">
+                                                        Use My Registered Address
                                                     </Label>
-                                                    <p className="text-xs text-gray-500 mt-1">
+                                                    <p className="text-sm text-gray-500 mt-1 font-medium leading-relaxed">
                                                         {userDefaultAddress ? userDefaultAddress.address : "No address found on profile"}
                                                     </p>
                                                 </div>
                                             </div>
 
-                                            <div className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                                addressOption === "custom" ? "bg-white border-blue-500 ring-1 ring-blue-500" : "bg-transparent border-transparent hover:bg-white"
+                                            <div className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                                addressOption === "custom" ? "bg-white border-[#03230F] shadow-md" : "bg-transparent border-gray-200 hover:bg-white"
                                             }`}>
                                                 <RadioGroupItem value="custom" id="opt-custom" className="mt-1" />
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-center">
-                                                        <Label htmlFor="opt-custom" className="cursor-pointer font-medium text-gray-900">
-                                                            Select Another Address
+                                                        <Label htmlFor="opt-custom" className="cursor-pointer font-bold text-gray-900 text-base">
+                                                            Deliver to Another Location
                                                         </Label>
                                                         {addressOption === "custom" && (
-                                                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIsAddressModalOpen(true)}>
-                                                                {confirmedCustomLocation ? "Change" : "Select"}
+                                                            <Button type="button" size="sm" className="h-8 text-xs bg-[#03230F] text-[#EEC044] hover:bg-[#03230F]/90 rounded-lg font-bold" onClick={() => setIsAddressModalOpen(true)}>
+                                                                {confirmedCustomLocation ? "Change Location" : "Select on Map"}
                                                             </Button>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-1">
+                                                    <p className="text-sm text-gray-500 mt-1 font-medium leading-relaxed">
                                                         {confirmedCustomLocation ? confirmedCustomLocation.address : "Click select to pick a location"}
                                                     </p>
                                                 </div>
                                             </div>
                                         </RadioGroup>
 
-                                        <div className="mt-4 pt-4 border-t border-blue-100 flex justify-between items-center text-sm">
-                                            <span className="text-blue-800 flex items-center gap-1">
+                                        <div className="mt-6 pt-5 border-t border-blue-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                            <div className="flex items-center gap-2 bg-blue-100/50 px-3 py-1.5 rounded-lg border border-blue-200">
                                                 {isCalculatingDistance ? (
-                                                    <><Loader2 className="w-3 h-3 animate-spin"/> Calculating...</>
+                                                    <><Loader2 className="w-4 h-4 text-blue-600 animate-spin"/> <span className="text-sm font-bold text-blue-800">Calculating route...</span></>
                                                 ) : (
-                                                    <><Navigation className="w-3 h-3" /> Distance: {distance} km</>
+                                                    <><Navigation className="w-4 h-4 text-blue-600" /> <span className="text-sm font-bold text-blue-800">Distance: {distance} km</span></>
                                                 )}
-                                            </span>
-                                            <div className="text-right">
-                                                <div className="font-bold text-blue-900">
+                                            </div>
+                                            <div className="text-left sm:text-right bg-white p-3 rounded-xl border border-blue-100 shadow-sm w-full sm:w-auto">
+                                                <div className="font-black text-[#03230F] text-lg">
                                                     Delivery Fee: Rs. {formatCurrency(deliveryFee)}
                                                 </div>
-                                                <div className="text-[10px] text-blue-600 opacity-90 mt-0.5">
+                                                <div className="text-xs font-semibold text-gray-500 mt-1">
                                                     Base: Rs. {formatCurrency(vegetable.baseCharge || 0)} + Rs. {formatCurrency(vegetable.extraRatePerKm || 0)}/km
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-5 bg-orange-50 rounded-lg border border-orange-100 text-orange-800 text-sm flex items-start gap-3">
-                                        <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                                    <div className="p-6 bg-orange-50 rounded-2xl border border-orange-200 flex items-start gap-4 shadow-sm">
+                                        <div className="p-3 bg-orange-100 rounded-full shrink-0">
+                                            <Info className="w-6 h-6 text-orange-600" />
+                                        </div>
                                         <div>
-                                            <p className="font-semibold mb-1">Pickup Only</p>
-                                            <p className="opacity-90">Delivery is not available for this item. Please collect it from the farmer's location shown above.</p>
+                                            <p className="font-bold text-orange-900 text-lg mb-1">Pickup Only</p>
+                                            <p className="text-orange-800 font-medium leading-relaxed">Delivery is not available for this item. Please be prepared to collect it directly from the farmer's location.</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="mt-auto bg-gray-50 rounded-xl p-6 border border-gray-200">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Final Summary</h3>
-                                <div className="space-y-2 mb-4 text-sm text-gray-600">
-                                    <div className="flex justify-between">
+                            {/* Final Summary Card */}
+                            <div className="mt-10 bg-[#03230F] rounded-3xl p-8 border-4 border-[#EEC044]/20 shadow-2xl relative overflow-hidden">
+                                {/* Decorative elements */}
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-[#EEC044]/10 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none"></div>
+
+                                <h3 className="text-xl font-black text-white mb-6 relative z-10">Final Summary</h3>
+
+                                <div className="space-y-4 mb-6 relative z-10">
+                                    <div className="flex justify-between items-center text-gray-300 font-medium">
                                         <span>Your Product Offer</span>
-                                        <span>Rs. {formatCurrency(suggestedTotalNum)}</span>
+                                        <span className="text-lg text-white">Rs. {formatCurrency(suggestedTotalNum)}</span>
                                     </div>
                                     {vegetable.deliveryAvailable && (
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center text-gray-300 font-medium">
                                             <span>Calculated Delivery Fee</span>
-                                            <span>Rs. {formatCurrency(deliveryFee)}</span>
+                                            <span className="text-lg text-white">Rs. {formatCurrency(deliveryFee)}</span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="pt-4 border-t border-gray-300 flex justify-between items-center">
-                                    <span className="font-bold text-gray-900 text-lg">Total Cost</span>
-                                    <span className="text-2xl font-bold text-green-800">
+
+                                <div className="pt-5 border-t border-white/20 flex justify-between items-end relative z-10">
+                                    <div>
+                                        <span className="font-black text-gray-300 text-sm uppercase tracking-wider block mb-1">Total Cost Estimate</span>
+                                    </div>
+                                    <span className="text-4xl font-black text-[#EEC044]">
                                         Rs. {formatCurrency(finalTotalWithDelivery)}
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-4">
+                            {/* Action Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-4 pt-6">
                                 <Button
                                     type="button"
                                     onClick={handleCancel}
                                     disabled={isSubmitting}
                                     variant="outline"
-                                    className="flex-1 border-green-300 text-green-800 hover:bg-green-50"
+                                    className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 font-bold py-6 text-lg rounded-xl shadow-sm"
                                 >
-                                    <ArrowLeft className="h-5 w-5 mr-2" />
-                                    Cancel
+                                    <ArrowLeft className="h-5 w-5 mr-2" /> Cancel
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={isSubmitting || isCalculatingDistance}
-                                    className="flex-1 bg-orange-700 hover:bg-orange-800 text-white transition-all active:scale-95"
+                                    disabled={isSubmitting || isCalculatingDistance || isQuantityExceeded || totalQuantityKg <= 0 || suggestedTotalNum <= 0}
+                                    className="flex-[2] bg-[#EEC044] hover:bg-[#d4a833] text-[#03230F] font-black py-6 text-lg rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 border-0"
                                 >
-                                    <Percent className="h-5 w-5 mr-2" />
-                                    {isSubmitting ? "Sending..." : "Submit Offer"}
+                                    {isSubmitting ? (
+                                        <><Loader2 className="w-6 h-6 animate-spin mr-2" /> Sending Offer...</>
+                                    ) : (
+                                        <><HandCoins className="h-6 w-6 mr-2" /> Submit Bargain Request</>
+                                    )}
                                 </Button>
                             </div>
                         </form>
@@ -702,15 +762,16 @@ export default function BargainPage() {
                 </Card>
             </div>
 
+            {/* Address Modal */}
             {isAddressModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b flex justify-between items-center flex-shrink-0">
-                            <h3 className="font-bold text-lg">Select Delivery Location</h3>
-                            <button onClick={() => setIsAddressModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full"><X className="w-5 h-5"/></button>
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
+                            <h3 className="font-bold text-xl text-[#03230F]">Select Delivery Location</h3>
+                            <button onClick={() => setIsAddressModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X className="w-5 h-5 text-gray-500"/></button>
                         </div>
 
-                        <div className="p-4 overflow-y-auto flex-1">
+                        <div className="p-6 overflow-y-auto flex-1">
                             <LocationPicker
                                 value={tempCustomLocation}
                                 onChange={setTempCustomLocation}
@@ -721,9 +782,9 @@ export default function BargainPage() {
                             />
                         </div>
 
-                        <div className="p-4 bg-gray-50 border-t flex justify-end gap-3 flex-shrink-0">
-                            <Button variant="outline" onClick={() => setIsAddressModalOpen(false)}>Cancel</Button>
-                            <Button onClick={saveCustomAddress}>Confirm Location</Button>
+                        <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+                            <Button variant="outline" className="font-bold rounded-xl" onClick={() => setIsAddressModalOpen(false)}>Cancel</Button>
+                            <Button onClick={saveCustomAddress} className="bg-[#03230F] text-[#EEC044] hover:bg-[#03230F]/90 font-bold rounded-xl shadow-md">Confirm Location</Button>
                         </div>
                     </div>
                 </div>
@@ -731,4 +792,3 @@ export default function BargainPage() {
         </div>
     )
 }
-

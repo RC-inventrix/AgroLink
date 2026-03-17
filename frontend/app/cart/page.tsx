@@ -5,10 +5,15 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X, ShoppingBag, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
-import Header from "@/components/header"
 import CartItem from "@/components/cart-item"
+import CartSummary from "@/components/cart-summary"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import { DashboardNav } from "@/components/dashboard-nav"
+import Footer2 from "@/components/footer/Footer"
+import BuyerHeader from "@/components/headers/BuyerHeader"
+import CartItem from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
+import CartSummary from "@/components/cart-summary" // Assumed path
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -22,7 +27,7 @@ interface CartItemData {
     sellerName: string
     sellerId: number
     selected: boolean
-    deliveryFee: number
+    deliveryFee: number | null
     deliveryAddress: string
     distance: number
 }
@@ -38,7 +43,6 @@ export default function Cart() {
         type: 'success' | 'error' | 'info' | 'loading';
     } | null>(null);
 
-    // Auto-dismiss notifications (except loading state)
     useEffect(() => {
         if (notification && notification.type !== 'loading') {
             const timer = setTimeout(() => setNotification(null), 5000);
@@ -62,7 +66,7 @@ export default function Cart() {
                         quantity: item.quantity,
                         sellerName: item.sellerName,
                         selected: false,
-                        deliveryFee: item.deliveryFee || 0,
+                        deliveryFee: item.deliveryFee, // Preserves null if it's pickup
                         deliveryAddress: item.deliveryAddress || "",
                         distance: item.distance || 0,
                     }))
@@ -87,33 +91,31 @@ export default function Cart() {
     const handleDeleteItem = async (id: string) => {
         setDeletingId(id);
         try {
-            const res = await fetch(`${API_URL}/cart/delete/${id}`, {
-                method: 'DELETE',
-            });
-
+            const res = await fetch(`${API_URL}/cart/delete/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 setItems(prevItems => prevItems.filter(item => item.id.toString() !== id));
-                setNotification({ message: "Item removed from cart successfully.", type: 'success' });
+                setNotification({ message: "Item removed from cart.", type: 'success' });
             } else {
-                setNotification({ message: "Failed to remove item. Please try again.", type: 'error' });
+                setNotification({ message: "Failed to remove item.", type: 'error' });
             }
         } catch (error) {
-            setNotification({ message: "Network error. Could not remove item.", type: 'error' });
+            setNotification({ message: "Network error.", type: 'error' });
         } finally {
             setDeletingId(null);
         }
     }
 
     const selectedItems = items.filter((item) => item.selected)
+
+    // Delivery fees are only calculated for items where deliveryFee is not null
     const subtotal = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
-    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + item.deliveryFee, 0)
+    const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + (item.deliveryFee || 0), 0)
     const totalPrice = subtotal + totalDeliveryFees
 
     const handleSelectAll = (checked: boolean) => {
         setItems(items.map((item) => ({ ...item, selected: checked })))
     }
 
-    // --- UPDATED: Directly processes the order request, bypassing the checkout page ---
     const handleCheckout = async () => {
         if (selectedItems.length === 0) {
             setNotification({ message: "Select items in your cart to proceed.", type: 'info' });
@@ -125,8 +127,10 @@ export default function Cart() {
         const userId = sessionStorage.getItem("id") || "1";
         const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
+        // Grab ONLY the IDs of the items the user checked
+        const selectedItemIds = selectedItems.map(item => item.id);
+
         try {
-            // 1. Fetch user data securely to attach the address
             const userRes = await fetch(`${API_URL}/auth/user/${userId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
@@ -141,7 +145,7 @@ export default function Cart() {
                 contactPhone = userData.phone || contactPhone;
             }
 
-            // 2. Send Cash On Delivery Order Request
+            // PASS the selected cartItemIds in the body so the backend ONLY processes those!
             const response = await fetch(`${API_URL}/api/payment/cod?userId=${userId}`, {
                 method: "POST",
                 headers: {
@@ -150,37 +154,33 @@ export default function Cart() {
                 },
                 body: JSON.stringify({
                     deliveryAddress: deliveryAddress,
-                    contactPhone: contactPhone
+                    contactPhone: contactPhone,
+                    cartItemIds: selectedItemIds
                 })
             });
 
             if (response.ok) {
                 setNotification({
-                    message: "Order request has been sent to the farmer. Check your order management page to track progress.",
+                    message: "Order request sent! Check your order management page.",
                     type: 'success'
                 });
 
-                // Clear successfully ordered items from the cart state immediately
+                // Clear successfully ordered items from the UI cart state immediately
                 setItems(items.filter(item => !item.selected));
             } else {
-                setNotification({ message: "Failed to send order request. Please try again.", type: 'error' });
+                setNotification({ message: "Failed to send order request.", type: 'error' });
             }
         } catch (error) {
             setNotification({ message: "Network error. Could not send order request.", type: 'error' });
         }
     }
 
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-            <div className="w-10 h-10 border-4 border-[#03230F] border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading your fresh picks...</p>
-        </div>
-    )
-
     return (
-        <div className="min-h-screen bg-gray-50 relative">
+        
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <BuyerHeader/>
 
+            {/* Notification Bar */}
             {notification && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
                     <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
@@ -203,29 +203,66 @@ export default function Cart() {
                 </div>
             )}
 
-            <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-                <h1 className="mb-2 text-3xl font-bold text-gray-900">Your Cart</h1>
-                <p className="text-gray-500 mb-8">Manage your selected agricultural products</p>
+            <div className="flex flex-1">
+                
+                <DashboardNav unreadCount={0} />
 
-                <div className="grid gap-8 lg:grid-cols-3">
-                    <div className="lg:col-span-2">
-                        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                            <div className="bg-gray-50/50 px-6 py-4 flex items-center gap-3 border-b border-gray-200">
-                                <Checkbox
-                                    id="select-all"
-                                    checked={items.length > 0 && selectedItems.length === items.length}
-                                    onCheckedChange={handleSelectAll}
-                                />
-                                <label htmlFor="select-all" className="cursor-pointer font-bold text-gray-700 text-sm uppercase tracking-wider">
-                                    Select All Items ({items.length})
-                                </label>
+                <main className="flex-1 w-full overflow-hidden flex flex-col p-8">
+                    <div className="max-w-6xl mx-auto w-full">
+                        
+                        
+                        <div className="mb-8">
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Your Cart</h1>
+                            <p className="text-[#A3ACBA] font-medium">Manage your selected agricultural products</p>
+                        </div>
+
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-32">
+                                <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
+                                <p className="text-[#03230F] font-bold">Loading your fresh picks...</p>
                             </div>
+                        ) : (
+                            <div className="grid gap-8 lg:grid-cols-3">
+                                <div className="lg:col-span-2">
+                                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="bg-white px-6 py-5 flex items-center gap-3 border-b border-gray-100">
+                                            <Checkbox
+                                                id="select-all"
+                                                checked={items.length > 0 && selectedItems.length === items.length}
+                                                onCheckedChange={handleSelectAll}
+                                                className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F]"
+                                            />
+                                            <label htmlFor="select-all" className="cursor-pointer font-black text-[#03230F] text-sm uppercase tracking-widest">
+                                                Select All Items ({items.length})
+                                            </label>
+                                        </div>
 
-                            <div className="p-6 space-y-4">
-                                {items.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500 font-medium">Your cart is feeling light. Add some fresh produce!</p>
+                                        <div className="p-6 space-y-4 bg-gray-50/30">
+                                            {items.length === 0 ? (
+                                                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                    <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                                    <p className="text-[#03230F] font-bold text-lg">Your cart is feeling light</p>
+                                                    <p className="text-gray-500 text-sm mt-1">Add some fresh produce from the marketplace!</p>
+                                                </div>
+                                            ) : (
+                                                items.map((item) => (
+                                                    <CartItem
+                                                        key={item.id}
+                                                        item={{
+                                                            id: item.id.toString(),
+                                                            name: item.productName,
+                                                            image: item.imageUrl,
+                                                            seller: item.sellerName,
+                                                            pricePerKg: item.pricePerKg,
+                                                            quantity: item.quantity,
+                                                            selected: item.selected
+                                                        }}
+                                                        onToggle={toggleItem}
+                                                        onDelete={handleDeleteItem}
+                                                    />
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
                                     items.map((item) => (
@@ -238,7 +275,9 @@ export default function Cart() {
                                                 seller: item.sellerName,
                                                 pricePerKg: item.pricePerKg,
                                                 quantity: item.quantity,
-                                                selected: item.selected
+                                                selected: item.selected,
+                                                deliveryFee: item.deliveryFee, // Pass to component
+                                                deliveryAddress: item.deliveryAddress
                                             }}
                                             onToggle={toggleItem}
                                             onDelete={handleDeleteItem}
@@ -246,10 +285,9 @@ export default function Cart() {
                                     ))
                                 )}
                             </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* --- REPLACED: Inlined Cart Summary to safely modify labels without needing the missing component --- */}
                     <div className="lg:col-span-1">
                         <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
                             <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
@@ -270,7 +308,6 @@ export default function Cart() {
                                 </div>
                             </div>
 
-                            {/* NEW: Cash on Delivery Label Requirement */}
                             <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
                                 <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
                                     <AlertCircle className="w-4 h-4" />
@@ -278,7 +315,6 @@ export default function Cart() {
                                 </p>
                             </div>
 
-                            {/* NEW: Updated Button Label & Size Requirement */}
                             <Button
                                 onClick={handleCheckout}
                                 disabled={selectedItems.length === 0 || notification?.type === 'loading'}

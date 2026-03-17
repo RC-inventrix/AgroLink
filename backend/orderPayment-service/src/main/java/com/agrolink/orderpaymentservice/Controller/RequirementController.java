@@ -26,6 +26,7 @@ public class RequirementController {
         return ResponseEntity.ok(requirementRepository.findByBuyerIdOrderByCreatedAtDesc(buyerId));
     }
 
+    // Inside RequirementController.java, update the PUT method:
     @PutMapping("/{id}")
     public ResponseEntity<Requirement> updateRequirement(@PathVariable Long id, @RequestBody Requirement updatedReq) {
         return requirementRepository.findById(id)
@@ -33,9 +34,19 @@ public class RequirementController {
                     existingReq.setCropName(updatedReq.getCropName());
                     existingReq.setQuantity(updatedReq.getQuantity());
                     existingReq.setExpectedUnitPrice(updatedReq.getExpectedUnitPrice());
-                    existingReq.setDeliveryAddress(updatedReq.getDeliveryAddress());
                     existingReq.setExpectedDate(updatedReq.getExpectedDate());
                     existingReq.setDescription(updatedReq.getDescription());
+                    existingReq.setContactNumber(updatedReq.getContactNumber()); // ADD THIS LINE
+
+                    // Location fields
+                    existingReq.setDeliveryMethod(updatedReq.getDeliveryMethod());
+                    existingReq.setDeliveryAddress(updatedReq.getDeliveryAddress());
+                    existingReq.setProvince(updatedReq.getProvince());
+                    existingReq.setDistrict(updatedReq.getDistrict());
+                    existingReq.setCity(updatedReq.getCity());
+                    existingReq.setLatitude(updatedReq.getLatitude());
+                    existingReq.setLongitude(updatedReq.getLongitude());
+
                     return ResponseEntity.ok(requirementRepository.save(existingReq));
                 })
                 .orElse(ResponseEntity.notFound().build());

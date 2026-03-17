@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargainfarmerside-card"
-import { Loader2, Leaf } from "lucide-react"
+import { Loader2, Handshake } from "lucide-react"
+import SellerHeader from "@/components/headers/SellerHeader"
+import SellerSidebar from "../dashboard/SellerSideBar"
+import Footer2 from "@/components/footer/Footer"
+import "../dashboard/SellerDashboard.css"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -69,7 +73,6 @@ export default function BargainPage() {
                         return {
                             id: item.id.toString(),
                             name: item.vegetableName,
-                            // Update: Use fullname from nameMap
                             buyerName: nameMap[item.buyerId] || item.buyerName || "Anonymous Buyer",
                             buyerId: item.buyerId,
                             image: item.vegetableImage || "/placeholder.svg",
@@ -143,118 +146,129 @@ export default function BargainPage() {
     const acceptedItems = requests.filter(item => item.status === "ACCEPTED")
     const rejectedItems = requests.filter(item => item.status === "REJECTED")
 
-    if (isLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-50">
-                <div className="text-green-800 flex items-center gap-3 font-semibold text-lg">
-                    <Loader2 className="h-6 w-6 animate-spin text-green-700" />
-                    Loading farmer dashboard...
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <main className="min-h-screen bg-gray-50 pb-12 font-sans">
-            <div className="px-6 py-10 bg-linear-to-r from-green-900 to-green-800 text-white shadow-md">
-                <div className="max-w-6xl mx-auto flex items-center gap-3">
-                    <Leaf className="w-10 h-10 text-green-300" />
-                    <div>
-                        <h1 className="text-4xl font-bold tracking-tight mb-1">Incoming Requests</h1>
-                        <p className="text-green-100/80 font-medium">Review buyer offers, accept deals, and manage deliveries</p>
-                    </div>
-                </div>
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+            <SellerHeader />
+            
+            <div className="flex flex-1">
+                <SellerSidebar unreadCount={0} activePage="bargains" />
+
+                <main className="flex-1 p-8">
+                    {isLoading ? (
+                        <div className="flex h-full items-center justify-center">
+                            <div className="text-[#004d2b] flex flex-col items-center gap-3 font-semibold text-lg">
+                                <Loader2 className="h-10 w-10 animate-spin text-[#EEC044]" />
+                                Loading bargaining requests...
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="max-w-6xl mx-auto">
+                            {/* Header Section */}
+                            <div className="mb-8 bg-[#03230F] text-white p-8 rounded-3xl shadow-lg flex items-center gap-4">
+                                <div className="bg-[#EEC044] p-3 rounded-2xl">
+                                    <Handshake className="w-8 h-8 text-[#03230F]" />
+                                </div>
+                                <div>
+                                    <h1 className="text-[32px] font-black mb-1 tracking-tight">Buyer Bargains</h1>
+                                    <p className="text-gray-300 font-medium">Review and manage price negotiations from buyers</p>
+                                </div>
+                            </div>
+
+                            {/* Tabs Section */}
+                            <Tabs defaultValue="all" className="w-full">
+                                <div className="w-full bg-white border border-gray-200 rounded-xl mb-6 shadow-sm">
+                                    <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar px-6">
+                                        <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#004d2b] data-[state=active]:bg-transparent data-[state=active]:text-[#004d2b] text-gray-500 font-bold hover:text-[#004d2b] transition-colors whitespace-nowrap">
+                                            All Requests ({requests.length})
+                                        </TabsTrigger>
+                                        <TabsTrigger value="pending" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#EEC044] data-[state=active]:bg-transparent data-[state=active]:text-[#b38f2b] text-gray-500 font-bold hover:text-[#EEC044] transition-colors whitespace-nowrap">
+                                            Pending ({pendingItems.length})
+                                        </TabsTrigger>
+                                        <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-bold hover:text-green-600 transition-colors whitespace-nowrap">
+                                            Accepted ({acceptedItems.length})
+                                        </TabsTrigger>
+                                        <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-bold hover:text-red-600 transition-colors whitespace-nowrap">
+                                            Rejected ({rejectedItems.length})
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </div>
+
+                                {/* Content Sections */}
+                                <div>
+                                    <TabsContent value="all" className="space-y-6 mt-0">
+                                        {requests.length === 0 ? (
+                                            <div className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+                                                <p className="font-semibold text-lg text-[#004d2b]">No bargaining requests found.</p>
+                                                <p className="text-sm mt-2">When buyers negotiate prices, they will appear here.</p>
+                                            </div>
+                                        ) : (
+                                            requests.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status={item.status.toLowerCase() as any}
+                                                    onAccept={() => item.status === 'PENDING' && handleAcceptDeal(item.id)}
+                                                    onReject={() => item.status === 'PENDING' && handleRejectRequest(item.id)}
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="pending" className="space-y-6 mt-0">
+                                        {pendingItems.length === 0 ? (
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No pending bargaining requests.</p>
+                                        ) : (
+                                            pendingItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="pending"
+                                                    onAccept={() => handleAcceptDeal(item.id)}
+                                                    onReject={() => handleRejectRequest(item.id)}
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="accepted" className="space-y-6 mt-0">
+                                        {acceptedItems.length === 0 ? (
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No accepted deals yet.</p>
+                                        ) : (
+                                            acceptedItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="accepted"
+                                                    onRemove={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="rejected" className="space-y-6 mt-0">
+                                        {rejectedItems.length === 0 ? (
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No rejected bargaining requests.</p>
+                                        ) : (
+                                            rejectedItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="rejected"
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+                                </div>
+                            </Tabs>
+                        </div>
+                    )}
+                </main>
             </div>
-
-            <Tabs defaultValue="all" className="w-full">
-                <div className="w-full bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                    <div className="max-w-6xl mx-auto px-6">
-                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar">
-                            <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap">
-                                All Requests ({requests.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="pending" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap">
-                                Pending ({pendingItems.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap">
-                                Accepted ({acceptedItems.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap">
-                                Rejected ({rejectedItems.length})
-                            </TabsTrigger>
-                        </TabsList>
-                    </div>
-                </div>
-
-                <div className="p-6">
-                    <div className="max-w-6xl mx-auto">
-                        <TabsContent value="all" className="space-y-6 mt-4">
-                            {requests.length === 0 ? (
-                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No bargaining requests found.</p>
-                            ) : (
-                                requests.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status={item.status.toLowerCase() as any}
-                                        onAccept={() => item.status === 'PENDING' && handleAcceptDeal(item.id)}
-                                        onReject={() => item.status === 'PENDING' && handleRejectRequest(item.id)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="pending" className="space-y-6 mt-4">
-                            {pendingItems.length === 0 ? (
-                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No pending bargaining requests.</p>
-                            ) : (
-                                pendingItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="pending"
-                                        onAccept={() => handleAcceptDeal(item.id)}
-                                        onReject={() => handleRejectRequest(item.id)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="accepted" className="space-y-6 mt-4">
-                            {acceptedItems.length === 0 ? (
-                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No accepted deals yet.</p>
-                            ) : (
-                                acceptedItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="accepted"
-                                        onRemove={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="rejected" className="space-y-6 mt-4">
-                            {rejectedItems.length === 0 ? (
-                                <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No rejected bargaining requests.</p>
-                            ) : (
-                                rejectedItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-
-                                        item={item}
-                                        status="rejected"
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            )}
-                        </TabsContent>
-                    </div>
-                </div>
-            </Tabs>
-        </main>
+            
+            <Footer2 />
+        </div>
     )
 }

@@ -1,17 +1,22 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HorizontalBargainCard } from "@/components/horizontal-bargain-card"
-import { Loader2, CheckCircle2, XCircle, Leaf } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, Handshake } from "lucide-react"
+import { DashboardNav } from "@/components/dashboard-nav"
+import BuyerHeader from "@/components/headers/BuyerHeader"
+import Footer2 from "@/components/footer/Footer"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Updated Interface to include Delivery, Location, and Coordinates Data
 interface BargainItem {
     id: string
     name: string
     seller: string
-    sellerId: number
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -33,44 +38,76 @@ export default function BuyerBargainPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [addedToCartIds, setAddedToCartIds] = useState<string[]>([])
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
+    const [navUnread, setNavUnread] = useState(0) 
 
     const router = useRouter()
 
     useEffect(() => {
-    const currentUserId = sessionStorage.getItem("id")
-    const storedAddedIds = JSON.parse(localStorage.getItem("addedToCartBargains") || "[]")
-    setAddedToCartIds(storedAddedIds)
+        const currentUserId = sessionStorage.getItem("id")
 
-    if (!currentUserId) {
-        setIsLoading(false)
-        return
-    }
+        if (!currentUserId) {
+            console.error("No user ID found.")
+            setIsLoading(false)
+            return
+        }
 
-    const fetchBargains = async () => {
-        try {
-            // 1. Fetch Bargain Requests
-            const response = await fetch(`http://localhost:8080/api/bargains/buyer/${currentUserId}`)
-            if (!response.ok) throw new Error("Failed to fetch bargains")
-            const data = await response.json()
+        const fetchBargainsAndCartState = async () => {
+            try {
+                // Fetch both the bargain history and the current user's cart in parallel
+                const [bargainsRes, cartRes] = await Promise.all([
+                    fetch(`${API_URL}/api/bargains/buyer/${currentUserId}`),
+                    fetch(`${API_URL}/cart/${currentUserId}`)
+                ]);
 
-            // 2. Extract unique Seller IDs
-            const sellerIds = Array.from(new Set(data.map((item: any) => item.sellerId))).filter(Boolean);
-
-            let nameMap: Record<number, string> = {};
-
-            // 3. Fetch Full Names from AuthController (Batch Request)
-            if (sellerIds.length > 0) {
-                const namesResponse = await fetch(`http://localhost:8080/auth/fullnames?ids=${sellerIds.join(',')}`);
-                if (namesResponse.ok) {
-                    nameMap = await namesResponse.json();
+                // 1. Map existing Cart Items to find which Bargains have already been converted to Cart Items
+                if (cartRes.ok) {
+                    const cartData = await cartRes.json();
+                    const cartBargainIds = cartData
+                        .filter((cartItem: any) => cartItem.bargainId != null)
+                        .map((cartItem: any) => cartItem.bargainId.toString());
+                    setAddedToCartIds(cartBargainIds);
                 }
+
+                // 2. Map Bargain History
+                if (bargainsRes.ok) {
+                    const data = await bargainsRes.json()
+
+                    const mappedData: BargainItem[] = data.map((item: any) => ({
+                        id: item.id.toString(),
+                        name: item.vegetableName,
+                        seller: item.sellerId,
+                        image: item.vegetableImage || "/placeholder.svg",
+                        pricePerHundredG: (item.originalPricePerKg || 0) / 10,
+                        pricePerKg: item.originalPricePerKg || 0,
+                        requestedQuantityKg: item.quantity,
+                        actualPrice: (item.originalPricePerKg || 0) * item.quantity,
+                        requestedPrice: item.suggestedPrice,
+                        discount: item.originalPricePerKg
+                            ? ((item.originalPricePerKg * item.quantity - item.suggestedPrice) / (item.originalPricePerKg * item.quantity)) * 100
+                            : 0,
+                        status: item.status.toLowerCase() === 'pending' ? 'in-progress' : item.status.toLowerCase(),
+                        vegetableId: item.vegetableId,
+
+                        // Logistics & Coordinates Mapped Here
+                        deliveryRequired: item.deliveryRequired || false,
+                        buyerAddress: item.buyerAddress || "Pickup at Farm",
+                        deliveryFee: item.deliveryFee || 0,
+                        buyerLatitude: item.buyerLatitude || null,
+                        buyerLongitude: item.buyerLongitude || null
+                    }))
+
+                    setItems(mappedData)
+                }
+            } catch (error) {
+                console.error("Error fetching bargains:", error)
+            } finally {
+                setIsLoading(false)
             }
 
             // 4. Map Backend Entity to UI Interface
             const mappedData: BargainItem[] = data.map((item: any) => ({
                 id: item.id.toString(),
                 name: item.vegetableName,
-                // Pass full name for display and raw ID for linking
                 seller: nameMap[item.sellerId] || `Farmer #${item.sellerId}`,
                 sellerId: item.sellerId,
                 image: item.vegetableImage || "/placeholder.svg",
@@ -97,10 +134,9 @@ export default function BuyerBargainPage() {
         } finally {
             setIsLoading(false)
         }
-    }
 
-    fetchBargains()
-}, [router])
+        fetchBargainsAndCartState()
+    }, [router])
 
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type })
@@ -119,7 +155,7 @@ export default function BuyerBargainPage() {
 
     const handleRemoveFromUI = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/bargains/${id}`, {
+            const res = await fetch(`${API_URL}/api/bargains/${id}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -146,36 +182,34 @@ export default function BuyerBargainPage() {
             return
         }
 
+        // Calculate the per-kg price that was successfully negotiated
         const bargainedPricePerKg = item.requestedPrice / item.requestedQuantityKg
 
-        // Safely parse the comma-separated address to extract City and Street
+        // Safely parse the comma-separated address to extract City and Street for the cart
         const addressParts = item.buyerAddress ? item.buyerAddress.split(',').map(s => s.trim()) : [];
         const streetAddress = addressParts.length > 0 ? addressParts[0] : "N/A";
         const city = addressParts.length > 1 ? addressParts[1] : "N/A";
 
         const cartPayload = {
-            // User Data
             userId: parseInt(currentUserId),
             buyerName: sessionStorage.getItem("name") || "Buyer",
-
-            // Product Data
             productId: parseInt(item.vegetableId),
             productName: item.name,
             pricePerKg: bargainedPricePerKg,
             quantity: item.requestedQuantityKg,
             imageUrl: item.image,
-            sellerId: item.sellerId,
-            sellerName: item.seller,
+            sellerId: parseInt(item.seller),
+            sellerName: "Farmer " + item.seller,
 
-            // Bargain Specific Data (NEW)
+            // Bargain Specific Data
             bargainId: parseInt(item.id),
             agreedPrice: item.requestedPrice,
-            productPrice: item.requestedPrice, // For backward compatibility with existing calculations
+            productPrice: item.requestedPrice,
             totalPrice: item.requestedPrice + item.deliveryFee,
 
-            // Delivery Specific Data (NEW & UPDATED)
+            // Delivery Specific Data mapped to CartItem entity
             deliveryFee: item.deliveryFee,
-            buyerAddress: item.buyerAddress, // Raw full string
+            buyerAddress: item.buyerAddress,
             buyerStreetAddress: streetAddress,
             buyerCity: city,
             buyerLatitude: item.buyerLatitude,
@@ -183,7 +217,7 @@ export default function BuyerBargainPage() {
         }
 
         try {
-            const res = await fetch("http://localhost:8080/cart/add", {
+            const res = await fetch(`${API_URL}/cart/add`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -193,9 +227,8 @@ export default function BuyerBargainPage() {
             })
 
             if (res.ok) {
-                const newAddedIds = [...addedToCartIds, item.id]
-                setAddedToCartIds(newAddedIds)
-                localStorage.setItem("addedToCartBargains", JSON.stringify(newAddedIds))
+                // Update local state to immediately move it to the "Cart" tab
+                setAddedToCartIds(prev => [...prev, item.id])
                 showNotification(`Item successfully added to cart`, "success")
             } else {
                 showNotification("Failed to add item to cart", "error")
@@ -210,135 +243,182 @@ export default function BuyerBargainPage() {
         router.push("/VegetableList");
     }
 
-    if (isLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-50">
-                <div className="text-green-800 flex items-center gap-3 font-semibold text-lg">
-                    <Loader2 className="h-6 w-6 animate-spin text-green-700" />
-                    Harvesting your requests...
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <main className="min-h-screen bg-gray-50 pb-12 font-sans">
-            <div className="px-6 py-10 bg-gradient-to-r from-green-900 to-green-800 text-white shadow-md">
-                <div className="max-w-6xl mx-auto flex items-center gap-3">
-                    <Leaf className="w-10 h-10 text-green-300" />
-                    <div>
-                        <h1 className="text-4xl font-bold tracking-tight mb-1">My Bargain Requests</h1>
-                        <p className="text-green-100/80 font-medium">Manage your farm-fresh negotiations and deals</p>
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
+            <BuyerHeader />
 
+            {/* Notification Toast */}
             {notification && (
-                <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-6 duration-300 ${
+                <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-6 duration-300 ${
                     notification.type === 'success'
-                        ? 'bg-green-800 text-white border border-green-700'
-                        : 'bg-red-700 text-white border border-red-600'
+                        ? 'bg-white text-green-800 border border-green-500'
+                        : 'bg-white text-red-800 border border-red-500'
                 }`}>
-                    {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5"/> : <XCircle className="w-5 h-5"/>}
-                    <span className="font-medium tracking-wide">{notification.message}</span>
+                    {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-green-500"/> : <XCircle className="w-5 h-5 text-red-500"/>}
+                    <span className="font-bold text-sm tracking-wide">{notification.message}</span>
                 </div>
             )}
 
-            <Tabs defaultValue="all" className="w-full">
-                <div className="w-full bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                    <div className="max-w-6xl mx-auto px-6">
-                        <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar">
-                            <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-700 data-[state=active]:bg-transparent data-[state=active]:text-green-800 text-gray-500 font-semibold hover:text-green-700 transition-colors whitespace-nowrap">
-                                All Requests
-                            </TabsTrigger>
-                            <TabsTrigger value="in-progress" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-yellow-500 data-[state=active]:bg-transparent data-[state=active]:text-yellow-700 text-gray-500 font-semibold hover:text-yellow-600 transition-colors whitespace-nowrap">
-                                Pending ({pendingItems.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-semibold hover:text-green-600 transition-colors whitespace-nowrap">
-                                Accepted ({acceptedItems.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-semibold hover:text-red-600 transition-colors whitespace-nowrap">
-                                Rejected ({rejectedItems.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="added-to-cart" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-700 text-gray-500 font-semibold hover:text-blue-600 transition-colors whitespace-nowrap">
-                                Cart ({addedToCartItems.length})
-                            </TabsTrigger>
-                        </TabsList>
+            <div className="flex flex-1">
+                {/* Sidebar */}
+                <DashboardNav unreadCount={navUnread} />
+
+                <main className="flex-1 w-full overflow-hidden flex flex-col p-6 lg:p-8">
+                    <div className="max-w-6xl mx-auto w-full">
+                        
+                        {/* Header Box */}
+                        <div className="bg-[#03230F] rounded-[2rem] p-8 mb-8 text-white flex items-center gap-6 shadow-lg">
+                            <div className="bg-[#EEC044] p-4 rounded-2xl flex-shrink-0">
+                                <Handshake className="w-10 h-10 text-[#03230F]" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black tracking-tight mb-1 text-white">Buyer Bargains</h1>
+                                <p className="text-gray-300 font-medium">Review and manage price negotiations from buyers</p>
+                            </div>
+                        </div>
+
+                        {isLoading ? (
+                            <div className="flex flex-col min-h-[40vh] items-center justify-center">
+                                <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
+                                <p className="text-[#03230F] font-bold text-lg">Harvesting your requests...</p>
+                            </div>
+                        ) : (
+                            <Tabs defaultValue="all" className="w-full">
+                                
+                                {/* --- UPDATED TABS (Matching your images with full borders) --- */}
+                                <TabsList className="flex w-full h-14 p-0 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+                                    <TabsTrigger 
+                                        value="all" 
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#03230F] data-[state=active]:text-[#03230F] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 data-[state=active]:hover:bg-white"
+                                    >
+                                        All Requests ({items.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger 
+                                        value="in-progress" 
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#EEC044] data-[state=active]:text-[#EEC044] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 data-[state=active]:hover:bg-white"
+                                    >
+                                        Pending ({pendingItems.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger 
+                                        value="accepted" 
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 data-[state=active]:hover:bg-white"
+                                    >
+                                        Accepted ({acceptedItems.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger 
+                                        value="rejected" 
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-red-600 data-[state=active]:text-red-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 data-[state=active]:hover:bg-white"
+                                    >
+                                        Rejected ({rejectedItems.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger 
+                                        value="added-to-cart" 
+                                        className="flex-1 h-full rounded-none border border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 data-[state=active]:hover:bg-white"
+                                    >
+                                        Cart ({addedToCartItems.length})
+                                    </TabsTrigger>
+                                </TabsList>
+
+                                <div className="mt-4">
+                                    <TabsContent value="all" className="space-y-6">
+                                        {items.length === 0 ? (
+                                            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">No bargaining requests found.</p>
+                                                <p className="text-gray-500 text-sm">When buyers negotiate prices, they will appear here.</p>
+                                            </div>
+                                        ) : (
+                                            items.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status={getEffectiveStatus(item)}
+                                                    hideActions={true}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="in-progress" className="space-y-6">
+                                        {pendingItems.length === 0 ? (
+                                            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">No pending negotiations.</p>
+                                                <p className="text-gray-500 text-sm">You don't have any active bargain requests right now.</p>
+                                            </div>
+                                        ) : (
+                                            pendingItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="in-progress"
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="accepted" className="space-y-6">
+                                        {acceptedItems.length === 0 ? (
+                                            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">No new accepted offers.</p>
+                                                <p className="text-gray-500 text-sm">Check back later for seller responses.</p>
+                                            </div>
+                                        ) : (
+                                            acceptedItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="accepted"
+                                                    onAddToCart={() => handleAddToCart(item)}
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="rejected" className="space-y-6">
+                                        {rejectedItems.length === 0 ? (
+                                            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">No rejected requests.</p>
+                                                <p className="text-gray-500 text-sm">None of your bargains have been rejected.</p>
+                                            </div>
+                                        ) : (
+                                            rejectedItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="rejected"
+                                                    onBargainAgain={() => handleBargainAgain(item)}
+                                                    onDelete={() => handleRemoveFromUI(item.id)}
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="added-to-cart" className="space-y-6">
+                                        {addedToCartItems.length === 0 ? (
+                                            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">No items added to cart yet.</p>
+                                                <p className="text-gray-500 text-sm">Accepted bargains that you add to cart will appear here.</p>
+                                            </div>
+                                        ) : (
+                                            addedToCartItems.map((item) => (
+                                                <HorizontalBargainCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    status="added-to-cart"
+                                                />
+                                            ))
+                                        )}
+                                    </TabsContent>
+
+                                </div>
+                            </Tabs>
+                        )}
                     </div>
-                </div>
-
-                <div className="p-6">
-                    <div className="max-w-6xl mx-auto">
-
-                        <TabsContent value="all" className="space-y-6 mt-4">
-                            {items.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No bargain history found.</p> :
-                                items.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status={getEffectiveStatus(item)}
-                                        hideActions={true}
-                                    />
-                                ))
-                            }
-                        </TabsContent>
-
-                        <TabsContent value="in-progress" className="space-y-6 mt-4">
-                            {pendingItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No active negotiations.</p> :
-                                pendingItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="in-progress"
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            }
-                        </TabsContent>
-
-                        <TabsContent value="accepted" className="space-y-6 mt-4">
-                            {acceptedItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No new accepted offers.</p> :
-                                acceptedItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="accepted"
-                                        onAddToCart={() => handleAddToCart(item)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            }
-                        </TabsContent>
-
-                        <TabsContent value="rejected" className="space-y-6 mt-4">
-                            {rejectedItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No rejected requests.</p> :
-                                rejectedItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="rejected"
-                                        onBargainAgain={() => handleBargainAgain(item)}
-                                        onDelete={() => handleRemoveFromUI(item.id)}
-                                    />
-                                ))
-                            }
-                        </TabsContent>
-
-                        <TabsContent value="added-to-cart" className="space-y-6 mt-4">
-                            {addedToCartItems.length === 0 ? <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">No items added to cart yet.</p> :
-                                addedToCartItems.map((item) => (
-                                    <HorizontalBargainCard
-                                        key={item.id}
-                                        item={item}
-                                        status="added-to-cart"
-                                    />
-                                ))
-                            }
-                        </TabsContent>
-
-                    </div>
-                </div>
-            </Tabs>
-        </main>
+                </main>
+            </div>
+            
+            <Footer2 />
+        </div>
     )
 }

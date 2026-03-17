@@ -6,8 +6,10 @@ import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { ConversationList, type Conversation } from "@/components/chat/conversation-list"
 import { MessageView, type Message } from "@/components/chat/message-view"
+import { Loader2, MessageCircle } from "lucide-react"
 import { DashboardNav } from "@/components/dashboard-nav"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import Footer2 from "@/components/footer/Footer"
 
 function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: number) => void }) {
     const [conversations, setConversations] = useState<Conversation[]>([])
@@ -115,10 +117,10 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
                             { 
                                 ...newMessage,
                                 id: newMessage.id?.toString() || Date.now().toString(),
-                                imageUrl: newMessage.imageUrl || null, // Safety fallback
+                                imageUrl: newMessage.imageUrl || null,
                                 isCurrentUser: false, 
                                 isRead: true 
-                            } as Message // Cast to Interface
+                            } as Message 
                         ]);
                         syncReadStatus(senderIdStr); 
                     }
@@ -249,33 +251,45 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
     } : null);
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden">
+        <>
             {isLoading ? (
-                <div className="flex-1 flex items-center justify-center animate-pulse text-[#2d5016] font-bold">
-                    Loading chats...
+                <div className="flex-1 flex flex-col items-center justify-center p-10">
+                    <Loader2 className="w-12 h-12 animate-spin text-[#EEC044] mb-4" />
+                    <div className="text-[#03230F] font-bold text-lg">Loading chats...</div>
                 </div>
             ) : (
-                <>
-                    <ConversationList conversations={conversations} selectedId={selectedConversationId} onSelect={setSelectedConversationId} onDelete={() => {}} />
-                    <div className="flex-1 flex flex-col relative bg-white">
+                <div className="flex w-full h-full divide-x divide-gray-100">
+                    <div className="w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col bg-gray-50/50 overflow-y-auto">
+                        <ConversationList 
+                            conversations={conversations} 
+                            selectedId={selectedConversationId} 
+                            onSelect={setSelectedConversationId} 
+                            onDelete={() => {}} 
+                        />
+                    </div>
+                    <div className="hidden md:flex flex-1 flex-col relative bg-white">
                         {activeConversation ? (
-                            <div className="flex-1 flex flex-col overflow-y-auto p-4">
+                            <div className="flex-1 flex flex-col h-full overflow-hidden p-0 m-0">
                                 <MessageView 
                                     conversation={activeConversation} 
                                     messages={messages} 
                                     onSendMessage={handleSendMessage} 
                                 />
-                                <div ref={messagesEndRef} className="h-1" />
+                                <div ref={messagesEndRef} className="h-1 shrink-0" />
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-muted-foreground font-medium uppercase text-xs">
-                                Select a contact to start messaging
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/30">
+                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-100">
+                                    <MessageCircle className="w-10 h-10 text-[#EEC044]" />
+                                </div>
+                                <p className="font-black text-xl text-[#03230F] uppercase tracking-tight mb-1">Your Messages</p>
+                                <p className="text-sm font-medium text-gray-500">Select a contact from the list to start chatting.</p>
                             </div>
                         )}
                     </div>
-                </>
+                </div>
             )}
-        </div>
+        </>
     );
 }
 
@@ -283,14 +297,38 @@ export default function BuyerChatPage() {
     const [totalUnread, setTotalUnread] = useState(0);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <BuyerHeader />
-            <div className="flex">
+            
+            <div className="flex flex-1 overflow-hidden">
                 <DashboardNav unreadCount={totalUnread} />
-                <Suspense fallback={<div className="p-10 font-bold">Loading interface...</div>}>
-                    <ChatContent onTotalUnreadChange={setTotalUnread} />
-                </Suspense>
+                
+                <main className="flex-1 w-full overflow-hidden flex flex-col p-4 lg:p-8">
+                
+                    <div className="bg-[#03230F] rounded-t-2xl p-6 lg:p-8 text-white shadow-md z-10 shrink-0">
+                        <div className="max-w-7xl mx-auto flex justify-between items-center">
+                            <div>
+                                <h1 className="text-2xl lg:text-3xl font-black text-[#EEC044] tracking-tight mb-1">Message Center</h1>
+                                <p className="text-gray-300 font-medium text-sm lg:text-base">Communicate directly with your sellers.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-b-2xl border border-t-0 border-gray-200 shadow-md flex-1 flex overflow-hidden">
+                        <Suspense fallback={
+                            <div className="flex flex-col items-center justify-center w-full h-full">
+                                <Loader2 className="w-12 h-12 animate-spin text-[#EEC044] mb-4" />
+                                <div className="text-[#03230F] font-bold text-lg">Loading interface...</div>
+                            </div>
+                        }>
+                            <ChatContent onTotalUnreadChange={setTotalUnread} />
+                        </Suspense>
+                    </div>
+                </main>
             </div>
+            
+            
+            <Footer2 />
         </div>
     );
 }

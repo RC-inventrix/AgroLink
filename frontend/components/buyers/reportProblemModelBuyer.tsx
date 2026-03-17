@@ -13,8 +13,8 @@ const ISSUE_TYPES = [
   { id: "FAKE_OR_MISLEADING_PRODUCE", label: "Fake or Misleading Produce" },
   { id: "INCORRECT_WEIGHT_OR_QUANTITY", label: "Incorrect Weight/Quantity" },
   { id: "UNFAIR_PRICE_MANIPULATION", label: "Unfair Price Manipulation" },
-  { id: "UNSAFE_CHEMICAL_USE", label: "Unsafe Chemical Use" },
-  { id: "NON_DELIVERY_AFTER_PAYMENT", label: "Non-delivery After Payment" },
+  { id: "UNAVAILABLE_ON_PICKUP", label: "Unavailable on pickup." },
+  { id: "NON_DELIVERY_AFTER_PAYMENT", label: "Non-delivery After Order placed" },
   { id: "OTHER", label: "Other Issues" },
 ];
 

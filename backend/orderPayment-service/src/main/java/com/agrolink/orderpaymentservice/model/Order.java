@@ -60,4 +60,22 @@ public class Order {
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
     private OrderReview orderReview;
+
+    @Column(name = "is_delivery")
+    private Boolean isDelivery;
+
+    @Column(name = "delivery_address", columnDefinition = "TEXT")
+    private String deliveryAddress;
+
+    @Column(name = "delivery_fee")
+    private Double deliveryFee;
+
+    @Column(name = "buyer_latitude")
+    private Double buyerLatitude;
+
+    @Column(name = "buyer_longitude")
+    private Double buyerLongitude;
+
+   
+
 }
