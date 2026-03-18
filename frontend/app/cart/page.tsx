@@ -5,15 +5,11 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { X, ShoppingBag, AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
-import CartItem from "@/components/cart-item"
-import CartSummary from "@/components/cart-summary"
-import BuyerHeader from "@/components/headers/BuyerHeader"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Footer2 from "@/components/footer/Footer"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import CartItem from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
-import CartSummary from "@/components/cart-summary" // Assumed path
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -65,8 +61,9 @@ export default function Cart() {
                         pricePerKg: item.pricePerKg,
                         quantity: item.quantity,
                         sellerName: item.sellerName,
+                        sellerId: item.sellerId,
                         selected: false,
-                        deliveryFee: item.deliveryFee, // Preserves null if it's pickup
+                        deliveryFee: item.deliveryFee,
                         deliveryAddress: item.deliveryAddress || "",
                         distance: item.distance || 0,
                     }))
@@ -106,8 +103,6 @@ export default function Cart() {
     }
 
     const selectedItems = items.filter((item) => item.selected)
-
-    // Delivery fees are only calculated for items where deliveryFee is not null
     const subtotal = selectedItems.reduce((sum, item) => sum + item.pricePerKg * item.quantity, 0)
     const totalDeliveryFees = selectedItems.reduce((sum, item) => sum + (item.deliveryFee || 0), 0)
     const totalPrice = subtotal + totalDeliveryFees
@@ -126,8 +121,6 @@ export default function Cart() {
 
         const userId = sessionStorage.getItem("id") || "1";
         const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-
-        // Grab ONLY the IDs of the items the user checked
         const selectedItemIds = selectedItems.map(item => item.id);
 
         try {
@@ -145,7 +138,6 @@ export default function Cart() {
                 contactPhone = userData.phone || contactPhone;
             }
 
-            // PASS the selected cartItemIds in the body so the backend ONLY processes those!
             const response = await fetch(`${API_URL}/api/payment/cod?userId=${userId}`, {
                 method: "POST",
                 headers: {
@@ -164,8 +156,6 @@ export default function Cart() {
                     message: "Order request sent! Check your order management page.",
                     type: 'success'
                 });
-
-                // Clear successfully ordered items from the UI cart state immediately
                 setItems(items.filter(item => !item.selected));
             } else {
                 setNotification({ message: "Failed to send order request.", type: 'error' });
@@ -176,18 +166,16 @@ export default function Cart() {
     }
 
     return (
-        
         <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
-            <BuyerHeader/>
+            <BuyerHeader />
 
-            {/* Notification Bar */}
             {notification && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
                     <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border ${
                         notification.type === 'success' ? "bg-white border-green-500 text-green-800" :
-                            notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
-                                notification.type === 'loading' ? "bg-white border-blue-500 text-blue-800" :
-                                    "bg-[#03230F] border-gray-700 text-white"
+                        notification.type === 'error' ? "bg-white border-red-500 text-red-800" :
+                        notification.type === 'loading' ? "bg-white border-blue-500 text-blue-800" :
+                        "bg-[#03230F] border-gray-700 text-white"
                     }`}>
                         {notification.type === 'success' && <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0" />}
                         {notification.type === 'error' && <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />}
@@ -204,13 +192,10 @@ export default function Cart() {
             )}
 
             <div className="flex flex-1">
-                
                 <DashboardNav unreadCount={0} />
 
                 <main className="flex-1 w-full overflow-hidden flex flex-col p-8">
                     <div className="max-w-6xl mx-auto w-full">
-                        
-                        
                         <div className="mb-8">
                             <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Your Cart</h1>
                             <p className="text-[#A3ACBA] font-medium">Manage your selected agricultural products</p>
@@ -223,6 +208,7 @@ export default function Cart() {
                             </div>
                         ) : (
                             <div className="grid gap-8 lg:grid-cols-3">
+                                {/* Left Column: Cart Items */}
                                 <div className="lg:col-span-2">
                                     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                                         <div className="bg-white px-6 py-5 flex items-center gap-3 border-b border-gray-100">
@@ -230,8 +216,7 @@ export default function Cart() {
                                                 id="select-all"
                                                 checked={items.length > 0 && selectedItems.length === items.length}
                                                 onCheckedChange={handleSelectAll}
-                                                className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F]"
-                                            />
+                                                className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F]" />
                                             <label htmlFor="select-all" className="cursor-pointer font-black text-[#03230F] text-sm uppercase tracking-widest">
                                                 Select All Items ({items.length})
                                             </label>
@@ -255,81 +240,65 @@ export default function Cart() {
                                                             seller: item.sellerName,
                                                             pricePerKg: item.pricePerKg,
                                                             quantity: item.quantity,
-                                                            selected: item.selected
+                                                            selected: item.selected,
+                                                            deliveryFee: item.deliveryFee,
+                                                            deliveryAddress: item.deliveryAddress
                                                         }}
                                                         onToggle={toggleItem}
-                                                        onDelete={handleDeleteItem}
-                                                    />
+                                                        onDelete={handleDeleteItem} />
                                                 ))
                                             )}
                                         </div>
                                     </div>
-                                ) : (
-                                    items.map((item) => (
-                                        <CartItem
-                                            key={item.id}
-                                            item={{
-                                                id: item.id.toString(),
-                                                name: item.productName,
-                                                image: item.imageUrl,
-                                                seller: item.sellerName,
-                                                pricePerKg: item.pricePerKg,
-                                                quantity: item.quantity,
-                                                selected: item.selected,
-                                                deliveryFee: item.deliveryFee, // Pass to component
-                                                deliveryAddress: item.deliveryAddress
-                                            }}
-                                            onToggle={toggleItem}
-                                            onDelete={handleDeleteItem}
-                                        />
-                                    ))
-                                )}
+                                </div>
+
+                                {/* Right Column: Summary */}
+                                <div className="lg:col-span-1">
+                                    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
+                                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
+
+                                        <div className="space-y-4 mb-6">
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Subtotal ({selectedItems.length} items)</span>
+                                                <span className="font-medium">Rs. {subtotal.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Total Delivery Fee</span>
+                                                <span className="font-medium">Rs. {totalDeliveryFees.toFixed(2)}</span>
+                                            </div>
+                                            <div className="h-px bg-gray-200 my-4"></div>
+                                            <div className="flex justify-between text-[#03230F] text-lg font-bold">
+                                                <span>Total Amount</span>
+                                                <span className="text-primary">Rs. {totalPrice.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
+                                            <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
+                                                <AlertCircle className="w-4 h-4" />
+                                                Only Cash on Delivery is available
+                                            </p>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleCheckout}
+                                            disabled={selectedItems.length === 0 || notification?.type === 'loading'}
+                                            className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-6 text-base shadow-md active:scale-95 transition-all whitespace-normal h-auto"
+                                        >
+                                            {notification?.type === 'loading' ? (
+                                                <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing...</>
+                                            ) : (
+                                                "Send order request"
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
-
-                    <div className="lg:col-span-1">
-                        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
-
-                            <div className="space-y-4 mb-6">
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Subtotal ({selectedItems.length} items)</span>
-                                    <span className="font-medium">Rs. {subtotal.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Total Delivery Fee</span>
-                                    <span className="font-medium">Rs. {totalDeliveryFees.toFixed(2)}</span>
-                                </div>
-                                <div className="h-px bg-gray-200 my-4"></div>
-                                <div className="flex justify-between text-[#03230F] text-lg font-bold">
-                                    <span>Total Amount</span>
-                                    <span className="text-primary">Rs. {totalPrice.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
-                                <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
-                                    <AlertCircle className="w-4 h-4" />
-                                    Only Cash on Delivery is available
-                                </p>
-                            </div>
-
-                            <Button
-                                onClick={handleCheckout}
-                                disabled={selectedItems.length === 0 || notification?.type === 'loading'}
-                                className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-6 text-base shadow-md active:scale-95 transition-all whitespace-normal h-auto"
-                            >
-                                {notification?.type === 'loading' ? (
-                                    <><Loader2 className="w-5 h-5 animate-spin mr-2"/> Processing...</>
-                                ) : (
-                                    "Send order request"
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </main>
+                </main>
+            </div>
+            <Footer2 />
         </div>
     )
 }

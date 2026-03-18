@@ -20,12 +20,10 @@ import Example from "@/components/footer/Footer";
 import Footer2 from "@/components/footer/Footer";
 
 
+
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
-// Hoisted to global scope so all components in this file can access them
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
 export default function SellerDashboard() {
     const [navUnread, setNavUnread] = useState(0);
