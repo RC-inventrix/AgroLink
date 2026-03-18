@@ -298,39 +298,7 @@ export default function BuyerDashboard() {
                         <div className="mb-8 grid gap-6 md:grid-cols-2">
                             
                             
-                            {/* 1. My Orders Card */}
-                            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-                                <CardHeader><CardTitle className="flex items-center gap-2 font-bold text-[#03230F]"><Package className="h-5 w-5 text-[#EEC044]" /> My Orders</CardTitle></CardHeader>
-                                <CardContent>
-                                    <Tabs defaultValue="pending">
-                                        <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
-                                            <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-semibold text-gray-500">Pending ({pendingOrders.length})</TabsTrigger>
-                                            <TabsTrigger value="history" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-semibold text-gray-500">History</TabsTrigger>
-                                        </TabsList>
-                                        <TabsContent value="pending" className="space-y-4">
-                                            {isLoadingOrders ? (
-                                                <div className="py-10 text-center animate-pulse font-semibold text-[#03230F]">Fetching orders...</div>
-                                            ) : pendingOrders.length > 0 ? (
-                                                pendingOrders.map((order, idx) => (
-                                                    <div key={`${order.orderId}-${idx}`} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:border-[#EEC044]/50 transition-colors">
-                                                        <div className="h-16 w-16 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0">
-                                                            <img src={order.imageUrl || "/buyer-dashboard/red-tomatoes.jpg"} className="h-full w-full object-cover" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="flex justify-between items-start"><h3 className="font-bold text-[#03230F]">{order.productName}</h3><span className="text-xs text-gray-400 font-medium">#{order.orderId}</span></div>
-                                                            <p className="text-xs text-gray-500 font-medium mt-0.5">Seller: <span className="text-[#03230F]">{order.sellerName}</span></p>
-                                                            <div className="mt-2 flex items-center gap-3"><p className="text-sm font-bold text-[#03230F]">LKR {(order.pricePerKg * order.quantity).toFixed(2)}</p><span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-md">{order.quantity} kg</span></div>
-                                                        </div>
-                                                        <Badge className="bg-[#EEC044]/20 text-[#03230F] border-[#EEC044]/50 uppercase tracking-widest text-[10px] font-bold"><Clock className="mr-1.5 h-3 w-3" /> Pending</Badge>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="py-12 text-center text-gray-400"><Package className="h-12 w-12 mx-auto mb-3 opacity-20" /><p className="font-medium">No pending orders</p></div>
-                                            )}
-                                        </TabsContent>
-                                    </Tabs>
-                                </CardContent>
-                            </Card>
+                            
 
                             {/* 2. My Cart Card (Now on the Right) */}
                             <Card className="hover:shadow-md transition-shadow border-gray-200">
