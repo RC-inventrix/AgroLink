@@ -1,16 +1,21 @@
 package com.agrolink.productcatalogservice.dto;
 
 public class CropRequest {
-    private double temperature;
-    private double humidity;
-    private double rainfall;
+    private Double latitude;
+    private Double longitude;
+    private String city;
+    private String province;
 
-    public double getTemperature() { return temperature; }
-    public void setTemperature(double temperature) { this.temperature = temperature; }
+    // Getters and Setters
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
 
-    public double getHumidity() { return humidity; }
-    public void setHumidity(double humidity) { this.humidity = humidity; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
-    public double getRainfall() { return rainfall; }
-    public void setRainfall(double rainfall) { this.rainfall = rainfall; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getProvince() { return province; }
+    public void setProvince(String province) { this.province = province; }
 }
