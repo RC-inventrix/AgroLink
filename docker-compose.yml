@@ -116,6 +116,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       EUREKA_HOST: service-discovery
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CROP_SERVICE_URL: http://crop-recommendation-service:5000
     env_file:
         - .env
     depends_on:
