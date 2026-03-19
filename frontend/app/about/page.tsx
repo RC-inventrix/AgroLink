@@ -1,15 +1,16 @@
-"use client";
+"use client"
 
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Footer from "@/components/Footer";
 import Headerall from "@/components/Headerall";
 import { motion, Variants } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AboutPage() {
-    // Animation settings for reuse
+    // 1. Initialize translation hook
+    const { t } = useLanguage()
+
+    // 2. Animation settings for reuse
     const fadeInUp: Variants = {
         hidden: { opacity: 0, y: 40 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
@@ -29,14 +30,14 @@ export default function AboutPage() {
                         variants={fadeInUp}
                     >
                         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-white text-center">
-                            Empowering
+                            {t("aboutHeroPrefix")}
                             <span className="text-[#EEC044] block my-2 sm:my-3">
-                                Sustainable Agriculture
+                                {t("aboutHeroHighlight")}
                             </span>
-                            Through Technology
+                            {t("aboutHeroSuffix")}
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-white/90 leading-relaxed text-center max-w-2xl mx-auto">
-                            AgroLink is revolutionizing the agricultural marketplace by connecting farmers directly with buyers, ensuring fair prices, transparency, and sustainable farming practices for a better tomorrow.
+                            {t("aboutHeroDesc")}
                         </p>
                     </motion.div>
                 </div>
@@ -53,16 +54,14 @@ export default function AboutPage() {
                                 viewport={{ once: true, margin: "-100px" }}
                                 transition={{ duration: 0.6, ease: "easeOut" }}
                             >
-                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-[#03230F] mb-6">{"Our Mission"}</h2>
+                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-[#03230F] mb-6">
+                                    {t("aboutMissionTitle")}
+                                </h2>
                                 <p className="text-lg text-foreground/80 leading-relaxed mb-4">
-                                    {
-                                        "We believe in creating a direct connection between those who grow our food and those who consume it. By eliminating intermediaries, we ensure farmers receive fair compensation while buyers access fresh, quality produce."
-                                    }
+                                    {t("aboutMissionDesc1")}
                                 </p>
                                 <p className="text-lg text-foreground/80 leading-relaxed">
-                                    {
-                                        "Our platform promotes sustainable agricultural practices, supports local farming communities, and contributes to food security for all."
-                                    }
+                                    {t("aboutMissionDesc2")}
                                 </p>
                             </motion.div>
                             
@@ -95,7 +94,7 @@ export default function AboutPage() {
                             viewport={{ once: true, margin: "-50px" }}
                             variants={fadeInUp}
                         >
-                            {"Our Core Values"}
+                            {t("aboutValuesTitle")}
                         </motion.h2>
                         
                         <div className="grid md:grid-cols-3 gap-8">
@@ -111,11 +110,9 @@ export default function AboutPage() {
                                         <div className="mb-4">
                                             <span className="text-4xl">🤝</span>
                                         </div>
-                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Fair Trade"}</h3>
+                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue1Title")}</h3>
                                         <p className="text-foreground/70 leading-relaxed">
-                                            {
-                                                "We ensure transparent pricing and fair compensation for farmers, creating a sustainable ecosystem for all participants."
-                                            }
+                                            {t("aboutValue1Desc")}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -133,11 +130,9 @@ export default function AboutPage() {
                                         <div className="mb-4">
                                             <span className="text-4xl">🌱</span>
                                         </div>
-                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Sustainability"}</h3>
+                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue2Title")}</h3>
                                         <p className="text-foreground/70 leading-relaxed">
-                                            {
-                                                "Supporting eco-friendly farming practices that protect our planet while delivering nutritious, quality produce."
-                                            }
+                                            {t("aboutValue2Desc")}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -155,16 +150,13 @@ export default function AboutPage() {
                                         <div className="mb-4">
                                             <span className="text-4xl">💡</span>
                                         </div>
-                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Innovation"}</h3>
+                                        <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue3Title")}</h3>
                                         <p className="text-foreground/70 leading-relaxed">
-                                            {
-                                                "Leveraging technology to create efficient, user-friendly solutions that modernize agricultural commerce."
-                                            }
+                                            {t("aboutValue3Desc")}
                                         </p>
                                     </CardContent>
                                 </Card>
                             </motion.div>
-
                         </div>
                     </div>
                 </div>
@@ -192,21 +184,17 @@ export default function AboutPage() {
                                 viewport={{ once: true, margin: "-100px" }}
                                 transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
                             >
-                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-[#EEC044] mb-6">{"Our Story"}</h2>
+                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-[#EEC044] mb-6">
+                                    {t("aboutStoryTitle")}
+                                </h2>
                                 <p className="text-lg text-white/80 leading-relaxed mb-4">
-                                    {
-                                        "Founded by a team of agricultural enthusiasts and technology innovators, AgroLink emerged from a simple observation: the gap between farmers and consumers was hurting both parties."
-                                    }
+                                    {t("aboutStoryDesc1")}
                                 </p>
                                 <p className="text-lg text-white/80 leading-relaxed mb-4">
-                                    {
-                                        "We set out to build a platform that would bridge this gap, creating a marketplace where quality meets fairness, and sustainability drives growth."
-                                    }
+                                    {t("aboutStoryDesc2")}
                                 </p>
                                 <p className="text-lg text-white/80 leading-relaxed">
-                                    {
-                                        "Today, we're proud to serve thousands of farmers and buyers, facilitating transparent transactions that benefit everyone involved."
-                                    }
+                                    {t("aboutStoryDesc3")}
                                 </p>
                             </motion.div>
                         </div>
@@ -225,12 +213,10 @@ export default function AboutPage() {
                         variants={fadeInUp}
                     >
                         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-balance text-white mb-4">
-                            {"Join the Future of Digital Agriculture Today!"}
+                            {t("ctaTitle")}
                         </h2>
                         <p className="text-lg text-white/90 mb-8 leading-relaxed text-pretty">
-                            {
-                                "Be part of a thriving community connecting farmers and buyers for sustainable, fair-trade agriculture. Start your journey now."
-                            }
+                            {t("ctaDesc")}
                         </p>
                     </motion.div>
                 </div>

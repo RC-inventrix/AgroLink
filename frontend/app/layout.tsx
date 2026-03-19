@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./globals-buyer-dashboard.css";
 import ChatbotWidget from "@/components/ChatbotWidget";
+import LanguageToggle from "@/components/LanguageToggle";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +32,11 @@ export default function RootLayout({
           suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <ChatbotWidget />
+        <LanguageProvider>
+          {children}
+          <LanguageToggle />
+          <ChatbotWidget />
+        </LanguageProvider>
       </body>
     </html>
   );

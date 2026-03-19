@@ -20,6 +20,7 @@ import { motion, type Variants } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Headerall from "@/components/Headerall"
 import Footer from "@/components/Footer"
+import { useLanguage } from "@/context/LanguageContext" // Added Context Hook
 
 const fadeUpVariant: Variants = {
     hidden: { opacity: 0, y: 30 },
@@ -42,6 +43,9 @@ const staggerContainer: Variants = {
 }
 
 export default function FeaturesPage() {
+    // Initialize the translation hook
+    const { t } = useLanguage()
+
     return (
         <div className="min-h-screen bg-background">
             <Headerall />
@@ -57,14 +61,13 @@ export default function FeaturesPage() {
                         transition={{ duration: 0.7 }}
                     >
                         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-white text-center mb-6">
-                            Powerful Features for
+                            {t("featHeroPrefix")}
                             <span className="text-[#EEC044] block my-2 sm:my-3">
-                                Modern Agriculture
+                                {t("featHeroHighlight")}
                             </span>
                         </h1>
                         <p className="text-lg md:text-xl text-white/90 leading-relaxed text-center max-w-3xl mx-auto text-balance">
-                            AgroLink connects farmers and buyers with cutting-edge technology, AI-powered insights, and seamless
-                            marketplace functionality for sustainable, fair-trade agriculture.
+                            {t("featHeroDesc")}
                         </p>
                     </motion.div>
                 </div>
@@ -80,10 +83,10 @@ export default function FeaturesPage() {
                     transition={{ duration: 0.6 }}
                 >
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
-                        Core Platform Features
+                        {t("featCoreTitle")}
                     </h2>
                     <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
-                        Everything you need to buy, sell, and manage agricultural products in one platform
+                        {t("featCoreSubtitle")}
                     </p>
                 </motion.div>
 
@@ -94,288 +97,297 @@ export default function FeaturesPage() {
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.15 }}
                 >
+                    {/* Feature 1 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Sprout className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Product Management</CardTitle>
-                                <CardDescription>Complete control over your listings</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featProductTitle")}</CardTitle>
+                                <CardDescription>{t("featProductDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Create, edit, and delete product listings with ease</span>
+                                        <span>{t("featProductItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Upload multiple images with prices and quantities</span>
+                                        <span>{t("featProductItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Track availability and inventory in real-time</span>
+                                        <span>{t("featProductItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Set custom delivery options and pricing</span>
+                                        <span>{t("featProductItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 2 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <ShoppingCart className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Smart Marketplace</CardTitle>
-                                <CardDescription>Browse and purchase with confidence</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featMarketTitle")}</CardTitle>
+                                <CardDescription>{t("featMarketDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Browse products by category, price, and location</span>
+                                        <span>{t("featMarketItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Advanced filters for precise product search</span>
+                                        <span>{t("featMarketItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Shopping cart with multiple payment options</span>
+                                        <span>{t("featMarketItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>View farmer profiles for transparency</span>
+                                        <span>{t("featMarketItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 3 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Gavel className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Bidding System</CardTitle>
-                                <CardDescription>Dynamic pricing for better deals</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featBiddingTitle")}</CardTitle>
+                                <CardDescription>{t("featBiddingDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Real-time bidding on agricultural products</span>
+                                        <span>{t("featBiddingItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Live updates using WebSocket technology</span>
+                                        <span>{t("featBiddingItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Transparent bid history and status tracking</span>
+                                        <span>{t("featBiddingItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Automatic notifications for bid updates</span>
+                                        <span>{t("featBiddingItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 4 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Search className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Reverse Marketplace</CardTitle>
-                                <CardDescription>Buyers list what they need</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featReverseTitle")}</CardTitle>
+                                <CardDescription>{t("featReverseDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Buyers post crop requirements and quantities</span>
+                                        <span>{t("featReverseItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Farmers respond with supply offers</span>
+                                        <span>{t("featReverseItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Smart matching between demand and supply</span>
+                                        <span>{t("featReverseItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Automated notifications for matches</span>
+                                        <span>{t("featReverseItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 5 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <MessageSquare className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Direct Communication</CardTitle>
-                                <CardDescription>Connect buyers and farmers instantly</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featCommsTitle")}</CardTitle>
+                                <CardDescription>{t("featCommsDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Real-time chat between buyers and farmers</span>
+                                        <span>{t("featCommsItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Direct negotiation and inquiry system</span>
+                                        <span>{t("featCommsItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Q&A section under each product listing</span>
+                                        <span>{t("featCommsItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Message history and notification system</span>
+                                        <span>{t("featCommsItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 6 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Truck className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Smart Delivery</CardTitle>
-                                <CardDescription>Distance-based delivery calculation</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featDeliveryTitle")}</CardTitle>
+                                <CardDescription>{t("featDeliveryDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Free delivery within specified radius</span>
+                                        <span>{t("featDeliveryItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Per-kilometer charge for extra distance</span>
+                                        <span>{t("featDeliveryItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Automatic delivery cost calculation</span>
+                                        <span>{t("featDeliveryItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>GPS-based distance measurement</span>
+                                        <span>{t("featDeliveryItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 7 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Star className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Ratings & Reviews</CardTitle>
-                                <CardDescription>Build trust and credibility</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featRatingTitle")}</CardTitle>
+                                <CardDescription>{t("featRatingDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Two-way rating system for buyers and farmers</span>
+                                        <span>{t("featRatingItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Detailed reviews with product feedback</span>
+                                        <span>{t("featRatingItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Review moderation and report system</span>
+                                        <span>{t("featRatingItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Average rating display on profiles</span>
+                                        <span>{t("featRatingItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 8 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <MapPin className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Location-Based Filtering</CardTitle>
-                                <CardDescription>Find nearby farmers and products</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featLocationTitle")}</CardTitle>
+                                <CardDescription>{t("featLocationDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>GPS-based farmer and product discovery</span>
+                                        <span>{t("featLocationItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Search within custom radius settings</span>
+                                        <span>{t("featLocationItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Reduce delivery time with local sellers</span>
+                                        <span>{t("featLocationItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Map view of available products nearby</span>
+                                        <span>{t("featLocationItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
                         </Card>
                     </motion.div>
 
+                    {/* Feature 9 */}
                     <motion.div variants={fadeUpVariant}>
                         <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
                             <CardHeader>
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <BarChart3 className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Dashboard & Analytics</CardTitle>
-                                <CardDescription>Comprehensive sales insights</CardDescription>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featDashboardTitle")}</CardTitle>
+                                <CardDescription>{t("featDashboardDesc")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Visual sales dashboard with graphs and charts</span>
+                                        <span>{t("featDashboardItem1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Track total sales and earnings in real-time</span>
+                                        <span>{t("featDashboardItem2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Product performance and top-selling items</span>
+                                        <span>{t("featDashboardItem3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Historical data and trend analysis</span>
+                                        <span>{t("featDashboardItem4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
@@ -395,10 +407,10 @@ export default function FeaturesPage() {
                         transition={{ duration: 0.6 }}
                     >
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
-                            AI-Powered Intelligence
+                            {t("featAiTitle")}
                         </h2>
                         <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
-                            Cutting-edge artificial intelligence to help you make better farming and business decisions
+                            {t("featAiSubtitle")}
                         </p>
                     </motion.div>
 
@@ -415,12 +427,11 @@ export default function FeaturesPage() {
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                         <TrendingUp className="h-6 w-6 text-[#EEC044]" />
                                     </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">AI Price Prediction</CardTitle>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard1Title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-foreground/70 leading-relaxed">
-                                        Machine learning models analyze market trends and historical data to predict optimal pricing for your
-                                        crops.
+                                        {t("featAiCard1Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -432,12 +443,11 @@ export default function FeaturesPage() {
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                         <Cloud className="h-6 w-6 text-[#EEC044]" />
                                     </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">Crop Recommendation</CardTitle>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard2Title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-foreground/70 leading-relaxed">
-                                        Weather-based AI suggests which crops to grow based on soil conditions, climate data, and market
-                                        demand.
+                                        {t("featAiCard2Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -449,11 +459,11 @@ export default function FeaturesPage() {
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                         <Bot className="h-6 w-6 text-[#EEC044]" />
                                     </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">Intelligent Chatbot</CardTitle>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard3Title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-foreground/70 leading-relaxed">
-                                        24/7 AI assistant helps farmers with common queries, platform navigation, and agricultural advice.
+                                        {t("featAiCard3Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -465,11 +475,11 @@ export default function FeaturesPage() {
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                         <BarChart3 className="h-6 w-6 text-[#EEC044]" />
                                     </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">Price Trends</CardTitle>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard4Title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-foreground/70 leading-relaxed">
-                                        Visualize price changes over time with interactive charts and receive insights on market fluctuations.
+                                        {t("featAiCard4Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -478,7 +488,7 @@ export default function FeaturesPage() {
                 </div>
             </section>
 
-            {/* Additional Features Section */}
+            {/* Security Features Section */}
             <section className="container mx-auto px-4 py-16 lg:px-8">
                 <motion.div
                     className="text-center mb-12"
@@ -488,10 +498,10 @@ export default function FeaturesPage() {
                     transition={{ duration: 0.6 }}
                 >
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
-                        Security & Management
+                        {t("featSecTitle")}
                     </h2>
                     <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
-                        Enterprise-grade security and comprehensive management tools
+                        {t("featSecSubtitle")}
                     </p>
                 </motion.div>
 
@@ -508,25 +518,25 @@ export default function FeaturesPage() {
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Shield className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Security & Protection</CardTitle>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard1Title")}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Secure authentication with JWT tokens</span>
+                                        <span>{t("featSecCard1Item1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Data encryption for sensitive information</span>
+                                        <span>{t("featSecCard1Item2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Role-based access control</span>
+                                        <span>{t("featSecCard1Item3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Secure payment processing</span>
+                                        <span>{t("featSecCard1Item4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
@@ -539,25 +549,25 @@ export default function FeaturesPage() {
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Bell className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Notifications & Alerts</CardTitle>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard2Title")}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Real-time order notifications</span>
+                                        <span>{t("featSecCard2Item1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Bid status updates and alerts</span>
+                                        <span>{t("featSecCard2Item2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Message and chat notifications</span>
+                                        <span>{t("featSecCard2Item3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Weather alerts and farming tips</span>
+                                        <span>{t("featSecCard2Item4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
@@ -570,25 +580,25 @@ export default function FeaturesPage() {
                                 <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
                                     <Shield className="h-6 w-6 text-[#EEC044]" />
                                 </div>
-                                <CardTitle className="text-xl font-bold text-[#004d2b]">Admin Management</CardTitle>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard3Title")}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm text-foreground/70">
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Manage farmer and buyer accounts</span>
+                                        <span>{t("featSecCard3Item1")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Post announcements and updates</span>
+                                        <span>{t("featSecCard3Item2")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>Monitor transactions and reports</span>
+                                        <span>{t("featSecCard3Item3")}</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-[#EEC044] mt-1 font-bold">✓</span>
-                                        <span>System-wide analytics and insights</span>
+                                        <span>{t("featSecCard3Item4")}</span>
                                     </li>
                                 </ul>
                             </CardContent>
@@ -608,10 +618,10 @@ export default function FeaturesPage() {
                         transition={{ duration: 0.6 }}
                     >
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-white mb-4">
-                            Flexible Payment Options
+                            {t("featPayTitle")}
                         </h2>
                         <p className="text-lg text-white/80 max-w-2xl mx-auto">
-                            Multiple payment methods to suit every transaction
+                            {t("featPaySubtitle")}
                         </p>
                     </motion.div>
 
@@ -624,19 +634,19 @@ export default function FeaturesPage() {
                     >
                         <motion.div variants={fadeUpVariant}>
                             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
-                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">Cash on Delivery</h3>
+                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard1Title")}</h3>
                                 <p className="text-white/80 mb-4 leading-relaxed">
-                                    Pay when you receive your products. Perfect for building trust in new transactions.
+                                    {t("featPayCard1Desc")}
                                 </p>
                                 <ul className="space-y-2 text-white/90">
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> No upfront payment required
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item1")}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> Inspect products before paying
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item2")}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> Secure and trustworthy
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item3")}
                                     </li>
                                 </ul>
                             </div>
@@ -644,19 +654,19 @@ export default function FeaturesPage() {
 
                         <motion.div variants={fadeUpVariant}>
                             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
-                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">Online Payment</h3>
+                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard2Title")}</h3>
                                 <p className="text-white/80 mb-4 leading-relaxed">
-                                    Fast and secure online transactions through trusted payment gateways.
+                                    {t("featPayCard2Desc")}
                                 </p>
                                 <ul className="space-y-2 text-white/90">
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> Instant payment confirmation
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item1")}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> Bank transfer support
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item2")}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> Encrypted and secure
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item3")}
                                     </li>
                                 </ul>
                             </div>

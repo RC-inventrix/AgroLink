@@ -176,52 +176,46 @@ export default function BuyerRegistration() {
                                 </p>
 
                                 <ul className="space-y-5">
-                                    <li className="flex items-start gap-4">
-                                        <span className="text-2xl leading-none">🛡️</span>
-                                        <div>
-                                            <strong className="text-gray-900 block mb-0.5">1. Get Verified</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">Build trust within the community by completing your profile verification. Farmers and buyers are more likely to trade with verified accounts.</span>
-                                        </div>
-                                    </li>
+
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">🤝</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">2. Trade with Verified Users</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have the "Verified" badge.</span>
+                                            <strong className="text-gray-900 block mb-0.5">1. Trade with Verified Users</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have good reputation among the community while we are developing our highly accurate user verification system.</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">💬</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">3. Communicate & Request Proof</strong>
+                                            <strong className="text-gray-900 block mb-0.5">2. Communicate & Request Proof</strong>
                                             <span className="text-gray-600 text-sm leading-relaxed">Always use the in-app chat to communicate. Ask for real-time images and confirm product details before finalizing any orders.</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">📍</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">4. Shop Local to Save</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">You and the seller are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
+                                            <strong className="text-gray-900 block mb-0.5">3. Shop Local to Save</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">You and the seller/buyer are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">💵</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">5. Cash on Delivery (COD) Only</strong>
+                                            <strong className="text-gray-900 block mb-0.5">4. Cash on Delivery (COD) Only</strong>
                                             <span className="text-gray-600 text-sm leading-relaxed">While we are developing a highly secure online payment gateway, <strong>all platform transactions are strictly Cash on Delivery</strong>. Do not send money online.</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">⭐</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">6. Check Ratings</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a farmer before agreeing to a trade.</span>
+                                            <strong className="text-gray-900 block mb-0.5">5. Check Ratings</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a user before agreeing to a trade.</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">🚩</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">7. Report Suspicious Activity</strong>
+                                            <strong className="text-gray-900 block mb-0.5">6. Report Suspicious Activity</strong>
                                             <span className="text-gray-600 text-sm leading-relaxed">Help us keep AgroLink safe! Use the "Report" button immediately if you encounter fraud, fake items, or unfair behavior.</span>
                                         </div>
                                     </li>

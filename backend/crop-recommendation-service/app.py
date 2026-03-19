@@ -1,99 +1,156 @@
-import os
-try:
-    import pickle
-    import numpy as np
-    from flask import Flask, request, jsonify
-except ModuleNotFoundError as e:
-    missing = getattr(e, "name", str(e))
-    raise SystemExit(
-        f"Missing dependency: {missing}.\nInstall dependencies with: python -m pip install -r requirements.txt"
-    ) from e
+from flask import Flask, request, jsonify
+import requests
+from datetime import datetime, timedelta
+import pickle
+import numpy as np
+import warnings
+
+# Suppress scikit-learn version warnings if any
+warnings.filterwarnings("ignore", category=UserWarning)
 
 app = Flask(__name__)
 
-# Load trained model and scaler from files relative to this script
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
-SCALER_PATH = os.path.join(BASE_DIR, "standscaler.pkl")
-
+# --- 1. LOAD ML MODELS ---
 try:
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
-except FileNotFoundError as e:
-    raise SystemExit(f"Model file not found at {MODEL_PATH}. Make sure model.pkl exists.") from e
+    model = pickle.load(open('model.pkl', 'rb'))
+    # If your model requires scaling, uncomment these:
+    # minmax_scaler = pickle.load(open('minmaxscaler.pkl', 'rb'))
+    # std_scaler = pickle.load(open('standscaler.pkl', 'rb'))
+    ml_ready = True
+    print("✅ ML Models loaded successfully.")
 except Exception as e:
-    raise SystemExit(f"Failed to load model from {MODEL_PATH}: {e}") from e
+    print(f"⚠️ Warning: Could not load ML models. Using rule-based fallback. Error: {e}")
+    ml_ready = False
 
-try:
-    with open(SCALER_PATH, "rb") as f:
-        scaler = pickle.load(f)
-except FileNotFoundError as e:
-    raise SystemExit(f"Scaler file not found at {SCALER_PATH}. Make sure standscaler.pkl exists.") from e
-except Exception as e:
-    raise SystemExit(f"Failed to load scaler from {SCALER_PATH}: {e}") from e
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
-# Label to crop mapping
-crop_map = {
-    1: "Rice",
-    2: "Maize",
-    3: "Chickpea",
-    4: "Kidney Beans",
-    5: "Pigeon Peas",
-    6: "Moth Beans",
-    7: "Mung Bean",
-    8: "Black Gram",
-    9: "Lentil",
-    10: "Pomegranate",
-    11: "Banana",
-    12: "Mango",
-    13: "Grapes",
-    14: "Watermelon",
-    15: "Muskmelon",
-    16: "Apple",
-    17: "Orange",
-    18: "Papaya",
-    19: "Coconut",
-    20: "Cotton",
-    21: "Jute",
-    22: "Coffee"
-}
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "UP"})
-
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({"error": "Invalid or missing JSON body"}), 400
+    data = request.json
+    lat = data.get('latitude')
+    lon = data.get('longitude')
+
+    if not lat or not lon:
+        return jsonify({'error': 'Latitude and Longitude are required'}), 400
+
+    # --- 2. FETCH WEATHER DATA (NASA POWER API) ---
+    # Calculates the 20-day range
+    end_date = datetime.now() - timedelta(days=1)
+    start_date = end_date - timedelta(days=20)
+    start_str = start_date.strftime("%Y%m%d")
+    end_str = end_date.strftime("%Y%m%d")
+
+    url = (
+        f"https://power.larc.nasa.gov/api/temporal/daily/point"
+        f"?parameters=T2M,PRECTOTCORR,RH2M"
+        f"&community=AG"
+        f"&longitude={lon}"
+        f"&latitude={lat}"
+        f"&start={start_str}"
+        f"&end={end_str}"
+        f"&format=JSON"
+    )
 
     try:
-        temperature = float(data["temperature"])
-        humidity = float(data["humidity"])
-        rainfall = float(data["rainfall"])
-    except KeyError as e:
-        return jsonify({"error": f"Missing field: {e.args[0]}"}), 400
-    except (TypeError, ValueError):
-        return jsonify({"error": "temperature, humidity and rainfall must be numbers"}), 400
+        res = requests.get(url).json()
 
-    input_data = np.array([[temperature, humidity, rainfall]])
-    try:
-        scaled_data = scaler.transform(input_data)
+        if "properties" not in res or "parameter" not in res["properties"]:
+            return jsonify({'error': 'No weather data found for these coordinates'}), 404
+
+        t2m_data = res["properties"]["parameter"].get("T2M", {})
+        rh2m_data = res["properties"]["parameter"].get("RH2M", {})
+        rain_data = res["properties"]["parameter"].get("PRECTOTCORR", {})
+
+        # Filter valid values
+        temps = [v for v in t2m_data.values() if -10 <= v <= 50]
+        hums  = [v for v in rh2m_data.values() if 0 <= v <= 100]
+        rains = [v for v in rain_data.values() if v >= 0]
+
+        # Calculate averages/totals
+        avg_temp = sum(temps) / len(temps) if temps else 0
+        avg_hum  = sum(hums) / len(hums) if hums else 0
+        total_rain = sum(rains) if rains else 0
+
     except Exception as e:
-        return jsonify({"error": f"Failed to scale input: {e}"}), 500
+        return jsonify({'error': f'Failed to fetch weather data from NASA: {str(e)}'}), 500
 
-    try:
-        prediction = model.predict(scaled_data)[0]
-    except Exception as e:
-        return jsonify({"error": f"Model prediction failed: {e}"}), 500
+    # --- 3. PREDICT THE CROP ---
+    recommended_crop = "Unknown"
 
-    try:
-        crop_name = crop_map[int(prediction)]
-    except Exception:
-        crop_name = "Unknown"
+    # The standard 22-Crop ML Dataset Mapping (Alphabetical)
+    crop_dictionary = {
+        '1': 'Apple',
+        '2': 'Banana',
+        '3': 'Blackgram',
+        '4': 'Chickpea',
+        '5': 'Coconut',
+        '6': 'Coffee',
+        '7': 'Cotton',
+        '8': 'Grapes',
+        '9': 'Jute',
+        '10': 'Kidneybeans',
+        '11': 'Lentil',
+        '12': 'Maize',
+        '13': 'Mango',
+        '14': 'Mothbeans',
+        '15': 'Mungbean',
+        '16': 'Muskmelon',
+        '17': 'Orange',
+        '18': 'Papaya',
+        '19': 'Pigeonpeas',
+        '20': 'Pomegranate',
+        '21': 'Rice',
+        '22': 'Watermelon'
+    }
 
-    return jsonify({"crop": crop_name})
+    if ml_ready:
+        try:
+            # Assuming your model expects [Temperature, Humidity, Rainfall]
+            features = np.array([[avg_temp, avg_hum, total_rain]])
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+            # Apply scalers if required by your specific pipeline:
+            # features = std_scaler.transform(features)
+            # features = minmax_scaler.transform(features)
+
+            prediction = model.predict(features)
+
+            # The model outputs a string like '21', so we capture it directly
+            predicted_id = str(prediction[0])
+
+            # Look up the crop name using the dictionary
+            recommended_crop = crop_dictionary.get(predicted_id, "Unknown Crop")
+        except Exception as e:
+            print(f"ML Prediction failed: {e}. Falling back to rules.")
+            recommended_crop = rule_based_predict(avg_temp, avg_hum, total_rain)
+    else:
+        # Uses your friend's original logic if the .pkl files don't work
+        recommended_crop = rule_based_predict(avg_temp, avg_hum, total_rain)
+
+    return jsonify({
+        'recommended_crop': recommended_crop,
+        'weather_metrics': {
+            'temperature': round(avg_temp, 2),
+            'humidity': round(avg_hum, 2),
+            'rainfall': round(total_rain, 2)
+        }
+    })
+
+# Fallback Logic from CropPredictor.java
+def rule_based_predict(avgTemp, avgHum, totalRain):
+    crops = []
+    if avgTemp >= 28 and totalRain >= 50: crops.append("Rice")
+    if 26 <= avgTemp < 28 and avgHum < 70 and totalRain >= 20: crops.append("Maize")
+    if avgTemp < 26 and totalRain < 20: crops.extend(["Chickpea", "Lentils"])
+    if avgHum >= 75 and 24 <= avgTemp <= 32: crops.extend(["Banana", "Papaya"])
+    if 20 <= avgTemp <= 30 and 50 <= avgHum <= 80 and totalRain < 50:
+        crops.extend(["Tomato", "Cabbage", "Carrot", "Brinjal", "Okra"])
+    if avgTemp > 30 and totalRain < 30: crops.extend(["Mango", "Pineapple"])
+
+    if not crops: crops.append("Vegetables")
+    return ", ".join(crops)
+
+if __name__ == '__main__':
+    # Runs on port 5000, accessible to Docker
+    app.run(host='0.0.0.0', port=5000)

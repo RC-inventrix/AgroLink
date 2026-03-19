@@ -3,9 +3,6 @@ import Link from "next/link"
 import React, { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import {
-    Menu,
-    X,
-    Search,
     Leaf,
     ShoppingCart,
     Users,
@@ -15,6 +12,7 @@ import {
 } from "lucide-react"
 import Footer from "@/components/Footer";
 import Headerall from "@/components/Headerall";
+import { useLanguage } from "@/context/LanguageContext";
 
 // Component for the counting animation
 function AnimatedCounter({ end, suffix = "", duration = 2000 }: { end: number, suffix?: string, duration?: number }) {
@@ -55,7 +53,7 @@ function AnimatedCounter({ end, suffix = "", duration = 2000 }: { end: number, s
     return <span ref={ref}>{count}{suffix}</span>;
 }
 
-// NEW: Scroll Animation Wrapper Component
+// Scroll Animation Wrapper Component
 function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
     const [isVisible, setIsVisible] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -65,11 +63,10 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
             ([entry]) => {
                 if (entry.isIntersecting) {
                     setIsVisible(true);
-                    // Disconnect after it becomes visible so it only animates once
                     if (ref.current) observer.unobserve(ref.current);
                 }
             },
-            { threshold: 0.1 } // Triggers when 10% of the element is visible
+            { threshold: 0.1 }
         );
         if (ref.current) observer.observe(ref.current);
         return () => observer.disconnect();
@@ -89,8 +86,7 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 export default function AgroLinkHome() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false)
-    const [searchTab, setSearchTab] = useState("products")
+    const { t, language } = useLanguage()
 
     return (
         <div className="min-h-screen bg-white text-[#03230F]">
@@ -103,7 +99,9 @@ export default function AgroLinkHome() {
                     animation: marquee 25s linear infinite;
                 }
             `}</style>
-            <Headerall/>
+            
+            {/* The new central Header component */}
+            <Headerall />
 
             {/* Hero Section */}
             <section className="relative w-full h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] mt-14 sm:mt-16 flex flex-col items-center justify-center overflow-hidden">
@@ -120,18 +118,23 @@ export default function AgroLinkHome() {
                     <div className="max-w-7xl mx-auto w-full space-y-4 sm:space-y-8">
                         <FadeIn>
                             <div className="max-w-2xl space-y-3 sm:space-y-4">
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight text-white text-balance">
-                                    Connecting Farmers and Buyers for a Smarter <span className="text-[#EEC044]"><br/>Agro Marketplace</span>
+                                <h1
+                                    className={`font-bold uppercase text-balance text-white ${
+                                        language === "si"
+                                            ? "text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-snug"
+                                            : "text-3xl sm:text-4xl md:text-5xl leading-tight"
+                                    }`}
+                                >
+                                    {t("heroTitle")} <span className="text-[#EEC044]"><br/>{t("heroHighlight")}</span>
                                 </h1>
                                 <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-100 leading-relaxed max-w-xl">
-                                    Direct access to fresh produce, fair pricing, and secure transactions. AgroLink bridges the gap between
-                                    farmers and buyers for sustainable agriculture.
+                                    {t("heroDesc")}
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-2 sm:pt-4">
                                     <Link href="/register">
                                         <button className="px-6 sm:px-8 py-2 sm:py-3 bg-[#EEC044] text-[#03230F] rounded-lg font-semibold hover:bg-[#d9a83d] transition shadow-lg w-fit text-sm sm:text-base">
-                                            Get Started
+                                            {t("getStarted")}
                                         </button>
                                     </Link>
                                 </div>
@@ -147,10 +150,10 @@ export default function AgroLinkHome() {
                     <FadeIn>
                         <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-12 lg:mb-16">
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight">
-                                Innovating the future of <span className="text-[#EEC044]">agriculture</span>
+                                {t("homeInnovationTitle1")} <span className="text-[#EEC044]">{t("homeInnovationTitle2")}</span>
                             </h2>
                             <p className="text-gray-300 max-w-md text-sm sm:text-base leading-relaxed lg:mt-2">
-                                A smart digital marketplace connecting farmers and buyers for secure, confident trading.
+                                {t("homeInnovationDesc")}
                             </p>
                         </div>
                     </FadeIn>
@@ -173,8 +176,8 @@ export default function AgroLinkHome() {
                                     <h3 className="text-5xl sm:text-7xl font-light tracking-tight text-[#EEC044]">
                                         <AnimatedCounter end={100} suffix="%" duration={2000} />
                                     </h3>
-                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">Customer Satisfaction</h4>
-                                    <p className="text-gray-400 text-sm sm:text-base">We create solutions that farmers trust and rely on.</p>
+                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">{t("homeStat1Title")}</h4>
+                                    <p className="text-gray-400 text-sm sm:text-base">{t("homeStat1Desc")}</p>
                                 </div>
                             </FadeIn>
 
@@ -183,8 +186,8 @@ export default function AgroLinkHome() {
                                     <h3 className="text-5xl sm:text-7xl font-light tracking-tight text-[#EEC044]">
                                         <AnimatedCounter end={100} suffix="%" duration={2000} />
                                     </h3>
-                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">Fresh Vegetables</h4>
-                                    <p className="text-gray-400 text-sm sm:text-base">A continuous supply of 100% farm-fresh produce, harvested daily for maximum quality.</p>
+                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">{t("homeStat2Title")}</h4>
+                                    <p className="text-gray-400 text-sm sm:text-base">{t("homeStat2Desc")}</p>
                                 </div>
                             </FadeIn>
 
@@ -193,8 +196,8 @@ export default function AgroLinkHome() {
                                     <h3 className="text-5xl sm:text-7xl font-light tracking-tight text-[#EEC044]">
                                         <AnimatedCounter end={100} suffix="%" duration={2000} />
                                     </h3>
-                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">Secure Trading</h4>
-                                    <p className="text-gray-400 text-sm sm:text-base">Ensuring safe, transparent, and fair transactions for all users.</p>
+                                    <h4 className="text-xl sm:text-2xl font-medium text-white/90">{t("homeStat3Title")}</h4>
+                                    <p className="text-gray-400 text-sm sm:text-base">{t("homeStat3Desc")}</p>
                                 </div>
                             </FadeIn>
                         </div>
@@ -205,20 +208,16 @@ export default function AgroLinkHome() {
             {/* Marquee Section */}
             <div className="w-full py-4 sm:py-5 overflow-hidden bg-[#03230F] text-white relative z-10 border-y-2 border-[#EEC044]/20">
                 <div className="flex gap-8 sm:gap-12 w-max animate-marquee">
-                    <div className="flex items-center gap-8 sm:gap-12 text-sm sm:text-base lg:text-lg tracking-widest whitespace-nowrap uppercase font-medium">
-                        <div className="flex items-center">Fresh Produce <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Fair Pricing <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Direct from Farmers <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">AI Price Insights <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Secure Payment <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                    </div>
-                    <div className="flex items-center gap-8 sm:gap-12 text-sm sm:text-base lg:text-lg tracking-widest whitespace-nowrap uppercase font-medium">
-                        <div className="flex items-center">Fresh Produce <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Fair Pricing <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Direct from Farmers <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">AI Price Insights <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                        <div className="flex items-center">Secure Payment <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
-                    </div>
+                    {/* Rendered twice for seamless loop */}
+                    {[1, 2].map((i) => (
+                        <div key={i} className="flex items-center gap-8 sm:gap-12 text-sm sm:text-base lg:text-lg tracking-widest whitespace-nowrap uppercase font-medium">
+                            <div className="flex items-center">{t("homeMarquee1")} <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                            <div className="flex items-center">{t("homeMarquee2")} <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                            <div className="flex items-center">{t("homeMarquee3")} <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                            <div className="flex items-center">{t("homeMarquee4")} <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                            <div className="flex items-center">{t("homeMarquee5")} <span className="text-[#EEC044] ml-8 sm:ml-12">✦</span></div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -227,84 +226,84 @@ export default function AgroLinkHome() {
                 <div className="max-w-7xl mx-auto">
                     <FadeIn>
                         <div className="text-center mb-8 sm:mb-12">
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight text-center mx-auto">
-                                Why Choose AgroLink?
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight text-center mx-auto text-[#03230F]">
+                                {t("featuresTitle")}
                             </h2>
                             <p className="text-sm sm:text-base md:text-xl text-gray-600 mt-2">
-                                A complete platform designed for both farmers and buyers
+                                {t("featuresSubtitle")}
                             </p>
                         </div>
                     </FadeIn>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         <FadeIn delay={100}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Farmers</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat1Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Create listings, manage orders, get AI-powered price suggestions, and connect directly with buyers.
+                                    {t("feat1Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={200}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <ShoppingCart className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Buyers</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat2Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Search fresh products, post item requests, negotiate prices, and support local farmers directly.
+                                    {t("feat2Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={300}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <Users className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Dual Search System</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat3Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Search farmer products or create buyer requests. Find exactly what you need in our marketplace.
+                                    {t("feat3Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={400}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <MessageCircle className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Chat & Reviews</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat4Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Real-time chat with buyers/farmers, ratings, reviews, and feedback to build trust and community.
+                                    {t("feat4Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={500}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <Lock className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Secure & Verified</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat5Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Role-based authentication, secure payments, and verified profiles for farmers, buyers, and admins.
+                                    {t("feat5Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={600}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition">
+                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
                                 <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                     <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                                 </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">AI Price Insights</h3>
+                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat6Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Smart pricing suggestions based on market trends, demand, and product quality for fair deals.
+                                    {t("feat6Desc")}
                                 </p>
                             </div>
                         </FadeIn>
@@ -317,11 +316,11 @@ export default function AgroLinkHome() {
                 <div className="max-w-7xl mx-auto">
                     <FadeIn>
                         <div className="text-center mb-8 sm:mb-12">
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight text-center mx-auto">
-                                How It Works
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-2xl leading-tight text-center mx-auto text-[#03230F]">
+                                {t("howItWorksTitle")}
                             </h2>
                             <p className="text-sm sm:text-base md:text-xl text-gray-600 mt-2">
-                                Get started with AgroLink in three simple steps
+                                {t("howItWorksSubtitle")}
                             </p>
                         </div>
                     </FadeIn>
@@ -332,25 +331,24 @@ export default function AgroLinkHome() {
                                 <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-md">
                                     <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">1</span>
                                 </div>
-                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">Sign Up</h3>
+                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step1Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Create your account as a Farmer, Buyer, or Admin. Verify your identity and set up your profile.
+                                    {t("step1Desc")}
                                 </p>
                             </div>
                         </FadeIn>
 
                         <FadeIn delay={300}>
                             <div className="text-center h-full relative">
-                                {/* Arrow container - absolute positioning so it doesn't break the grid flow on smaller screens */}
                                 <div className="hidden sm:flex absolute -left-8 top-8 items-center justify-center">
                                     <ChevronRight className="w-6 sm:w-8 h-6 sm:h-8 text-[#EEC044]" />
                                 </div>
                                 <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-md">
                                     <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">2</span>
                                 </div>
-                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">List or Search</h3>
+                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step2Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Farmers list vegetables with details. Buyers search products or post item requests.
+                                    {t("step2Desc")}
                                 </p>
                             </div>
                         </FadeIn>
@@ -363,9 +361,9 @@ export default function AgroLinkHome() {
                                 <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-md">
                                     <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">3</span>
                                 </div>
-                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">Connect & Trade</h3>
+                                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step3Title")}</h3>
                                 <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    Chat, negotiate, place orders, and complete transactions securely. Leave reviews and build trust.
+                                    {t("step3Desc")}
                                 </p>
                             </div>
                         </FadeIn>
@@ -381,24 +379,24 @@ export default function AgroLinkHome() {
                 <div className="max-w-7xl mx-auto text-center space-y-4 sm:space-y-6">
                     <FadeIn delay={100}>
                         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-balance">
-                            Join the Future of Digital Agriculture Today!
+                            {t("ctaTitle")}
                         </h2>
                     </FadeIn>
                     <FadeIn delay={300}>
                         <p className="text-xs sm:text-sm md:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-                            Be part of a thriving community connecting farmers and buyers for sustainable, fair-trade agriculture. Start
-                            your journey now.
+                            {t("ctaDesc")}
                         </p>
                     </FadeIn>
                     <FadeIn delay={500}>
                         <Link href="/register">
                             <button className="mt-4 px-6 sm:px-10 py-2.5 sm:py-4 bg-[#EEC044] text-[#03230F] rounded-lg font-semibold text-sm sm:text-base lg:text-lg hover:bg-[#d9a83d] transition inline-block">
-                                Create an Account
+                                {t("createAccount")}
                             </button>
                         </Link>
                     </FadeIn>
                 </div>
             </section>
+            
             <Footer/>
         </div>
     )
