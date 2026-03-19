@@ -5,7 +5,6 @@ import Image from "next/image"
 import {
     Menu,
     X,
-    Search,
     Leaf,
     ShoppingCart,
     Users,
@@ -15,10 +14,11 @@ import {
 
 } from "lucide-react"
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AgroLinkHome() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
-    const [searchTab, setSearchTab] = useState("products")
+    const { t, language } = useLanguage()
 
     useEffect(() => {
         const handleScroll = () => {
@@ -47,16 +47,16 @@ export default function AgroLinkHome() {
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center gap-5 lg:gap-15">
                             <a href="#" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Home
+                                {t("navHome")}
                             </a>
                             <a href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                About
+                                {t("navAbout")}
                             </a>
                             <a
                                 href="/features"
                                 className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base"
                             >
-                                Features
+                                {t("navFeatures")}
                             </a>
                             
                         </div>
@@ -66,13 +66,13 @@ export default function AgroLinkHome() {
 
                            <Link href="/login">
                                <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                   Login
+                                   {t("login")}
                                </button>
                            </Link>
                             {/* Wrapped Register Button */}
                             <Link href="/register">
                                 <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                    Register
+                                    {t("register")}
                                 </button>
                             </Link>
                         </div>
@@ -87,25 +87,25 @@ export default function AgroLinkHome() {
                     {isMenuOpen && (
                         <div className="md:hidden pb-4 space-y-3 bg-[#03230F] border-t border-gray-700">
                             <a href="#" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                Home
+                                {t("navHome")}
                             </a>
                             <a href="#about" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                About
+                                {t("navAbout")}
                             </a>
                             <a href="#features" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                Features
+                                {t("navFeatures")}
                             </a>
                             <a href="#contact" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                                Contact
+                                {t("navContact")}
                             </a>
                             <div className="flex gap-2 pt-2 px-2">
                                 <button className="flex-1 px-3 py-2 border-2 border-[#EEC044] text-[#EEC044] rounded-full text-xs font-semibold">
-                                    Login
+                                    {t("login")}
                                 </button>
                                 {/* Wrapped Mobile Register Button */}
                                 <Link href="/register" className="flex-1">
                                     <button className="w-full px-3 py-2 bg-[#EEC044] text-[#03230F] rounded-full text-xs font-semibold">
-                                        Register
+                                        {t("register")}
                                     </button>
                                 </Link>
                             </div>
@@ -129,19 +129,24 @@ export default function AgroLinkHome() {
                 <div className="relative z-10 w-full px-3 sm:px-6 lg:px-8 flex flex-col items-start justify-center h-full">
                     <div className="max-w-7xl mx-auto w-full space-y-4 sm:space-y-8">
                         <div className="max-w-2xl space-y-3 sm:space-y-4">
-                            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold leading-tight text-white text-balance">
-                                Connecting Farmers and Buyers for a Smarter <span className="text-[#EEC044]">Agro Marketplace</span>
+                            <h1
+                                className={`font-bold text-white text-balance ${
+                                    language === "si"
+                                        ? "text-lg sm:text-xl md:text-3xl lg:text-4xl leading-snug"
+                                        : "text-xl sm:text-2xl md:text-4xl lg:text-5xl leading-tight"
+                                }`}
+                            >
+                                {t("heroTitle")} <span className="text-[#EEC044]">{t("heroHighlight")}</span>
                             </h1>
                             <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-100 leading-relaxed max-w-xl">
-                                Direct access to fresh produce, fair pricing, and secure transactions. AgroLink bridges the gap between
-                                farmers and buyers for sustainable agriculture.
+                                {t("heroDesc")}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-2 sm:pt-4">
                                 {/* Wrapped Get Started Button */}
                                 <Link href="/register">
                                     <button className="px-6 sm:px-8 py-2 sm:py-3 bg-[#EEC044] text-[#03230F] rounded-lg font-semibold hover:bg-[#d9a83d] transition shadow-lg w-fit text-sm sm:text-base">
-                                        Get Started
+                                        {t("getStarted")}
                                     </button>
                                 </Link>
                                 
@@ -157,10 +162,10 @@ export default function AgroLinkHome() {
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-8 sm:mb-12">
                         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#03230F] mb-2 sm:mb-4 text-balance">
-                            Why Choose AgroLink?
+                            {t("featuresTitle")}
                         </h2>
                         <p className="text-sm sm:text-base md:text-xl text-gray-600">
-                            A complete platform designed for both farmers and buyers
+                            {t("featuresSubtitle")}
                         </p>
                     </div>
 
@@ -170,9 +175,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Farmers</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat1Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Create listings, manage orders, get AI-powered price suggestions, and connect directly with buyers.
+                                {t("feat1Desc")}
                             </p>
                         </div>
 
@@ -181,9 +186,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <ShoppingCart className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">For Buyers</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat2Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Search fresh products, post item requests, negotiate prices, and support local farmers directly.
+                                {t("feat2Desc")}
                             </p>
                         </div>
 
@@ -192,9 +197,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <Users className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Dual Search System</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat3Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Search farmer products or create buyer requests. Find exactly what you need in our marketplace.
+                                {t("feat3Desc")}
                             </p>
                         </div>
 
@@ -203,9 +208,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <MessageCircle className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Chat & Reviews</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat4Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Real-time chat with buyers/farmers, ratings, reviews, and feedback to build trust and community.
+                                {t("feat4Desc")}
                             </p>
                         </div>
 
@@ -214,9 +219,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <Lock className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">Secure & Verified</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat5Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Role-based authentication, secure payments, and verified profiles for farmers, buyers, and admins.
+                                {t("feat5Desc")}
                             </p>
                         </div>
 
@@ -225,9 +230,9 @@ export default function AgroLinkHome() {
                             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                                 <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">AI Price Insights</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat6Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Smart pricing suggestions based on market trends, demand, and product quality for fair deals.
+                                {t("feat6Desc")}
                             </p>
                         </div>
                     </div>
@@ -239,10 +244,10 @@ export default function AgroLinkHome() {
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-8 sm:mb-12">
                         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#03230F] mb-2 sm:mb-4 text-balance">
-                            How It Works
+                            {t("howItWorksTitle")}
                         </h2>
                         <p className="text-sm sm:text-base md:text-xl text-gray-600">
-                            Get started with AgroLink in three simple steps
+                            {t("howItWorksSubtitle")}
                         </p>
                     </div>
 
@@ -252,9 +257,9 @@ export default function AgroLinkHome() {
                             <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                                 <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">1</span>
                             </div>
-                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">Sign Up</h3>
+                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step1Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Create your account as a Farmer, Buyer, or Admin. Verify your identity and set up your profile.
+                                {t("step1Desc")}
                             </p>
                         </div>
 
@@ -267,9 +272,9 @@ export default function AgroLinkHome() {
                             <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                                 <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">2</span>
                             </div>
-                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">List or Search</h3>
+                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step2Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Farmers list vegetables with details. Buyers search products or post item requests.
+                                {t("step2Desc")}
                             </p>
                         </div>
 
@@ -282,9 +287,9 @@ export default function AgroLinkHome() {
                             <div className="w-14 sm:w-16 h-14 sm:h-16 bg-[#EEC044] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                                 <span className="text-2xl sm:text-3xl font-bold text-[#03230F]">3</span>
                             </div>
-                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">Connect & Trade</h3>
+                            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-[#03230F] mb-2 sm:mb-3">{t("step3Title")}</h3>
                             <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                Chat, negotiate, place orders, and complete transactions securely. Leave reviews and build trust.
+                                {t("step3Desc")}
                             </p>
                         </div>
                     </div>
@@ -298,16 +303,15 @@ export default function AgroLinkHome() {
             >
                 <div className="max-w-7xl mx-auto text-center space-y-4 sm:space-y-6">
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-balance">
-                        Join the Future of Digital Agriculture Today!
+                        {t("ctaTitle")}
                     </h2>
                     <p className="text-xs sm:text-sm md:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-                        Be part of a thriving community connecting farmers and buyers for sustainable, fair-trade agriculture. Start
-                        your journey now.
+                        {t("ctaDesc")}
                     </p>
                     {/* Wrapped Create Account Button */}
                     <Link href="/register">
                         <button className="px-6 sm:px-10 py-2.5 sm:py-4 bg-[#EEC044] text-[#03230F] rounded-lg font-semibold text-sm sm:text-base lg:text-lg hover:bg-[#d9a83d] transition inline-block">
-                            Create an Account
+                            {t("createAccount")}
                         </button>
                     </Link>
                 </div>

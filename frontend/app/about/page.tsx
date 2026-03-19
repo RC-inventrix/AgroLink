@@ -1,9 +1,13 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Footer from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
 export default function AboutPage() {
+    const { t } = useLanguage()
+
     return (
         <div className="min-h-screen bg-background">
 
@@ -26,13 +30,13 @@ export default function AboutPage() {
                         {/* Desktop Menu */}
                         <div className="hidden md:flex items-center gap-5 lg:gap-15">
                             <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Home
+                                {t("navHome")}
                             </Link>
                             <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                About
+                                {t("navAbout")}
                             </Link>
                             <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                                Features
+                                {t("navFeatures")}
                             </Link>
                         </div>
 
@@ -40,13 +44,13 @@ export default function AboutPage() {
                         <div className="hidden md:flex items-center gap-2 lg:gap-3">
                             <Link href="/login">
                                 <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                    Login
+                                    {t("login")}
                                 </button>
                             </Link>
 
                             <Link href="/register">
                                 <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                    Register
+                                    {t("register")}
                                 </button>
                             </Link>
                         </div>
@@ -62,14 +66,12 @@ export default function AboutPage() {
                 <div className="container mx-auto px-4 lg:px-8">
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance">
-                            {"Empowering "}
-                            <span className="text-[#EEC044]">{"Sustainable Agriculture"}</span>
-                            {" Through Technology"}
+                            {t("aboutHeroPrefix")}
+                            <span className="text-[#EEC044]">{t("aboutHeroHighlight")}</span>
+                            {t("aboutHeroSuffix")}
                         </h1>
                         <p className="text-lg md:text-xl text-white/90 leading-relaxed text-pretty">
-                            {
-                                "AgroLink is revolutionizing the agricultural marketplace by connecting farmers directly with buyers, ensuring fair prices, transparency, and sustainable farming practices for a better tomorrow."
-                            }
+                            {t("aboutHeroDesc")}
                         </p>
                     </div>
                 </div>
@@ -81,16 +83,12 @@ export default function AboutPage() {
                     <div className="max-w-6xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             <div>
-                                <h2 className="text-3xl md:text-4xl font-bold text-[#03230F] mb-6">{"Our Mission"}</h2>
+                                <h2 className="text-3xl md:text-4xl font-bold text-[#03230F] mb-6">{t("aboutMissionTitle")}</h2>
                                 <p className="text-lg text-foreground/80 leading-relaxed mb-4">
-                                    {
-                                        "We believe in creating a direct connection between those who grow our food and those who consume it. By eliminating intermediaries, we ensure farmers receive fair compensation while buyers access fresh, quality produce."
-                                    }
+                                    {t("aboutMissionDesc1")}
                                 </p>
                                 <p className="text-lg text-foreground/80 leading-relaxed">
-                                    {
-                                        "Our platform promotes sustainable agricultural practices, supports local farming communities, and contributes to food security for all."
-                                    }
+                                    {t("aboutMissionDesc2")}
                                 </p>
                             </div>
                             <div className="relative h-[400px] rounded-lg overflow-hidden bg-[#03230F]/10">
@@ -109,18 +107,16 @@ export default function AboutPage() {
             <section className="py-16 bg-background">
                 <div className="container mx-auto px-4 lg:px-8">
                     <div className="max-w-6xl mx-auto">
-                        <h2 className="text-3xl md:text-4xl font-bold text-[#004d2b] text-center mb-12">{"Our Core Values"}</h2>
+                        <h2 className="text-3xl md:text-4xl font-bold text-[#004d2b] text-center mb-12">{t("aboutValuesTitle")}</h2>
                         <div className="grid md:grid-cols-3 gap-8">
                             <Card className="border-2 border-[#D4A650]/20 hover:border-[#D4A650] transition-colors">
                                 <CardContent className="p-6">
                                     <div className="w-12 h-12 bg-[#D4A650] rounded-lg flex items-center justify-center mb-4">
                                         <span className="text-2xl">🤝</span>
                                     </div>
-                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Fair Trade"}</h3>
+                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue1Title")}</h3>
                                     <p className="text-foreground/70 leading-relaxed">
-                                        {
-                                            "We ensure transparent pricing and fair compensation for farmers, creating a sustainable ecosystem for all participants."
-                                        }
+                                        {t("aboutValue1Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -130,11 +126,9 @@ export default function AboutPage() {
                                     <div className="w-12 h-12 bg-[#D4A650] rounded-lg flex items-center justify-center mb-4">
                                         <span className="text-2xl">🌱</span>
                                     </div>
-                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Sustainability"}</h3>
+                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue2Title")}</h3>
                                     <p className="text-foreground/70 leading-relaxed">
-                                        {
-                                            "Supporting eco-friendly farming practices that protect our planet while delivering nutritious, quality produce."
-                                        }
+                                        {t("aboutValue2Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -144,11 +138,9 @@ export default function AboutPage() {
                                     <div className="w-12 h-12 bg-[#D4A650] rounded-lg flex items-center justify-center mb-4">
                                         <span className="text-2xl">💡</span>
                                     </div>
-                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{"Innovation"}</h3>
+                                    <h3 className="text-xl font-bold text-[#004d2b] mb-3">{t("aboutValue3Title")}</h3>
                                     <p className="text-foreground/70 leading-relaxed">
-                                        {
-                                            "Leveraging technology to create efficient, user-friendly solutions that modernize agricultural commerce."
-                                        }
+                                        {t("aboutValue3Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
@@ -166,21 +158,15 @@ export default function AboutPage() {
                                 <img src="about-us/agricultural-marketplace-digital-platform-mobile-a.jpg" alt="AgroLink platform" className="w-full h-full object-cover" />
                             </div>
                             <div className="order-1 md:order-2">
-                                <h2 className="text-3xl md:text-4xl font-bold text-[#004d2b] mb-6">{"Our Story"}</h2>
+                                <h2 className="text-3xl md:text-4xl font-bold text-[#004d2b] mb-6">{t("aboutStoryTitle")}</h2>
                                 <p className="text-lg text-foreground/80 leading-relaxed mb-4">
-                                    {
-                                        "Founded by a team of agricultural enthusiasts and technology innovators, AgroLink emerged from a simple observation: the gap between farmers and consumers was hurting both parties."
-                                    }
+                                    {t("aboutStoryDesc1")}
                                 </p>
                                 <p className="text-lg text-foreground/80 leading-relaxed mb-4">
-                                    {
-                                        "We set out to build a platform that would bridge this gap, creating a marketplace where quality meets fairness, and sustainability drives growth."
-                                    }
+                                    {t("aboutStoryDesc2")}
                                 </p>
                                 <p className="text-lg text-foreground/80 leading-relaxed">
-                                    {
-                                        "Today, we're proud to serve thousands of farmers and buyers, facilitating transparent transactions that benefit everyone involved."
-                                    }
+                                    {t("aboutStoryDesc3")}
                                 </p>
                             </div>
                         </div>
@@ -193,12 +179,10 @@ export default function AboutPage() {
                 <div className="container mx-auto px-4 lg:px-8">
                     <div className="max-w-3xl mx-auto text-center">
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 text-balance">
-                            {"Join the Future of Digital Agriculture Today!"}
+                            {t("ctaTitle")}
                         </h2>
                         <p className="text-lg text-white/90 mb-8 leading-relaxed text-pretty">
-                            {
-                                "Be part of a thriving community connecting farmers and buyers for sustainable, fair-trade agriculture. Start your journey now."
-                            }
+                            {t("ctaDesc")}
                         </p>
 
                     </div>

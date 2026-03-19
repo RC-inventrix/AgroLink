@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Footer() {
+    const { t } = useLanguage();
+
     return (
         <footer className= "text-white" style={{ backgroundColor: "#03230F" }}>
             <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 px-6 py-10 text-sm">
@@ -18,23 +23,23 @@ export default function Footer() {
                 </div>
 
                 <div>
-                    <h3 className="font-bold mb-2">Explore</h3>
-                    <p>About</p>
-                    <p>Features</p>
-                    <p>Meet the Farmers</p>
+                    <h3 className="font-bold mb-2">{t("footerExploreTitle")}</h3>
+                    <p>{t("navAbout")}</p>
+                    <p>{t("navFeatures")}</p>
+                    <p>{t("footerMeetFarmers")}</p>
                 </div>
 
                 <div>
-                    <h3 className="font-bold mb-2">News</h3>
-                    <p>Bringing Food Production Back To Cities</p>
-                    <p>The Future of Farming</p>
+                    <h3 className="font-bold mb-2">{t("footerNewsTitle")}</h3>
+                    <p>{t("footerNewsItem1")}</p>
+                    <p>{t("footerNewsItem2")}</p>
                 </div>
 
                 <div>
-                    <h3 className="font-bold mb-2">Contact</h3>
+                    <h3 className="font-bold mb-2">{t("footerContactTitle")}</h3>
                     <p>📞 +94 70 322 4356</p>
                     <p>✉️ Agrolink@gmail.com</p>
-                    <p>📍 Matara, Srilanka</p>
+                    <p>📍 {t("footerAddress")}</p>
                 </div>
             </div>
         </footer>
