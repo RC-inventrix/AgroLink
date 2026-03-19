@@ -1,6 +1,6 @@
 import logo from "../../public/images/Group-6.png"
 
-export default function Example() {
+export default function Footer2() {
     return (
         <footer className="w-full bg-gradient-to-b from-[#03230F] to-[#124326] text-white">
             <div className="max-w-7xl mx-auto px-6 py-16 flex flex-col items-center">

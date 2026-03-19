@@ -1,7 +1,12 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Trash2, Truck, Store, MapPin } from "lucide-react"
+import { Trash2, Truck, Store, MapPin, User } from "lucide-react"
 import Image from "next/image"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 interface Vegetable {
     id: string
@@ -9,10 +14,11 @@ interface Vegetable {
     image: string
     pricePerKg: number
     quantity: number
-    seller: string
+    seller: string // This currently holds the ID or "Farmer #" string
     selected: boolean
     deliveryFee?: number | null
     deliveryAddress?: string
+    sellerId?: string | number // Added to ensure we have the ID for the lookup
 }
 
 interface CartItemProps {
@@ -22,6 +28,39 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
+    const [sellerFullName, setSellerFullName] = useState<string>("");
+
+    // Fetch Full Name using the endpoint
+    useEffect(() => {
+        const fetchSellerName = async () => {
+            // Extract the numeric ID from the seller string if sellerId isn't provided directly
+            const idToFetch = item.sellerId || item.seller.replace(/\D/g, "");
+            
+            if (!idToFetch) {
+                setSellerFullName(item.seller);
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/auth/fullnames?ids=${idToFetch}`);
+                if (res.ok) {
+                    const nameMap = await res.json();
+                    // nameMap is Record<Long, String>
+                    if (nameMap[idToFetch]) {
+                        setSellerFullName(nameMap[idToFetch]);
+                    } else {
+                        setSellerFullName(item.seller);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching seller name:", error);
+                setSellerFullName(item.seller);
+            }
+        };
+
+        fetchSellerName();
+    }, [item.seller, item.sellerId]);
+
     const goodsPrice = item.pricePerKg * item.quantity
 
     // Check if it's delivery (fee exists and is greater than 0)
@@ -50,16 +89,21 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
             <div className="flex flex-1 justify-between">
                 <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    <p className="text-sm text-gray-500">{item.seller}</p>
+                    
+                    {/* Updated to display fetched Full Name */}
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {sellerFullName || item.seller}
+                    </p>
 
                     <div className="mt-2 text-sm text-gray-600 flex flex-col gap-2">
-                        <span>{item.quantity} kg <span className="text-gray-400">·</span> Rs. {item.pricePerKg}/kg</span>
+                        <span>{item.quantity} kg <span className="text-gray-400">·</span> Rs. {item.pricePerKg.toFixed(2)}/kg</span>
 
                         {/* --- NEW: Delivery vs Pickup UI --- */}
                         {isDelivery ? (
                             <div className="flex items-center gap-1.5 text-blue-700 bg-blue-100 w-fit px-2.5 py-1 rounded-md">
                                 <Truck className="w-4 h-4" />
-                                <span className="font-bold text-xs tracking-tight">Delivery (Rs. {item.deliveryFee})</span>
+                                <span className="font-bold text-xs tracking-tight">Delivery (Rs. {item.deliveryFee?.toFixed(2)})</span>
                                 {item.deliveryAddress && (
                                     <>
                                         <MapPin className="w-3 h-3 ml-1 text-blue-500" />

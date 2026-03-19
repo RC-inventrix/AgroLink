@@ -6,6 +6,7 @@ import SellerHeader from "@/components/headers/SellerHeader"
 import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner"
+import Footer2 from "@/components/footer/Footer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -37,7 +38,7 @@ export default function AuctionsPage() {
         // Flatten if API returns nested structure
         const flatData = Array.isArray(data) ? data : Object.values(data).flat()
         setAuctions(flatData)
-      }else {
+      } else {
           // --- ADD THIS ERROR HANDLING ---
           console.error("API Error:", res.status, res.statusText);
           const errorText = await res.text();
@@ -57,16 +58,18 @@ export default function AuctionsPage() {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    
+    <div className="min-h-screen flex flex-col bg-[#F8F9FA]"> 
       <Toaster position="top-center" richColors />
 
       <SellerHeader />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         <SellerSidebar unreadCount={0} activePage="auctions" />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">
+        
+        <main className="flex-1 p-8">
+          <div className="max-w-6xl mx-auto">
             <div className="mb-8">
               <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">
                 My Auctions
@@ -94,6 +97,9 @@ export default function AuctionsPage() {
           </div>
         </main>
       </div>
+      
+      
+      <Footer2 />
     </div>
   )
 }

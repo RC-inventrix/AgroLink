@@ -1,605 +1,681 @@
 "use client"
 
 import {
-  Sprout,
-  ShoppingCart,
-  TrendingUp,
-  MessageSquare,
-  Shield,
-  MapPin,
-  Bell,
-  Star,
-  Gavel,
-  Search,
-  BarChart3,
-  Cloud,
-  Bot,
-  Truck,
+    Sprout,
+    ShoppingCart,
+    TrendingUp,
+    MessageSquare,
+    Shield,
+    MapPin,
+    Bell,
+    Star,
+    Gavel,
+    Search,
+    BarChart3,
+    Cloud,
+    Bot,
+    Truck,
 } from "lucide-react"
+import { motion, type Variants } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Image from "next/image";
-import Link from "next/link";
-import Footer from "@/components/Footer";
-import { useLanguage } from "@/context/LanguageContext";
+import Headerall from "@/components/Headerall"
+import Footer from "@/components/Footer"
+import { useLanguage } from "@/context/LanguageContext" // Added Context Hook
+
+const fadeUpVariant: Variants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.6,
+        },
+    },
+}
+
+const staggerContainer: Variants = {
+    hidden: {},
+    visible: {
+        transition: {
+            staggerChildren: 0.12,
+        },
+    },
+}
 
 export default function FeaturesPage() {
-  const { t } = useLanguage()
+    // Initialize the translation hook
+    const { t } = useLanguage()
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-        <nav className="fixed top-0 w-full z-50 bg-[#03230F] shadow-md h-14 sm:h-16">
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-14 sm:h-16">
+    return (
+        <div className="min-h-screen bg-background">
+            <Headerall />
 
-                    {/* Logo Section */}
-                    <div className="flex items-center gap-2">
-                        <Image
-                            src="/images/Group-6.png"
-                            alt="AgroLink Logo"
-                            width={180}
-                            height={64}
-                            className="h-8 sm:h-12 w-auto"
-                        />
-                    </div>
-
-                    {/* Desktop Menu */}
-                    <div className="hidden md:flex items-center gap-5 lg:gap-15">
-                        <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            {t("navHome")}
-                        </Link>
-                        <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            {t("navAbout")}
-                        </Link>
-                        <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            {t("navFeatures")}
-                        </Link>
-                    </div>
-
-                    {/* Auth Buttons - Desktop */}
-                    <div className="hidden md:flex items-center gap-2 lg:gap-3">
-                        <Link href="/login">
-                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-full hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                {t("login")}
-                            </button>
-                        </Link>
-
-                        <Link href="/register">
-                            <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-full hover:bg-[#d9a83d] transition font-semibold">
-                                {t("register")}
-                            </button>
-                        </Link>
-                    </div>
-
+            {/* Hero Section */}
+            <section className="bg-[#03230F] text-white py-20 pt-24 md:pt-32">
+                <div className="container mx-auto px-4 lg:px-8 text-center">
+                    <motion.div
+                        className="max-w-4xl mx-auto flex flex-col items-center justify-center"
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.7 }}
+                    >
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-white text-center mb-6">
+                            {t("featHeroPrefix")}
+                            <span className="text-[#EEC044] block my-2 sm:my-3">
+                                {t("featHeroHighlight")}
+                            </span>
+                        </h1>
+                        <p className="text-lg md:text-xl text-white/90 leading-relaxed text-center max-w-3xl mx-auto text-balance">
+                            {t("featHeroDesc")}
+                        </p>
+                    </motion.div>
                 </div>
-            </div>
-        </nav>
+            </section>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-[#03230F] to-[#03230F] text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6 text-balance">{t("featuresPageHeroTitle")}</h1>
-          <p className="text-xl text-emerald-100 max-w-3xl mx-auto text-balance">
-            {t("featuresPageHeroDesc")}
-          </p>
-        </div>
-      </section>
+            {/* Main Features Grid */}
+            <section className="container mx-auto px-4 py-16 lg:px-8">
+                <motion.div
+                    className="text-center mb-12"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                >
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
+                        {t("featCoreTitle")}
+                    </h2>
+                    <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
+                        {t("featCoreSubtitle")}
+                    </p>
+                </motion.div>
 
-      {/* Main Features Grid */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-[#0d3b2e] mb-4">{t("featuresPageCoreTitle")}</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {t("featuresPageCoreSubtitle")}
-          </p>
-        </div>
+                <motion.div
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.15 }}
+                >
+                    {/* Feature 1 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Sprout className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featProductTitle")}</CardTitle>
+                                <CardDescription>{t("featProductDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featProductItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featProductItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featProductItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featProductItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Farmer Features */}
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Sprout className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardProductTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardProductSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardProductItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardProductItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardProductItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardProductItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 2 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <ShoppingCart className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featMarketTitle")}</CardTitle>
+                                <CardDescription>{t("featMarketDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featMarketItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featMarketItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featMarketItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featMarketItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <ShoppingCart className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardMarketplaceTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardMarketplaceSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardMarketplaceItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardMarketplaceItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardMarketplaceItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardMarketplaceItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 3 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Gavel className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featBiddingTitle")}</CardTitle>
+                                <CardDescription>{t("featBiddingDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featBiddingItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featBiddingItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featBiddingItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featBiddingItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Gavel className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardBiddingTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardBiddingSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardBiddingItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardBiddingItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardBiddingItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardBiddingItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 4 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Search className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featReverseTitle")}</CardTitle>
+                                <CardDescription>{t("featReverseDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featReverseItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featReverseItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featReverseItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featReverseItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Search className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardReverseTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardReverseSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardReverseItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardReverseItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardReverseItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardReverseItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 5 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <MessageSquare className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featCommsTitle")}</CardTitle>
+                                <CardDescription>{t("featCommsDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featCommsItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featCommsItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featCommsItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featCommsItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <MessageSquare className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardCommsTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardCommsSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardCommsItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardCommsItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardCommsItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardCommsItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 6 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Truck className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featDeliveryTitle")}</CardTitle>
+                                <CardDescription>{t("featDeliveryDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDeliveryItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDeliveryItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDeliveryItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDeliveryItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Truck className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardDeliveryTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardDeliverySubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDeliveryItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDeliveryItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDeliveryItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDeliveryItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 7 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Star className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featRatingTitle")}</CardTitle>
+                                <CardDescription>{t("featRatingDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featRatingItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featRatingItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featRatingItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featRatingItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Star className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardRatingTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardRatingSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardRatingItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardRatingItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardRatingItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardRatingItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 8 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <MapPin className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featLocationTitle")}</CardTitle>
+                                <CardDescription>{t("featLocationDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featLocationItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featLocationItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featLocationItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featLocationItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <MapPin className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardLocationTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardLocationSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardLocationItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardLocationItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardLocationItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardLocationItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+                    {/* Feature 9 */}
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <BarChart3 className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featDashboardTitle")}</CardTitle>
+                                <CardDescription>{t("featDashboardDesc")}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDashboardItem1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDashboardItem2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDashboardItem3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featDashboardItem4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                </motion.div>
+            </section>
 
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all hover:shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <BarChart3 className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageCardDashboardTitle")}</CardTitle>
-              <CardDescription>{t("featuresPageCardDashboardSubtitle")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDashboardItem1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDashboardItem2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDashboardItem3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageCardDashboardItem4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+            {/* AI Features Section */}
+            <section className="bg-[#EBEFEA] py-16">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <motion.div
+                        className="text-center mb-12"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
+                            {t("featAiTitle")}
+                        </h2>
+                        <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
+                            {t("featAiSubtitle")}
+                        </p>
+                    </motion.div>
 
-      {/* AI Features Section */}
-      <section className="bg-gradient-to-r from-emerald-50 to-emerald-100 py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#0d3b2e] mb-4">{t("featuresPageAiTitle")}</h2>
-            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-              {t("featuresPageAiSubtitle")}
-            </p>
-          </div>
+                    <motion.div
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.2 }}
+                    >
+                        <motion.div variants={fadeUpVariant}>
+                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
+                                <CardHeader>
+                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                        <TrendingUp className="h-6 w-6 text-[#EEC044]" />
+                                    </div>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard1Title")}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                        {t("featAiCard1Desc")}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-2 border-[#d4a340] bg-white">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-br from-[#0d3b2e] to-[#165a42] rounded-lg flex items-center justify-center mb-3">
-                  <TrendingUp className="h-6 w-6 text-[#d4a340]" />
+                        <motion.div variants={fadeUpVariant}>
+                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
+                                <CardHeader>
+                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                        <Cloud className="h-6 w-6 text-[#EEC044]" />
+                                    </div>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard2Title")}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                        {t("featAiCard2Desc")}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+
+                        <motion.div variants={fadeUpVariant}>
+                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
+                                <CardHeader>
+                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                        <Bot className="h-6 w-6 text-[#EEC044]" />
+                                    </div>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard3Title")}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                        {t("featAiCard3Desc")}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+
+                        <motion.div variants={fadeUpVariant}>
+                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
+                                <CardHeader>
+                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                        <BarChart3 className="h-6 w-6 text-[#EEC044]" />
+                                    </div>
+                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard4Title")}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-foreground/70 leading-relaxed">
+                                        {t("featAiCard4Desc")}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    </motion.div>
                 </div>
-                <CardTitle className="text-[#0d3b2e]">{t("featuresPageAiCard1Title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  {t("featuresPageAiCard1Desc")}
-                </p>
-              </CardContent>
-            </Card>
+            </section>
 
-            <Card className="border-2 border-[#d4a340] bg-white">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-br from-[#0d3b2e] to-[#165a42] rounded-lg flex items-center justify-center mb-3">
-                  <Cloud className="h-6 w-6 text-[#d4a340]" />
+            {/* Security Features Section */}
+            <section className="container mx-auto px-4 py-16 lg:px-8">
+                <motion.div
+                    className="text-center mb-12"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                >
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-[#03230F] mb-4">
+                        {t("featSecTitle")}
+                    </h2>
+                    <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
+                        {t("featSecSubtitle")}
+                    </p>
+                </motion.div>
+
+                <motion.div
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.2 }}
+                >
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Shield className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard1Title")}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard1Item1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard1Item2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard1Item3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard1Item4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Bell className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard2Title")}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard2Item1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard2Item2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard2Item3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard2Item4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+
+                    <motion.div variants={fadeUpVariant}>
+                        <Card className="border-2 border-[#EEC044] transition-colors hover:shadow-lg h-full">
+                            <CardHeader>
+                                <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
+                                    <Shield className="h-6 w-6 text-[#EEC044]" />
+                                </div>
+                                <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featSecCard3Title")}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-foreground/70">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard3Item1")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard3Item2")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard3Item3")}</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-[#EEC044] mt-1 font-bold">✓</span>
+                                        <span>{t("featSecCard3Item4")}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                </motion.div>
+            </section>
+
+            {/* Payment Options Section */}
+            <section className="bg-[#03230F] text-white py-16">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <motion.div
+                        className="text-center mb-12"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-white mb-4">
+                            {t("featPayTitle")}
+                        </h2>
+                        <p className="text-lg text-white/80 max-w-2xl mx-auto">
+                            {t("featPaySubtitle")}
+                        </p>
+                    </motion.div>
+
+                    <motion.div
+                        className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.2 }}
+                    >
+                        <motion.div variants={fadeUpVariant}>
+                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
+                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard1Title")}</h3>
+                                <p className="text-white/80 mb-4 leading-relaxed">
+                                    {t("featPayCard1Desc")}
+                                </p>
+                                <ul className="space-y-2 text-white/90">
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item1")}
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item2")}
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item3")}
+                                    </li>
+                                </ul>
+                            </div>
+                        </motion.div>
+
+                        <motion.div variants={fadeUpVariant}>
+                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
+                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard2Title")}</h3>
+                                <p className="text-white/80 mb-4 leading-relaxed">
+                                    {t("featPayCard2Desc")}
+                                </p>
+                                <ul className="space-y-2 text-white/90">
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item1")}
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item2")}
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item3")}
+                                    </li>
+                                </ul>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 </div>
-                <CardTitle className="text-[#0d3b2e]">{t("featuresPageAiCard2Title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  {t("featuresPageAiCard2Desc")}
-                </p>
-              </CardContent>
-            </Card>
+            </section>
 
-            <Card className="border-2 border-[#d4a340] bg-white">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-br from-[#0d3b2e] to-[#165a42] rounded-lg flex items-center justify-center mb-3">
-                  <Bot className="h-6 w-6 text-[#d4a340]" />
-                </div>
-                <CardTitle className="text-[#0d3b2e]">{t("featuresPageAiCard3Title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  {t("featuresPageAiCard3Desc")}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-[#d4a340] bg-white">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-br from-[#0d3b2e] to-[#165a42] rounded-lg flex items-center justify-center mb-3">
-                  <BarChart3 className="h-6 w-6 text-[#d4a340]" />
-                </div>
-                <CardTitle className="text-[#0d3b2e]">{t("featuresPageAiCard4Title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  {t("featuresPageAiCard4Desc")}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+            <Footer />
         </div>
-      </section>
-
-      {/* Additional Features Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-[#0d3b2e] mb-4">{t("featuresPageSecurityTitle")}</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {t("featuresPageSecuritySubtitle")}
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Shield className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageSecurityCard1Title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard1Item1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard1Item2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard1Item3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard1Item4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Bell className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageSecurityCard2Title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard2Item1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard2Item2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard2Item3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard2Item4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-emerald-100 hover:border-[#d4a340] transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 bg-[#0d3b2e] rounded-lg flex items-center justify-center mb-3">
-                <Shield className="h-6 w-6 text-[#d4a340]" />
-              </div>
-              <CardTitle className="text-[#0d3b2e]">{t("featuresPageSecurityCard3Title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard3Item1")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard3Item2")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard3Item3")}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#d4a340] mt-1">✓</span>
-                  <span>{t("featuresPageSecurityCard3Item4")}</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Payment Options Section */}
-      <section className="bg-[#03230F] text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">{t("featuresPagePaymentTitle")}</h2>
-            <p className="text-xl text-emerald-100 max-w-2xl mx-auto">
-              {t("featuresPagePaymentSubtitle")}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-[#d4a340]/30">
-              <h3 className="text-2xl font-bold text-[#d4a340] mb-4">{t("featuresPagePaymentCard1Title")}</h3>
-              <p className="text-emerald-100 mb-4">
-                {t("featuresPagePaymentCard1Desc")}
-              </p>
-              <ul className="space-y-2 text-emerald-50">
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard1Item1")}
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard1Item2")}
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard1Item3")}
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-[#d4a340]/30">
-              <h3 className="text-2xl font-bold text-[#d4a340] mb-4">{t("featuresPagePaymentCard2Title")}</h3>
-              <p className="text-emerald-100 mb-4">
-                {t("featuresPagePaymentCard2Desc")}
-              </p>
-              <ul className="space-y-2 text-emerald-50">
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard2Item1")}
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard2Item2")}
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#d4a340]">✓</span> {t("featuresPagePaymentCard2Item3")}
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-2xl p-12 text-center">
-          <h2 className="text-4xl font-bold text-[#0d3b2e] mb-4 text-balance">
-            {t("featuresPageCtaTitle")}
-          </h2>
-          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto text-balance">
-            {t("featuresPageCtaDesc")}
-          </p>
-          
-        </div>
-      </section>
-    <Footer/>
-      
-    </div>
-  )
+    )
 }

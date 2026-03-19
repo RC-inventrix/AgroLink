@@ -53,6 +53,8 @@ public class Product {
     private Double pickupLatitude;
     private Double pickupLongitude;
 
+    private Integer handlingTime;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> images;
 }

@@ -26,6 +26,7 @@ import ProtectedRoute from "@/components/protected-route"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import BuyerHeader from "@/components/headers/BuyerHeader"
+import Footer from "@/components/footer/Footer"
 
 export default function BuyerDashboard() {
     const [firstName, setFirstName] = useState("User")
@@ -59,6 +60,8 @@ export default function BuyerDashboard() {
                 const response = await fetch(`${gatewayUrl}/auth/me`, { headers });
                 if (response.ok) {
                     const data = await response.json();
+
+                    // Check ban status first
                     if (data.isBanned) {
                         setIsBanned(true);
                         return;
@@ -208,7 +211,7 @@ export default function BuyerDashboard() {
                         <div className="flex items-center gap-2 text-sm text-gray-700"><Mail size={16} className="text-red-500"/> support@agrolink.com</div>
                         <div className="flex items-center gap-2 text-sm text-gray-700"><Phone size={16} className="text-red-500"/> +94 11 234 5678</div>
                     </div>
-                    <Button onClick={() => { sessionStorage.clear(); window.location.href = "/login"; }} className="w-full bg-gray-900 hover:bg-gray-800"><LogOut className="mr-2 h-4 w-4"/> Logout</Button>
+                    <Button onClick={() => { sessionStorage.clear(); window.location.href = "/login"; }} className="w-full bg-[#03230F] hover:bg-black text-[#EEC044]"><LogOut className="mr-2 h-4 w-4"/> Logout</Button>
                 </div>
             </div>
         );
@@ -267,7 +270,7 @@ export default function BuyerDashboard() {
         <ProtectedRoute>
             <div className="min-h-screen bg-background text-gray-800">
                 <BuyerHeader />
-                <div className="flex">
+                <div className="flex flex-1">
                     <DashboardNav unreadCount={navUnread} />
                     <main className="flex-1 p-6 lg:p-8">
                         {/* Welcome Banner */}
@@ -278,35 +281,40 @@ export default function BuyerDashboard() {
 
                         {/* Announcement Bar */}
                         {showAnnouncements && announcements.length > 0 && (
-                            <div className="mb-6 bg-yellow-400 rounded-xl px-6 py-4 flex justify-between items-center shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="mb-6 bg-[#EEC044] rounded-xl px-6 py-4 flex justify-between items-center shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-[#03230F] p-2 rounded-lg"><Megaphone size={18} className="text-yellow-400" /></div>
+                                    <div className="bg-[#03230F] p-2 rounded-lg"><Megaphone size={18} className="text-[#EEC044]" /></div>
                                     <div>
                                         <p className="text-sm font-bold text-[#03230F] leading-tight">{announcements[0].title}</p>
-                                        <p className="text-sm text-[#03230F]/80">{announcements[0].message}</p>
+                                        <p className="text-sm text-[#03230F]/80 font-medium">{announcements[0].message}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowAnnouncements(false)} className="hover:bg-black/10 p-1.5 rounded-full transition-colors">
+                                <button onClick={() => setShowAnnouncements(false)} className="hover:bg-[#03230F]/10 p-1.5 rounded-full transition-colors">
                                     <X size={20} className="text-[#03230F]" />
                                 </button>
                             </div>
                         )}
 
                         <div className="mb-8 grid gap-6 md:grid-cols-2">
-                            <Card className="hover:shadow-md transition-shadow border-none shadow-sm rounded-2xl overflow-hidden">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gray-50/50 border-b">
-                                    <CardTitle className="text-lg font-bold text-gray-800">My Cart</CardTitle>
-                                    <ShoppingCart className="h-5 w-5 text-yellow-500" />
+                            
+                            
+                            
+
+                            {/* 2. My Cart Card (Now on the Right) */}
+                            <Card className="hover:shadow-md transition-shadow border-gray-200">
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-lg font-bold text-[#03230F]">My Cart</CardTitle>
+                                    <ShoppingCart className="h-5 w-5 text-[#EEC044]" />
                                 </CardHeader>
                                 <CardContent className="pt-6">
                                     {isLoadingCart ? (
-                                        <div className="h-24 flex items-center justify-center animate-pulse bg-gray-50 rounded-lg">Loading cart...</div>
+                                        <div className="h-24 flex items-center justify-center animate-pulse bg-gray-50 rounded-lg text-[#03230F] font-semibold">Loading...</div>
                                     ) : (
                                         <>
-                                            <div className="text-3xl font-bold text-[#2d5016] mb-4">{realCartItems.length} <span className="text-lg font-medium text-gray-500">items</span></div>
-                                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                                                {realCartItems.slice(0, 5).map((item) => (
-                                                    <div key={item.id} className="h-14 w-14 flex-shrink-0 rounded-xl overflow-hidden border shadow-sm">
+                                            <div className="text-3xl font-black text-[#03230F] mb-4">{realCartItems.length} <span className="text-lg text-gray-500 font-medium">items</span></div>
+                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                                {realCartItems.slice(0, 4).map((item) => (
+                                                    <div key={item.id} className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border border-[#EEC044]/30 shadow-sm">
                                                         <img src={item.imageUrl || "/placeholder.svg"} className="h-full w-full object-cover" />
                                                     </div>
                                                 ))}
@@ -425,14 +433,16 @@ export default function BuyerDashboard() {
                                             </Link>
                                         ))
                                     ) : (
-                                        <p className="py-8 text-center text-sm text-gray-400">No active chats</p>
+                                        <p className="py-4 text-center text-sm text-gray-400 font-medium">No active chats</p>
                                     )}
-                                    <Link href="/buyer/chat"><Button variant="ghost" className="w-full mt-2 text-sm text-[#2d5016] hover:text-[#1a2e0c] hover:bg-green-50 font-bold rounded-xl h-11">Open Message Center</Button></Link>
+                                    <Link href="/buyer/chat"><Button variant="ghost" className="w-full text-xs text-[#03230F] hover:text-[#EEC044] hover:bg-[#03230F] transition-colors mt-2 font-bold uppercase tracking-widest">Open Message Center</Button></Link>
                                 </CardContent>
                             </Card>
                         </div>
                     </main>
                 </div>
+                
+                <Footer />
             </div>
         </ProtectedRoute>
     )

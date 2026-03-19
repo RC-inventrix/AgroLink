@@ -152,6 +152,7 @@ export default function VegetableForm() {
         baseCharge: "",
         extraRatePerKm: "",
         useCustomPickupLocation: false,
+        handlingTime: "",
         pickupLocation: {
             province: "",
             district: "",
@@ -322,24 +323,31 @@ export default function VegetableForm() {
 
         try {
             const uploadPromises = images.map(async (file) => {
-                const presignRes = await fetch(
-                    `${API_URL}/products/presigned-url?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`,
-                    { headers: { "Authorization": `Bearer ${token}` }, signal }
-                );
+    // 1. Always use the current file type (it might be image/jpeg after compression)
+    const currentContentType = file.type;
 
-                if (!presignRes.ok) throw new Error("Permission denied for upload");
-                const { uploadUrl } = await presignRes.json();
+    // 2. Request the URL using the ACTUAL current type
+    const presignRes = await fetch(
+        `${API_URL}/products/presigned-url?fileName=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(file.type)}`,
+        { headers: { "Authorization": `Bearer ${token}` }, signal }
+    );
 
-                const uploadRes = await fetch(uploadUrl, {
-                    method: "PUT",
-                    body: file,
-                    headers: { "Content-Type": file.type },
-                    signal
-                });
+    if (!presignRes.ok) throw new Error("Permission denied for upload");
+    const { uploadUrl } = await presignRes.json();
 
-                if (!uploadRes.ok) throw new Error(`Failed to upload ${file.name}`);
-                return getCleanS3Url(uploadUrl);
-            });
+    // 3. Perform the PUT with the EXACT same Content-Type as step 2
+    const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        
+        headers: { "Content-Type": file.type }, // This MUST match the presigned request
+        
+        signal
+    });
+
+    if (!uploadRes.ok) throw new Error(`Failed to upload ${file.name}`);
+    return getCleanS3Url(uploadUrl);
+});
 
             const uploadedUrls = await Promise.all(uploadPromises);
 
@@ -348,7 +356,7 @@ export default function VegetableForm() {
             let finalLng = null;
 
             if (formData.useCustomPickupLocation) {
-                if(formData.pickupLocation.streetAddress) {
+                if (formData.pickupLocation.streetAddress) {
                     finalAddress = `${formData.pickupLocation.streetAddress}, ${formData.pickupLocation.city}, ${formData.pickupLocation.district}`;
                 }
                 finalLat = formData.pickupLocation.latitude;
@@ -376,7 +384,8 @@ export default function VegetableForm() {
                     pickupAddress: finalAddress,
                     pickupLatitude: finalLat,
                     pickupLongitude: finalLng,
-                    imageUrls: uploadedUrls
+                    imageUrls: uploadedUrls,
+                    handlingTime: parseInt(formData.handlingTime) || 1,
                 };
 
                 response = await fetch(`${API_URL}/products`, {
@@ -460,9 +469,8 @@ export default function VegetableForm() {
             )}
 
             {notification && (
-                <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${
-                    notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" : "bg-red-950 border-red-500 text-white"
-                }`}>
+                <div className={`fixed top-5 right-5 z-[100] flex items-center p-4 rounded-lg shadow-2xl border transition-all transform duration-500 ease-out animate-in slide-in-from-right-10 ${notification.type === 'success' ? "bg-[#03230F] border-green-500 text-white" : "bg-red-950 border-red-500 text-white"
+                    }`}>
                     <div className="flex items-center gap-3">
                         {notification.type === 'success' ? <Check className="w-5 h-5 text-green-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
                         <p className="font-medium pr-4">{notification.message}</p>
@@ -668,6 +676,36 @@ export default function VegetableForm() {
                             <div className="flex items-center gap-2"><RadioGroupItem value="no" id="no" /><Label htmlFor="no">No</Label></div>
                         </RadioGroup>
                     </div>
+
+                    {/* Delivery / Pickup Time Logic */}
+                    {/* Insert this after the "Will You Deliver?" section */}
+<div className="mb-8 p-4 bg-primary/5 rounded-lg border border-primary/10 animate-in fade-in duration-300">
+    <Label htmlFor="handlingTime" className="text-base font-semibold mb-2 block">
+        {formData.willDeliver === "yes" ? "Estimated Delivery Time" : "Collection Deadline"}
+    </Label>
+    <div className="flex items-center gap-3">
+        <Select 
+            value={formData.handlingTime} 
+            onValueChange={(value) => handleSelectChange(value, "handlingTime")}
+        >
+            <SelectTrigger id="handlingTime" className="w-full max-w-[200px]">
+                <SelectValue placeholder="Select days" />
+            </SelectTrigger>
+            <SelectContent>
+                {[1, 2, 3, 4, 5, 7, 10, 14].map((day) => (
+                    <SelectItem key={day} value={day.toString()}>
+                        {day} {day === 1 ? 'Day' : 'Days'}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">
+            {formData.willDeliver === "yes" 
+                ? "after order placement." 
+                : "for buyer to pick up."}
+        </span>
+    </div>
+</div>
 
                     {formData.willDeliver === "yes" && (
                         <div className="bg-muted/30 rounded-lg p-6 mb-8 animate-in zoom-in-95 duration-300">

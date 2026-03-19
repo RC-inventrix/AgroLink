@@ -552,26 +552,36 @@ export default function ProductList() {
                             </div>
                         </div>
 
-                        <div className="p-6 border-t bg-muted/10 flex gap-4 sticky bottom-0 z-10">
-                            <Button size="lg" className="flex-1" onClick={() => setShowSaveConfirm(true)}>Save Changes</Button>
-                            <Button size="lg" variant="outline" className="flex-1" onClick={() => setEditingProduct(null)}>Cancel</Button>
+                        <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100">
+                            <Button size="lg" className="flex-1 bg-[#03230F] text-[#EEC044] font-bold uppercase tracking-widest text-xs hover:bg-black transition-all shadow-lg" onClick={() => setShowSaveConfirm(true)}>
+                                Save Changes
+                            </Button>
+                            <Button size="lg" variant="outline" className="flex-1 border-gray-200 text-gray-500 font-bold uppercase tracking-widest text-xs hover:bg-gray-50" onClick={() => setEditingProduct(null)}>
+                                Cancel
+                            </Button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* --- SAVE MODAL --- */}
+            {/* --- SAVE CONFIRM MODAL --- */}
             {showSaveConfirm && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full border border-border animate-in fade-in zoom-in-95">
-                        <h3 className="text-lg font-bold mb-2">Confirm Updates?</h3>
-                        <p className="text-sm text-muted-foreground mb-6">These changes will be visible to buyers immediately.</p>
-                        <div className="flex gap-3">
-                            <Button className="flex-1" onClick={executeSave} disabled={isSaving}>
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden text-center">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
+                        <div className="bg-yellow-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Check className="w-10 h-10 text-[#EEC044]" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">Confirm Updates?</h3>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">These changes will be visible to buyers immediately.</p>
+                        <div className="flex flex-col gap-3">
+                            <Button className="w-full bg-[#03230F] text-[#EEC044] font-bold py-6 uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all" onClick={executeSave} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
                                 {isSaving ? "Saving..." : "Confirm"}
                             </Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setShowSaveConfirm(false)} disabled={isSaving}>Back</Button>
+                            <button className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors" onClick={() => setShowSaveConfirm(false)} disabled={isSaving}>
+                                Back
+                            </button>
                         </div>
                     </div>
                 </div>
