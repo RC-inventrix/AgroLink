@@ -5,16 +5,29 @@ import { useEffect, useState } from "react";
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import Link from "next/link";
-// Added the missing icon imports here (LogOut, Mail, Phone, ShieldAlert, Megaphone, X)
-import { Plus, TrendingUp, Package, Wallet, Carrot, Sparkles, Bell, ChevronRight, AlertCircle, CheckCircle2, LogOut, Mail, Phone, ShieldAlert, Megaphone, X } from "lucide-react";
-// Added missing UI component imports
+import {
+    Plus,
+    TrendingUp,
+    Package,
+    Wallet,
+    Carrot,
+    Sparkles,
+    Bell,
+    ChevronRight,
+    AlertCircle,
+    CheckCircle2,
+    LogOut,
+    Mail,
+    Phone,
+    ShieldAlert as Shield,
+    Megaphone,
+    X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
-import Footer from "@/components/footer/Footer";
-import Example from "@/components/footer/Footer";
 import Footer2 from "@/components/footer/Footer";
 
 
@@ -457,17 +470,44 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
     );
 }
 
+// Helper Component: Updated CropRecommendationCard
 function CropRecommendationCard() {
-    const [temperature, setTemperature] = useState("");
-    const [humidity, setHumidity] = useState("");
-    const [rainfall, setRainfall] = useState("");
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [userLocation, setUserLocation] = useState<any>(null);
+
+    // Ensure we use the environment variable for Google Cloud compatibility, falling back to localhost
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+    // 1. Fetch user location automatically on component mount
+    useEffect(() => {
+        const fetchLocation = async () => {
+            const token = sessionStorage.getItem("token");
+            const myId = sessionStorage.getItem("id");
+            if (!token || !myId) return;
+
+            try {
+                // Call the existing Identity Service endpoint to get location
+                const res = await fetch(`${baseUrl}/users/${myId}/address`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setUserLocation(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch user location", err);
+            }
+        };
+
+        fetchLocation();
+    }, [baseUrl]);
 
     const handlePredict = async () => {
-        if (!temperature || !humidity || !rainfall) {
-            setError("Please fill in all fields.");
+        if (!userLocation || !userLocation.latitude || !userLocation.longitude) {
+            setError("Location data is missing. Please update your profile with your location.");
             return;
         }
 
@@ -476,22 +516,29 @@ function CropRecommendationCard() {
         setError(null);
 
         try {
+            // 2. Call the Java Backend (Product Catalog Service)
+            // This safely routes through your API, working for both Localhost and Google Cloud
             const response = await fetch(`${baseUrl}/api/crop/recommend`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    temperature: Number(temperature),
-                    humidity: Number(humidity),
-                    rainfall: Number(rainfall),
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                    city: userLocation.city,
+                    province: userLocation.district // Mapping district to province
                 }),
             });
 
-            if (!response.ok) throw new Error("Failed to get crop prediction");
+            if (!response.ok) {
+                setError("Failed to get crop prediction from AI model.");
+                return;
+            }
 
             const data = await response.json();
-            setResult(data.crop);
+            // Assuming the Python API returns { "recommended_crop": "Rice" }
+            setResult(data.recommended_crop || data.crop || "Unknown Crop");
         } catch (err: any) {
-            setError(err.message || "Something went wrong. Please try again.");
+            setError(err.message || "Something went wrong communicating with the AI. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -507,24 +554,33 @@ function CropRecommendationCard() {
                 <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">Powered by ML</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            {/* Displaying detected location instead of input fields */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-5 border border-gray-100 flex justify-between items-center">
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature (°C)</label>
-                    <input type="number" placeholder="e.g. 28" value={temperature} onChange={e => setTemperature(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Detected Farm Location</p>
+                    {userLocation ? (
+                        <p className="text-sm font-semibold text-[#03230F]">
+                            {userLocation.city}, {userLocation.district} <br/>
+                            <span className="text-xs font-normal text-gray-400">
+                                Lat: {userLocation.latitude} | Lon: {userLocation.longitude}
+                            </span>
+                        </p>
+                    ) : (
+                        <p className="text-sm text-gray-400">Loading location data...</p>
+                    )}
                 </div>
-                <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Humidity (%)</label>
-                    <input type="number" placeholder="e.g. 70" value={humidity} onChange={e => setHumidity(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
-                </div>
-                <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Rainfall (mm)</label>
-                    <input type="number" placeholder="e.g. 120" value={rainfall} onChange={e => setRainfall(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#EEC044] focus:bg-white transition-all"/>
+                <div className="bg-white p-3 rounded-xl shadow-sm">
+                    📍
                 </div>
             </div>
 
             <div className="flex justify-end mb-6">
-                <button onClick={handlePredict} disabled={loading} className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                    {loading ? "Analyzing Weather..." : "Recommend Crop"}
+                <button
+                    onClick={handlePredict}
+                    disabled={loading || !userLocation}
+                    className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {loading ? "Analyzing Soil & Weather..." : "Auto-Recommend Crop"}
                 </button>
             </div>
 
@@ -533,15 +589,15 @@ function CropRecommendationCard() {
                     <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
                     <div>
                         <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>{error ? 'Analysis Error' : `Best to grow: ${result}`}</h4>
-                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : "Based on the weather conditions you provided."}</p>
+                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : "Based on your farm's exact location coordinates."}</p>
                     </div>
                 </div>
             ) : (
                 <div className="flex items-center gap-6 p-4 rounded-2xl bg-gray-50 border border-dashed border-gray-200">
-                    <div className="text-4xl opacity-50">☁️</div>
+                    <div className="text-4xl opacity-50">🤖</div>
                     <div>
-                        <h4 className="font-bold text-gray-500">Awaiting Data</h4>
-                        <p className="text-sm text-gray-400">Enter your local weather conditions above to get an AI-powered recommendation.</p>
+                        <h4 className="font-bold text-gray-500">Ready to Analyze</h4>
+                        <p className="text-sm text-gray-400">Click the button above to let our ML model analyze your location.</p>
                     </div>
                 </div>
             )}
