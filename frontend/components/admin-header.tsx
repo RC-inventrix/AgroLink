@@ -9,9 +9,7 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ setSidebarOpen, sidebarOpen }: AdminHeaderProps) {
-  // දැනට අපිට සැබෑ Server එකක් නැති නිසා, මේකෙන් අපිට Test කරන්න පුළුවන්.
-  // පස්සේ කාලෙක මේක Backend එකෙන් එන විදිහට හදමු.
-  const isOnline = true; // මෙතන 'false' දැම්මොත් "System Offline" කියලා වැටෙයි.
+  const isOnline = true;
 
   return (
     <header className="border-b border-border bg-card">

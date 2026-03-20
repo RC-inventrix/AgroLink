@@ -8,10 +8,8 @@ export default function Page() {
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
       <SellerHeader />
       
-      
       <div className="flex flex-1">
         <SellerSidebar unreadCount={0} activePage="products" />
-        
         
         <main className="flex-1 w-full overflow-hidden">
           <ProductList />

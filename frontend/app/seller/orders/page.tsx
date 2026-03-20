@@ -8,10 +8,12 @@ import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner"
 import Footer2 from "@/components/footer/Footer";
+import { useLanguage } from "@/context/LanguageContext"; // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function OrdersPage() {
+    const { t } = useLanguage(); // Initialized the hook
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -65,8 +67,8 @@ export default function OrdersPage() {
                 <main className="flex-1 p-8">
                     <div className="max-w-6xl mx-auto">
                         <div className="mb-8">
-                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Order Management</h1>
-                            <p className="text-[#A3ACBA] font-medium">Manage your vegetable orders</p>
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("ordersTitle")}</h1>
+                            <p className="text-[#A3ACBA] font-medium">{t("ordersSubtitle")}</p>
                         </div>
 
                         {loading ? (

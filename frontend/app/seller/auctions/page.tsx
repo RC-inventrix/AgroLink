@@ -7,10 +7,12 @@ import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner"
 import Footer2 from "@/components/footer/Footer";
+import { useLanguage } from "@/context/LanguageContext"; // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function AuctionsPage() {
+  const { t } = useLanguage(); // Initialized the hook
   const [auctions, setAuctions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -72,10 +74,10 @@ export default function AuctionsPage() {
           <div className="max-w-6xl mx-auto">
             <div className="mb-8">
               <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">
-                My Auctions
+                {t("auctionsTitle")}
               </h1>
               <p className="text-[#A3ACBA] font-medium">
-                Manage your agricultural auction listings
+                {t("auctionsSubtitle")}
               </p>
             </div>
 

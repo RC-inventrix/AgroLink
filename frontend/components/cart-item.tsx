@@ -1,10 +1,10 @@
+/* fileName: cart-item.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Trash2, Truck, Store, MapPin, User } from "lucide-react"
-import Image from "next/image"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -14,11 +14,11 @@ interface Vegetable {
     image: string
     pricePerKg: number
     quantity: number
-    seller: string // This currently holds the ID or "Farmer #" string
+    seller: string 
     selected: boolean
     deliveryFee?: number | null
     deliveryAddress?: string
-    sellerId?: string | number // Added to ensure we have the ID for the lookup
+    sellerId?: string | number 
 }
 
 interface CartItemProps {
@@ -28,12 +28,11 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
+    const { t } = useLanguage() // Initialized the hook
     const [sellerFullName, setSellerFullName] = useState<string>("");
 
-    // Fetch Full Name using the endpoint
     useEffect(() => {
         const fetchSellerName = async () => {
-            // Extract the numeric ID from the seller string if sellerId isn't provided directly
             const idToFetch = item.sellerId || item.seller.replace(/\D/g, "");
             
             if (!idToFetch) {
@@ -44,16 +43,16 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
             try {
                 const res = await fetch(`${API_URL}/auth/fullnames?ids=${idToFetch}`);
                 if (res.ok) {
-                    const nameMap = await res.json();
-                    // nameMap is Record<Long, String>
-                    if (nameMap[idToFetch]) {
-                        setSellerFullName(nameMap[idToFetch]);
+                    const data = await res.json();
+                    if (data[idToFetch]) {
+                        setSellerFullName(data[idToFetch]);
                     } else {
                         setSellerFullName(item.seller);
                     }
+                } else {
+                    setSellerFullName(item.seller);
                 }
-            } catch (error) {
-                console.error("Error fetching seller name:", error);
+            } catch (err) {
                 setSellerFullName(item.seller);
             }
         };
@@ -61,60 +60,52 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
         fetchSellerName();
     }, [item.seller, item.sellerId]);
 
-    const goodsPrice = item.pricePerKg * item.quantity
-
-    // Check if it's delivery (fee exists and is greater than 0)
-    const isDelivery = item.deliveryFee != null && item.deliveryFee > 0;
-    const finalPrice = isDelivery ? goodsPrice + item.deliveryFee! : goodsPrice;
+    const finalPrice = item.pricePerKg * item.quantity
 
     return (
-        <div
-            className={`flex gap-4 rounded-lg border p-4 transition-colors ${
-                item.selected ? "border-green-300 bg-green-50" : "border-gray-200 bg-white"
-            }`}
-        >
-            <div className="flex items-start pt-1">
-                <Checkbox
-                    id={`item-${item.id}`}
-                    checked={item.selected}
-                    onCheckedChange={() => onToggle(item.id)}
-                    className="mt-1"
-                />
-            </div>
+        <div className={`p-4 transition-colors`}>
+            <div className="flex gap-4">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100 shadow-sm">
+                    <img
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                </div>
 
-            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
-            </div>
+                <div className="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                        <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{item.name}</h3>
+                        
+                        <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-2">
+                            <User className="w-3.5 h-3.5 shrink-0" />
+                            <span className="font-medium truncate max-w-[150px]">{sellerFullName || "Loading..."}</span>
+                        </div>
 
-            <div className="flex flex-1 justify-between">
-                <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    
-                    {/* Updated to display fetched Full Name */}
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {sellerFullName || item.seller}
-                    </p>
+                        <div className="flex items-center gap-3 text-sm">
+                            <span className="font-bold text-[#03230F] bg-green-50 px-2 py-0.5 rounded-md">{item.quantity} {t("purchaseKgUnit")}</span>
+                            <span className="text-gray-400 font-medium">×</span>
+                            <span className="text-gray-600 font-medium">Rs. {item.pricePerKg.toFixed(2)} / kg</span>
+                        </div>
+                    </div>
 
-                    <div className="mt-2 text-sm text-gray-600 flex flex-col gap-2">
-                        <span>{item.quantity} kg <span className="text-gray-400">·</span> Rs. {item.pricePerKg.toFixed(2)}/kg</span>
-
-                        {/* --- NEW: Delivery vs Pickup UI --- */}
-                        {isDelivery ? (
-                            <div className="flex items-center gap-1.5 text-blue-700 bg-blue-100 w-fit px-2.5 py-1 rounded-md">
-                                <Truck className="w-4 h-4" />
-                                <span className="font-bold text-xs tracking-tight">Delivery (Rs. {item.deliveryFee?.toFixed(2)})</span>
+                    <div className="mt-3">
+                        {item.deliveryFee !== null && item.deliveryFee !== undefined ? (
+                            <div className="flex items-center gap-1.5 text-blue-700 bg-blue-50 w-fit px-2.5 py-1 rounded-md">
+                                <Truck className="w-4 h-4 shrink-0" />
+                                <span className="font-bold text-xs tracking-tight shrink-0">{t("cartItemDeliveryOrder")}</span>
                                 {item.deliveryAddress && (
                                     <>
-                                        <MapPin className="w-3 h-3 ml-1 text-blue-500" />
+                                        <span className="text-blue-300 mx-0.5 shrink-0">•</span>
+                                        <MapPin className="w-3 h-3 opacity-70 shrink-0" />
                                         <span className="text-[11px] font-medium truncate max-w-[120px]">{item.deliveryAddress}</span>
                                     </>
                                 )}
                             </div>
                         ) : (
                             <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-100 w-fit px-2.5 py-1 rounded-md">
-                                <Store className="w-4 h-4" />
-                                <span className="font-bold text-xs tracking-tight">Pickup Order</span>
+                                <Store className="w-4 h-4 shrink-0" />
+                                <span className="font-bold text-xs tracking-tight">{t("cartItemPickupOrder")}</span>
                             </div>
                         )}
                     </div>
@@ -127,11 +118,11 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => onDelete(item.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center gap-1.5 px-3 py-1.5 h-auto"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center gap-1.5 px-3 py-1.5 h-auto shrink-0"
                         aria-label={`Remove ${item.name} from cart`}
                     >
-                        <Trash2 className="w-4 h-4" />
-                        <span className="text-sm font-medium">Remove</span>
+                        <Trash2 className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-medium">{t("cartItemRemove")}</span>
                     </Button>
                 </div>
             </div>

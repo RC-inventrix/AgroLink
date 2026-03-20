@@ -1,9 +1,9 @@
-/* Updated SellerSidebar Component */
 "use client"
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Package, ShoppingBag, Gavel, MessageSquare, Book, Timer, BookOpen, ShieldCheck, X } from 'lucide-react';
+import { useLanguage } from "@/context/LanguageContext" // Added Translation Hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -18,6 +18,7 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                                                          orderCount = 0,
                                                          activePage
                                                      }) => {
+    const { t } = useLanguage(); // Initialize hook
     const [newRequestCount, setNewRequestCount] = useState(0);
     const [liveUnreadCount, setLiveUnreadCount] = useState(initialUnreadCount);
     const [showInstructions, setShowInstructions] = useState(false);
@@ -85,35 +86,35 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                     <Link href="/seller/dashboard"
                           className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'dashboard' ? 'active bg-gray-100 font-semibold' : '' }`}>
                         <div className='flex items-center gap-3'>
-                            <LayoutDashboard size={20} />
-                            <span>Dashboard</span>
+                            <LayoutDashboard size={20} className="shrink-0" />
+                            <span>{t("sellerNavDashboard")}</span>
                         </div>
                     </Link>
 
                     <Link href="/seller/my-products"
                           className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'products' ? 'active bg-gray-100 font-semibold' : ''}`}>
                         <div className='flex items-center gap-3'>
-                            <Package size={20} />
-                            <span>My Products</span>
+                            <Package size={20} className="shrink-0" />
+                            <span>{t("sellerNavProducts")}</span>
                         </div>
                     </Link>
 
                     <Link href="/seller/auctions"
                           className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'auctions' ? 'active bg-gray-100 font-semibold' : ''}`}>
                         <div className='flex items-center gap-3'>
-                            <Timer size={20} />
-                            <span>My Auctions</span>
+                            <Timer size={20} className="shrink-0" />
+                            <span>{t("sellerNavAuctions")}</span>
                         </div>
                     </Link>
 
                     <Link href="/seller/orders"
                           className={`nav-item flex items-center justify-between p-3 rounded-lg transition-colors ${activePage === 'orders' ? 'active bg-gray-100 font-semibold' : ''}`}>
                         <div className='flex items-center gap-3'>
-                            <ShoppingBag size={20} />
-                            <span>Orders</span>
+                            <ShoppingBag size={20} className="shrink-0" />
+                            <span>{t("sellerNavOrders")}</span>
                         </div>
                         {orderCount > 0 && (
-                            <span className="bg-[#03230F] text-white text-[10px] font-bold p-1 rounded-full min-w-[20px] text-center">
+                            <span className="bg-[#03230F] text-white text-[10px] h-5 font-bold px-1.5 flex items-center justify-center rounded-full min-w-[20px] text-center">
                             {orderCount}
                         </span>
                         )}
@@ -122,18 +123,18 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                     <Link href="/seller/bargains"
                           className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors ${activePage === 'bargains' ? 'active bg-gray-100 font-semibold' : ''}`}>
                         <div className='flex items-center gap-3'>
-                            <Gavel size={20} />
-                            <span>Bargains</span>
+                            <Gavel size={20} className="shrink-0" />
+                            <span>{t("sellerNavBargains")}</span>
                         </div>
                     </Link>
 
                     <Link href="/seller/chat"
                           className={`nav-item flex items-center justify-between p-3 rounded-lg transition-colors ${activePage === 'chat' ? 'active bg-[#D4A017] text-black font-semibold shadow-sm' : ''}`}>
                         <div className="flex items-center gap-3">
-                            <MessageSquare size={20} />
-                            <span>Chat</span>
+                            <MessageSquare size={20} className="shrink-0" />
+                            <span>{t("sellerNavChat")}</span>
                             {liveUnreadCount > 0 && (
-                                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                <span className="bg-red-500 text-white text-[10px] h-5 font-bold px-1.5 flex items-center justify-center rounded-full min-w-[20px] text-center">
                                     {liveUnreadCount > 99 ? "99+" : liveUnreadCount}
                                 </span>
                             )}
@@ -143,11 +144,11 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                     <Link href="/seller/item-requests"
                           className={`nav-item flex items-center justify-between p-3 rounded-lg transition-colors ${activePage === 'item-requests' ? 'active bg-gray-100 font-semibold' : ''}`}>
                         <div className='flex items-center gap-3'>
-                            <Book size={20} />
-                            <span>Item Requests</span>
+                            <Book size={20} className="shrink-0" />
+                            <span>{t("sellerNavRequests")}</span>
                         </div>
                         {newRequestCount > 0 && (
-                            <span className="bg-[#EEC044] text-[#03230F] text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                            <span className="bg-[#EEC044] text-[#03230F] text-[10px] h-5 font-bold px-1.5 flex items-center justify-center rounded-full min-w-[20px] text-center shadow-sm">
                                 {newRequestCount}
                             </span>
                         )}
@@ -159,8 +160,8 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                         className={`nav-item flex items-center gap-3 p-3 rounded-lg transition-colors text-left w-full ${showInstructions ? 'active bg-gray-100 font-semibold' : 'hover:bg-gray-50'}`}
                     >
                         <div className='flex items-center gap-3'>
-                            <BookOpen size={20} />
-                            <span>Instructions</span>
+                            <BookOpen size={20} className="shrink-0" />
+                            <span>{t("sellerNavInstructions")}</span>
                         </div>
                     </button>
 
@@ -172,64 +173,65 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-6 bg-gray-50 border-b border-gray-100 flex items-center gap-3 shrink-0">
-                            <div className="p-2 bg-[#03230F]/10 rounded-lg">
+                            <div className="p-2 bg-[#03230F]/10 rounded-lg shrink-0">
                                 <ShieldCheck className="w-6 h-6 text-[#03230F]" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-[#03230F]">AgroLink Community Guidelines</h2>
-                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">Safety & Trust Rules</p>
+                                <h2 className="text-xl font-bold text-[#03230F]">{t("authGuidelinesTitle")}</h2>
+                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">{t("authGuidelinesSubtitle")}</p>
                             </div>
-                            <button onClick={() => setShowInstructions(false)} className="ml-auto p-2 hover:bg-gray-200 rounded-full transition-colors">
+                            <button onClick={() => setShowInstructions(false)} className="ml-auto p-2 hover:bg-gray-200 rounded-full transition-colors shrink-0">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto flex-1">
+                        <div className="p-6 overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <p className="text-sm text-gray-600 mb-6 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                To ensure a safe and profitable environment for everyone, please review our community rules.
+                                {t("authGuidelinesIntro")}
                             </p>
                             <ul className="space-y-5">
-
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🤝</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">1. Trade with Verified Users</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have good reputation among the community while we are developing our highly accurate user verification system.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline1Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline1Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
-                                    <span className="text-2xl leading-none">💬</span>
+                                    <span className="text-2xl leading-none">📸</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">2. Communicate & Request Proof</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always use the in-app chat to communicate. Ask for real-time images and confirm product details before finalizing any orders.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline2Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline2Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">📍</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">3. Shop Local to Save</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">You and the seller/buyer are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline3Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline3Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">💵</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">4. Cash on Delivery (COD) Only</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">While we are developing a highly secure online payment gateway, <strong>all platform transactions are strictly Cash on Delivery</strong>. Do not send money online.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline4Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">
+                                            {t("authGuideline4DescPrefix")} <strong>{t("authGuideline4DescStrong")}</strong>. {t("authGuideline4DescSuffix")}
+                                        </span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">⭐</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">5. Check Ratings</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a user before agreeing to a trade.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline5Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline5Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🚩</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">6. Report Suspicious Activity</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Help us keep AgroLink safe! Use the "Report" button immediately if you encounter fraud, fake items, or unfair behavior.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline6Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline6Desc")}</span>
                                     </div>
                                 </li>
                             </ul>
@@ -239,9 +241,9 @@ const SellerSidebar: React.FC<SellerSidebarProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setShowInstructions(false)}
-                                className="px-8 py-2.5 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-md hover:bg-[#03230F]/90 active:scale-[0.98] transition-all"
+                                className="px-8 py-2.5 h-auto bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-md hover:bg-[#03230F]/90 active:scale-[0.98] transition-all"
                             >
-                                Close
+                                {t("commonClose")}
                             </button>
                         </div>
                     </div>

@@ -13,6 +13,7 @@ import Link from "next/link"
 import ReportProblemModalBuyer from "./buyers/reportProblemModelBuyer"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Footer2 from "@/components/footer/Footer"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -25,10 +26,10 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
                     key={star}
                     type="button"
                     onClick={() => interactive && setRating?.(star)}
-                    className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-transform active:scale-90`}
+                    className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-transform active:scale-90 shrink-0`}
                 >
                     <Star
-                        className={`w-5 h-5 ${star <= rating ? "fill-[#EEC044] text-[#EEC044]" : "text-gray-200"}`}
+                        className={`w-5 h-5 shrink-0 ${star <= rating ? "fill-[#EEC044] text-[#EEC044]" : "text-gray-200"}`}
                     />
                 </button>
             ))}
@@ -38,6 +39,7 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
 
 // --- FETCHES CANCELLATION REASON ---
 function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
+    const { t } = useLanguage() // Initialized the hook
     const [reason, setReason] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,7 @@ function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
     return (
         <div className="mt-4 p-4 bg-red-50/50 border border-red-100 rounded-xl animate-in fade-in zoom-in-95 duration-300">
             <p className="flex items-center gap-2 text-[10px] font-black uppercase text-red-600 mb-1">
-                <AlertCircle size={12} /> Reason for Cancellation
+                <AlertCircle size={12} className="shrink-0" /> {t("orderHistReasonCancel")}
             </p>
             <p className="text-sm text-gray-700 italic font-medium">
                 "{reason}"
@@ -93,6 +95,7 @@ interface OrderItem {
 }
 
 export function OrderHistoryClient() {
+    const { t } = useLanguage() // Initialized the hook
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
     const [navUnread, setNavUnread] = useState(0)
@@ -156,12 +159,12 @@ export function OrderHistoryClient() {
                     .map((entry, index) => ({
                         id: `${entry.orderId}-${index}`,
                         displayOrderId: entry.orderId,
-                        name: entry.itemData.productName || entry.itemData.name || "Unknown Item",
+                        name: entry.itemData.productName || entry.itemData.name || t("orderHistUnknownItem"),
                         quantity: entry.itemData.quantity || 1,
                         pricePerKg: entry.itemData.pricePerKg || 0,
                         image: entry.itemData.imageUrl || entry.itemData.image || "/placeholder.svg",
                         sellerId: entry.sellerId,
-                        sellerName: sellerNameMap[entry.sellerId] || "AgroLink Seller",
+                        sellerName: sellerNameMap[entry.sellerId] || t("orderHistAgroSeller"),
                         orderDate: new Date(entry.createdAt),
                         status: entry.status,
                         totalPrice: (entry.amount / 100),
@@ -181,24 +184,21 @@ export function OrderHistoryClient() {
             <BuyerHeader />
             
             <div className="flex flex-1">
-                
                 <DashboardNav unreadCount={navUnread} />
-                
                 <main className="flex-1 w-full overflow-x-hidden flex flex-col">
                     <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 w-full flex-1">
                         
-                        
                         <div className="mb-8">
-                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Order History</h1>
-                            <p className="text-[#A3ACBA] font-medium">View your past transactions, active orders, and provide feedback.</p>
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("orderHistTitle")}</h1>
+                            <p className="text-[#A3ACBA] font-medium">{t("orderHistSubtitle")}</p>
                         </div>
 
                         <Tabs defaultValue="all" className="w-full">
-                            <TabsList className="bg-gray-100 border border-gray-200 shadow-sm rounded-xl p-1 mb-6">
-                                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">All ({orders.length})</TabsTrigger>
-                                <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Completed ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
-                                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
-                                <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
+                            <TabsList className="bg-gray-100 border border-gray-200 shadow-sm rounded-xl p-1 mb-6 flex flex-wrap h-auto min-h-[44px]">
+                                <TabsTrigger value="all" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabAll")} ({orders.length})</TabsTrigger>
+                                <TabsTrigger value="completed" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCompleted")} ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
+                                <TabsTrigger value="pending" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabPending")} ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+                                <TabsTrigger value="cancelled" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCancelled")} ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
                             </TabsList>
 
                             <div className="mt-2">
@@ -219,24 +219,25 @@ export function OrderHistoryClient() {
                     </div>
                 </main>
             </div>
-            
             <Footer2 />
         </div>
     )
 }
 
 function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loading: boolean, onRefresh: () => void }) {
+    const { t } = useLanguage() // Initialized the hook
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
-            <p className="text-[#03230F] font-bold">Loading your order history...</p>
+            <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4 shrink-0" />
+            <p className="text-[#03230F] font-bold">{t("orderHistLoading")}</p>
         </div>
     )
     if (orders.length === 0) return (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-            <Package className="w-16 h-16 text-gray-300 mb-4" />
-            <p className="text-[#03230F] font-bold text-lg">No orders found</p>
-            <p className="text-gray-500 text-sm mt-1">You don't have any orders in this category.</p>
+            <Package className="w-16 h-16 text-gray-300 mb-4 shrink-0" />
+            <p className="text-[#03230F] font-bold text-lg">{t("orderHistNoOrders")}</p>
+            <p className="text-gray-500 text-sm mt-1">{t("orderHistNoOrdersDesc")}</p>
         </div>
     )
 
@@ -250,6 +251,7 @@ function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loadin
 }
 
 function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () => void }) {
+    const { t } = useLanguage() // Initialized the hook
     const [showReportModal, setShowReportModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [rating, setRating] = useState(0);
@@ -259,7 +261,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
     const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
 
     const handleSubmitReview = async () => {
-        if (rating === 0) { toast.error("Please select a rating"); return; }
+        if (rating === 0) { toast.error(t("orderHistSelectRating")); return; }
         setIsSubmitting(true);
         const userId = sessionStorage.getItem("id");
         const token = sessionStorage.getItem("token");
@@ -272,11 +274,18 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
             });
 
             if (res.ok) {
-                toast.success("Review submitted!");
+                toast.success(t("orderHistReviewSuccess"));
                 onRefresh();
             }
-        } catch (err) { toast.error("Submission failed"); }
+        } catch (err) { toast.error(t("orderHistReviewFail")); }
         finally { setIsSubmitting(false); }
+    };
+
+    const getTranslatedStatus = (status: string) => {
+        if (status === "completed") return t("orderHistTabCompleted");
+        if (status === "pending") return t("orderHistTabPending");
+        if (status === "cancelled") return t("orderHistTabCancelled");
+        return status;
     };
 
     return (
@@ -289,37 +298,37 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                     <div className="flex-1 w-full">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-[10px] font-black text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} /> ORDER #{order.displayOrderId}</p>
+                                <p className="text-[10px] font-black text-gray-400 flex items-center gap-1 mb-1 uppercase tracking-widest"><Hash size={10} className="shrink-0" /> {t("orderHistOrderHash")}{order.displayOrderId}</p>
                                 <h3 className="font-black text-xl text-[#03230F]">{order.name}</h3>
-                                <p className="text-sm font-semibold text-gray-500 mt-0.5">
-                                    Sold by <Link href={`/user/${order.sellerId}?role=SELLER`} className="text-[#03230F] hover:text-[#EEC044] hover:underline transition-colors">{order.sellerName}</Link>
+                                <p className="text-sm font-semibold text-gray-500 mt-0.5 flex flex-wrap gap-1">
+                                    {t("orderHistSoldBy")} <Link href={`/user/${order.sellerId}?role=SELLER`} className="text-[#03230F] hover:text-[#EEC044] hover:underline transition-colors truncate">{order.sellerName}</Link>
                                 </p>
                             </div>
-                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold px-3 py-1 text-[10px] tracking-widest uppercase ${
+                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold px-3 py-1 text-[10px] tracking-widest uppercase h-auto shrink-0 ${
                                 order.status === 'completed' ? 'bg-[#03230F] text-[#EEC044]' :
                                 order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-none' : 
                                 'bg-[#EEC044]/20 text-[#03230F] border-none'
                             }`}>
-                                {order.status}
+                                {getTranslatedStatus(order.status)}
                             </Badge>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100">
-                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Qty</p><p className="font-bold text-[#03230F]">{order.quantity} kg</p></div>
-                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Rate</p><p className="font-bold text-[#03230F]">Rs. {order.pricePerKg}</p></div>
-                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Date</p><p className="font-bold text-[#03230F]">{format(order.orderDate, "MMM d, yyyy")}</p></div>
-                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Total</p><p className="font-black text-lg text-[#03230F]">Rs. {order.totalPrice.toFixed(2)}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t("orderHistQty")}</p><p className="font-bold text-[#03230F]">{order.quantity} {t("purchaseKgUnit")}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t("orderHistRate")}</p><p className="font-bold text-[#03230F]">Rs. {order.pricePerKg}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t("orderHistDate")}</p><p className="font-bold text-[#03230F]">{format(order.orderDate, "MMM d, yyyy")}</p></div>
+                            <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t("orderHistTotal")}</p><p className="font-black text-lg text-[#03230F] whitespace-nowrap">Rs. {order.totalPrice.toFixed(2)}</p></div>
                         </div>
 
                         {order.status === "pending" && order.otp && (
-                            <div className="mt-6 p-4 bg-[#EEC044]/10 border-2 border-dashed border-[#EEC044]/50 rounded-2xl flex justify-between items-center">
+                            <div className="mt-6 p-4 bg-[#EEC044]/10 border-2 border-dashed border-[#EEC044]/50 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
                                     <p className="flex items-center gap-2 text-xs font-black uppercase text-[#03230F]">
-                                        <KeyRound className="w-4 h-4 text-[#EEC044]" /> Delivery Handover OTP
+                                        <KeyRound className="w-4 h-4 text-[#EEC044] shrink-0" /> {t("orderHistDeliveryOtp")}
                                     </p>
-                                    <p className="text-[11px] text-gray-500 font-medium mt-1">Provide this code to the seller to confirm delivery</p>
+                                    <p className="text-[11px] text-gray-500 font-medium mt-1">{t("orderHistOtpDesc")}</p>
                                 </div>
-                                <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-5 py-2 rounded-xl border border-[#EEC044]/30 shadow-sm">
+                                <div className="text-2xl font-black text-[#03230F] tracking-[0.3em] bg-white px-5 py-2 rounded-xl border border-[#EEC044]/30 shadow-sm shrink-0">
                                     {order.otp}
                                 </div>
                             </div>
@@ -333,10 +342,10 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                         variant="outline"
                                         size="sm"
                                         onClick={() => setShowReportModal(true)}
-                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest transition-colors rounded-lg"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest transition-colors rounded-lg h-auto py-2"
                                     >
-                                        <AlertCircle size={12} className="mr-1.5" />
-                                        Report a Problem
+                                        <AlertCircle size={12} className="mr-1.5 shrink-0" />
+                                        {t("orderHistReportProblem")}
                                     </Button>
                                 </div>
                                 <ReportProblemModalBuyer
@@ -357,8 +366,8 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             {hasReviewed ? (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                        <span className="text-xs font-black uppercase tracking-widest text-green-600">Your Feedback to Seller</span>
+                                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                        <span className="text-xs font-black uppercase tracking-widest text-green-600">{t("orderHistYourFeedback")}</span>
                                     </div>
                                     <StarRating rating={order.orderReview.buyerRating} />
                                     <p className="text-sm text-gray-600 italic bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium">
@@ -368,13 +377,13 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             ) : (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <MessageSquare className="w-4 h-4 text-[#EEC044]" />
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">Rate your experience</h4>
+                                        <MessageSquare className="w-4 h-4 text-[#EEC044] shrink-0" />
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">{t("orderHistRateExp")}</h4>
                                     </div>
                                     <div className="flex flex-col gap-3">
                                         <StarRating rating={rating} setRating={setRating} interactive={true} />
                                         <textarea
-                                            placeholder="How was the crop quality and transaction?"
+                                            placeholder={t("orderHistReviewPlaceholder")}
                                             className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/50 transition-all font-medium text-[#03230F]"
                                             rows={3}
                                             value={comment}
@@ -383,9 +392,9 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                         <Button
                                             onClick={handleSubmitReview}
                                             disabled={isSubmitting}
-                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2.5 rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-black shadow-md mt-1"
+                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2.5 h-auto rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-black shadow-md mt-1"
                                         >
-                                            {isSubmitting ? "Submitting..." : "Submit Review"}
+                                            {isSubmitting ? t("orderHistSubmitting") : t("orderHistSubmitReview")}
                                         </Button>
                                     </div>
                                 </div>
@@ -394,8 +403,8 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
 
                         <div className="space-y-4 border-l-0 md:border-l md:border-gray-200 md:pl-8">
                             <div className="flex items-center gap-2 mb-2">
-                                <User className="w-4 h-4 text-[#EEC044]" />
-                                <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">Seller's Feedback for You</h4>
+                                <User className="w-4 h-4 text-[#EEC044] shrink-0" />
+                                <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F]">{t("orderHistSellerFeedback")}</h4>
                             </div>
                             {sellerHasReviewed ? (
                                 <div className="space-y-3">
@@ -406,9 +415,9 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                                    <Clock className="w-8 h-8 text-gray-300 mb-2" />
+                                    <Clock className="w-8 h-8 text-gray-300 mb-2 shrink-0" />
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-4">
-                                        Pending Review
+                                        {t("orderHistPendingReview")}
                                     </p>
                                 </div>
                             )}

@@ -8,6 +8,7 @@ import SellerHeader from "@/components/headers/SellerHeader"
 import SellerSidebar from "../dashboard/SellerSideBar"
 import Footer2 from "@/components/footer/Footer"
 import "../dashboard/SellerDashboard.css"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -33,6 +34,7 @@ interface BargainRequestUI {
 }
 
 export default function BargainPage() {
+    const { t } = useLanguage(); // Initialized the hook
     const [requests, setRequests] = useState<BargainRequestUI[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -158,19 +160,19 @@ export default function BargainPage() {
                         <div className="flex h-full items-center justify-center">
                             <div className="text-[#004d2b] flex flex-col items-center gap-3 font-semibold text-lg">
                                 <Loader2 className="h-10 w-10 animate-spin text-[#EEC044]" />
-                                Loading bargaining requests...
+                                {t("bargainLoading")}
                             </div>
                         </div>
                     ) : (
                         <div className="max-w-6xl mx-auto">
                             {/* Header Section */}
                             <div className="mb-8 bg-[#03230F] text-white p-8 rounded-3xl shadow-lg flex items-center gap-4">
-                                <div className="bg-[#EEC044] p-3 rounded-2xl">
+                                <div className="bg-[#EEC044] p-3 rounded-2xl shrink-0">
                                     <Handshake className="w-8 h-8 text-[#03230F]" />
                                 </div>
                                 <div>
-                                    <h1 className="text-[32px] font-black mb-1 tracking-tight">Buyer Bargains</h1>
-                                    <p className="text-gray-300 font-medium">Review and manage price negotiations from buyers</p>
+                                    <h1 className="text-[32px] font-black mb-1 tracking-tight">{t("bargainTitle")}</h1>
+                                    <p className="text-gray-300 font-medium">{t("bargainSubtitle")}</p>
                                 </div>
                             </div>
 
@@ -179,16 +181,16 @@ export default function BargainPage() {
                                 <div className="w-full bg-white border border-gray-200 rounded-xl mb-6 shadow-sm">
                                     <TabsList className="flex w-full h-auto p-0 bg-transparent rounded-none justify-start gap-6 overflow-x-auto hide-scrollbar px-6">
                                         <TabsTrigger value="all" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#004d2b] data-[state=active]:bg-transparent data-[state=active]:text-[#004d2b] text-gray-500 font-bold hover:text-[#004d2b] transition-colors whitespace-nowrap">
-                                            All Requests ({requests.length})
+                                            {t("bargainTabAll")} ({requests.length})
                                         </TabsTrigger>
                                         <TabsTrigger value="pending" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#EEC044] data-[state=active]:bg-transparent data-[state=active]:text-[#b38f2b] text-gray-500 font-bold hover:text-[#EEC044] transition-colors whitespace-nowrap">
-                                            Pending ({pendingItems.length})
+                                            {t("bargainTabPending")} ({pendingItems.length})
                                         </TabsTrigger>
                                         <TabsTrigger value="accepted" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-700 text-gray-500 font-bold hover:text-green-600 transition-colors whitespace-nowrap">
-                                            Accepted ({acceptedItems.length})
+                                            {t("bargainTabAccepted")} ({acceptedItems.length})
                                         </TabsTrigger>
                                         <TabsTrigger value="rejected" className="px-2 py-5 rounded-none border-b-[3px] border-transparent data-[state=active]:border-red-500 data-[state=active]:bg-transparent data-[state=active]:text-red-700 text-gray-500 font-bold hover:text-red-600 transition-colors whitespace-nowrap">
-                                            Rejected ({rejectedItems.length})
+                                            {t("bargainTabRejected")} ({rejectedItems.length})
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -198,8 +200,8 @@ export default function BargainPage() {
                                     <TabsContent value="all" className="space-y-6 mt-0">
                                         {requests.length === 0 ? (
                                             <div className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300">
-                                                <p className="font-semibold text-lg text-[#004d2b]">No bargaining requests found.</p>
-                                                <p className="text-sm mt-2">When buyers negotiate prices, they will appear here.</p>
+                                                <p className="font-semibold text-lg text-[#004d2b]">{t("bargainNoRequests")}</p>
+                                                <p className="text-sm mt-2">{t("bargainNoRequestsHint")}</p>
                                             </div>
                                         ) : (
                                             requests.map((item) => (
@@ -217,7 +219,7 @@ export default function BargainPage() {
 
                                     <TabsContent value="pending" className="space-y-6 mt-0">
                                         {pendingItems.length === 0 ? (
-                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No pending bargaining requests.</p>
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">{t("bargainNoPending")}</p>
                                         ) : (
                                             pendingItems.map((item) => (
                                                 <HorizontalBargainCard
@@ -234,7 +236,7 @@ export default function BargainPage() {
 
                                     <TabsContent value="accepted" className="space-y-6 mt-0">
                                         {acceptedItems.length === 0 ? (
-                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No accepted deals yet.</p>
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">{t("bargainNoAccepted")}</p>
                                         ) : (
                                             acceptedItems.map((item) => (
                                                 <HorizontalBargainCard
@@ -249,7 +251,7 @@ export default function BargainPage() {
 
                                     <TabsContent value="rejected" className="space-y-6 mt-0">
                                         {rejectedItems.length === 0 ? (
-                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">No rejected bargaining requests.</p>
+                                            <p className="text-center text-gray-500 py-16 bg-white rounded-2xl border border-dashed border-gray-300 font-semibold">{t("bargainNoRejected")}</p>
                                         ) : (
                                             rejectedItems.map((item) => (
                                                 <HorizontalBargainCard

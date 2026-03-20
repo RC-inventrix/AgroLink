@@ -1,4 +1,3 @@
-/* fileName: vegetable-listings.tsx */
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
@@ -94,6 +94,8 @@ const SRI_LANKA_LOCATIONS: ProvinceMap = {
 };
 
 export default function VegetableListings() {
+    const { t } = useLanguage() // Initialized the hook
+    
     // Basic Filters
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
@@ -150,7 +152,7 @@ export default function VegetableListings() {
                     description: item.description,
                     category: item.category,
                     sellerId: item.farmerId?.toString() || "",
-                    seller: fullNameMap[item.farmerId] || `Farmer #${item.farmerId}`,
+                    seller: fullNameMap[item.farmerId] || `${t("browseFarmerHash")}${item.farmerId}`,
                     rating: 4.5,
                     quantity: item.quantity || 0,
                     deliveryAvailable: item.deliveryAvailable || false,
@@ -169,7 +171,7 @@ export default function VegetableListings() {
                     image: item.productImageUrl || "/placeholder.svg",
                     price1kg: item.currentHighestBidAmount || item.startingPrice,
                     price100g: 0,
-                    seller: item.farmerName || "Unknown Farmer",
+                    seller: item.farmerName || t("browseUnknownFarmer"),
                     sellerId: item.farmerId?.toString(),
                     description: item.description,
                     category: "Auction",
@@ -194,7 +196,8 @@ export default function VegetableListings() {
 
             } catch (err) {
                 console.error("Error loading data:", err);
-                setError("Could not load marketplace items. Please check your connection.");
+                // Storing translation key for error
+                setError("browseErrorDesc");
             } finally {
                 setLoading(false);
             }
@@ -224,7 +227,7 @@ export default function VegetableListings() {
 
         fetchData();
         fetchUnreadCount();
-    }, []);
+    }, [t]);
 
     const filteredVegetables = useMemo(() => {
         return vegetables.filter((veg) => {
@@ -248,27 +251,27 @@ export default function VegetableListings() {
 
             <main className="flex-1 w-full overflow-x-hidden flex flex-col">
                 <div className="p-8">
-                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Fresh Vegetables Marketplace</h1>
-                    <p className="text-[#A3ACBA] font-medium">Discover fresh, locally sourced vegetables and live auctions directly from farmers.</p>
+                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("browseTitle")}</h1>
+                    <p className="text-[#A3ACBA] font-medium">{t("browseSubtitle")}</p>
                 </div>
 
                 <div className="container mx-auto px-4 py-0">
                     {/* --- UNIFIED SEARCH & FILTERS SECTION --- */}
                     <div className="bg-card rounded-xl p-6 mb-10 border border-border shadow-sm">
                         <div className="flex items-center gap-3 mb-6 border-b pb-4">
-                            <Filter className="w-5 h-5 text-[#2d5016]" />
-                            <h3 className="font-bold text-lg text-foreground">Search & Filters</h3>
+                            <Filter className="w-5 h-5 text-[#2d5016] shrink-0" />
+                            <h3 className="font-bold text-lg text-foreground">{t("browseSearchFilters")}</h3>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {/* 1. Search */}
                             <div className="space-y-2">
-                                <Label className="text-muted-foreground font-semibold">Search Name</Label>
+                                <Label className="text-muted-foreground font-semibold">{t("browseSearchName")}</Label>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 shrink-0" />
                                     <Input
                                         type="text"
-                                        placeholder="e.g. Carrots, Auction..."
+                                        placeholder={t("browseSearchPlaceholder")}
                                         className="pl-9 w-full"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -278,22 +281,22 @@ export default function VegetableListings() {
 
                             {/* 2. Category */}
                             <div className="space-y-2">
-                                <Label className="text-muted-foreground font-semibold">Category</Label>
+                                <Label className="text-muted-foreground font-semibold">{t("browseCategory")}</Label>
                                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                                    <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t("browseAllCategories")} /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Categories</SelectItem>
-                                        <SelectItem value="Leafy">Leafy Vegetables</SelectItem>
-                                        <SelectItem value="Root">Root Vegetables</SelectItem>
-                                        <SelectItem value="Fruit">Fruit Vegetables</SelectItem>
-                                        <SelectItem value="Organic">Organic</SelectItem>
+                                        <SelectItem value="All">{t("browseAllCategories")}</SelectItem>
+                                        <SelectItem value="Leafy">{t("browseCatLeafy")}</SelectItem>
+                                        <SelectItem value="Root">{t("browseCatRoot")}</SelectItem>
+                                        <SelectItem value="Fruit">{t("browseCatFruit")}</SelectItem>
+                                        <SelectItem value="Organic">{t("browseCatOrganic")}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             {/* 3. Province */}
                             <div className="space-y-2">
-                                <Label className="text-muted-foreground font-semibold">Province</Label>
+                                <Label className="text-muted-foreground font-semibold">{t("browseProv")}</Label>
                                 <Select
                                     value={selectedProvince}
                                     onValueChange={(val) => {
@@ -302,11 +305,11 @@ export default function VegetableListings() {
                                         setSelectedCity("All");
                                     }}
                                 >
-                                    <SelectTrigger><SelectValue placeholder="All Provinces" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t("browseAllProv")} /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Provinces</SelectItem>
+                                        <SelectItem value="All">{t("browseAllProv")}</SelectItem>
                                         {Object.keys(SRI_LANKA_LOCATIONS).map(prov => (
-                                            <SelectItem key={prov} value={prov}>{prov} Province</SelectItem>
+                                            <SelectItem key={prov} value={prov}>{prov}{t("browseProvSuffix")}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -314,7 +317,7 @@ export default function VegetableListings() {
 
                             {/* 4. District */}
                             <div className="space-y-2">
-                                <Label className="text-muted-foreground font-semibold">District</Label>
+                                <Label className="text-muted-foreground font-semibold">{t("browseDist")}</Label>
                                 <Select
                                     disabled={selectedProvince === "All"}
                                     value={selectedDistrict}
@@ -323,9 +326,9 @@ export default function VegetableListings() {
                                         setSelectedCity("All");
                                     }}
                                 >
-                                    <SelectTrigger><SelectValue placeholder="All Districts" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t("browseAllDist")} /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Districts</SelectItem>
+                                        <SelectItem value="All">{t("browseAllDist")}</SelectItem>
                                         {selectedProvince !== "All" && Object.keys(SRI_LANKA_LOCATIONS[selectedProvince]).map(dist => (
                                             <SelectItem key={dist} value={dist}>{dist}</SelectItem>
                                         ))}
@@ -335,15 +338,15 @@ export default function VegetableListings() {
 
                             {/* 5. City */}
                             <div className="space-y-2">
-                                <Label className="text-muted-foreground font-semibold">City</Label>
+                                <Label className="text-muted-foreground font-semibold">{t("browseCity")}</Label>
                                 <Select
                                     disabled={selectedDistrict === "All"}
                                     value={selectedCity}
                                     onValueChange={setSelectedCity}
                                 >
-                                    <SelectTrigger><SelectValue placeholder="All Cities" /></SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder={t("browseAllCities")} /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Cities</SelectItem>
+                                        <SelectItem value="All">{t("browseAllCities")}</SelectItem>
                                         {selectedDistrict !== "All" && SRI_LANKA_LOCATIONS[selectedProvince][selectedDistrict].map(city => (
                                             <SelectItem key={city} value={city}>{city}</SelectItem>
                                         ))}
@@ -354,9 +357,9 @@ export default function VegetableListings() {
                             {/* 6. Price Range */}
                             <div className="space-y-2 lg:col-span-3">
                                 <div className="flex items-center justify-between mb-2">
-                                    <Label className="text-muted-foreground font-semibold">Price Range (LKR per kg)</Label>
+                                    <Label className="text-muted-foreground font-semibold">{t("browsePriceRange")}</Label>
                                     <span className="text-sm font-bold text-[#2d5016] bg-[#2d5016]/10 px-3 py-1 rounded-full">
-                                        Up to Rs. {priceRange[1].toLocaleString()}
+                                        {t("browseUpTo")} {priceRange[1].toLocaleString()}
                                     </span>
                                 </div>
                                 <input
@@ -378,22 +381,22 @@ export default function VegetableListings() {
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center py-16 bg-red-50 rounded-2xl border border-red-100 max-w-2xl mx-auto my-12 shadow-sm">
                             <div className="bg-red-100 p-4 rounded-full mb-4">
-                                <AlertCircle className="w-10 h-10 text-red-500" />
+                                <AlertCircle className="w-10 h-10 text-red-500 shrink-0" />
                             </div>
-                            <h3 className="text-xl font-bold text-red-900 mb-2">Oops! Something went wrong</h3>
-                            <p className="text-red-600 text-center max-w-md">{error}</p>
+                            <h3 className="text-xl font-bold text-red-900 mb-2">{t("browseErrorTitle")}</h3>
+                            <p className="text-red-600 text-center max-w-md">{t(error)}</p>
                             <Button
                                 onClick={() => window.location.reload()}
                                 variant="outline"
-                                className="mt-6 border-red-200 text-red-700 hover:bg-red-100"
+                                className="mt-6 border-red-200 text-red-700 hover:bg-red-100 h-auto py-2 px-6"
                             >
-                                Try Again
+                                {t("browseTryAgain")}
                             </Button>
                         </div>
                     ) : (
                         <>
                             <p className="text-muted-foreground mb-6 flex items-center gap-2">
-                                Showing <span className="font-bold text-foreground px-2 py-0.5 bg-muted rounded">{filteredVegetables.length}</span> results
+                                {t("browseShowing")} <span className="font-bold text-foreground px-2 py-0.5 bg-muted rounded">{filteredVegetables.length}</span> {t("browseResults")}
                             </p>
 
                             {filteredVegetables.length > 0 ? (
@@ -407,13 +410,13 @@ export default function VegetableListings() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed border-border rounded-xl">
-                                    <MapPin className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                                    <h3 className="text-lg font-bold text-foreground">No vegetables found</h3>
-                                    <p className="text-muted-foreground mt-1">Try adjusting your location, price, or search criteria.</p>
+                                <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed border-border rounded-xl px-4 text-center">
+                                    <MapPin className="w-12 h-12 text-muted-foreground/50 mb-4 shrink-0" />
+                                    <h3 className="text-lg font-bold text-foreground">{t("browseNoVeg")}</h3>
+                                    <p className="text-muted-foreground mt-1">{t("browseNoVegDesc")}</p>
                                     <Button
                                         variant="outline"
-                                        className="mt-6"
+                                        className="mt-6 h-auto py-2.5 px-6"
                                         onClick={() => {
                                             setSearchQuery("");
                                             setSelectedCategory("All");
@@ -423,7 +426,7 @@ export default function VegetableListings() {
                                             setPriceRange([0, 50000]);
                                         }}
                                     >
-                                        Clear all filters
+                                        {t("browseClearFilters")}
                                     </Button>
                                 </div>
                             )}

@@ -10,6 +10,7 @@ import Footer2 from "@/components/footer/Footer"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import CartItem from "@/components/cart-item"
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -29,6 +30,7 @@ interface CartItemData {
 }
 
 export default function Cart() {
+    const { t } = useLanguage() // Initialized the hook
     const [items, setItems] = useState<CartItemData[]>([])
     const [loading, setLoading] = useState(true)
     const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -70,13 +72,13 @@ export default function Cart() {
                     setItems(mappedItems)
                 }
             } catch (error) {
-                setNotification({ message: "Failed to load your cart. Please refresh.", type: 'error' });
+                setNotification({ message: t("cartErrLoadRefresh"), type: 'error' });
             } finally {
                 setLoading(false)
             }
         }
         fetchCart()
-    }, [])
+    }, [t])
 
     const toggleItem = (id: string) => {
         const numericId = parseInt(id);
@@ -91,12 +93,12 @@ export default function Cart() {
             const res = await fetch(`${API_URL}/cart/delete/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 setItems(prevItems => prevItems.filter(item => item.id.toString() !== id));
-                setNotification({ message: "Item removed from cart.", type: 'success' });
+                setNotification({ message: t("cartItemRemovedSuccess"), type: 'success' });
             } else {
-                setNotification({ message: "Failed to remove item.", type: 'error' });
+                setNotification({ message: t("cartErrRemoveItem"), type: 'error' });
             }
         } catch (error) {
-            setNotification({ message: "Network error.", type: 'error' });
+            setNotification({ message: t("cartNetworkErr"), type: 'error' });
         } finally {
             setDeletingId(null);
         }
@@ -113,11 +115,11 @@ export default function Cart() {
 
     const handleCheckout = async () => {
         if (selectedItems.length === 0) {
-            setNotification({ message: "Select items in your cart to proceed.", type: 'info' });
+            setNotification({ message: t("cartSelectItemsProceed"), type: 'info' });
             return;
         }
 
-        setNotification({ message: "Preparing your order request...", type: 'loading' });
+        setNotification({ message: t("cartPreparingOrder"), type: 'loading' });
 
         const userId = sessionStorage.getItem("id") || "1";
         const token = sessionStorage.getItem("token") || localStorage.getItem("token");
@@ -153,15 +155,15 @@ export default function Cart() {
 
             if (response.ok) {
                 setNotification({
-                    message: "Order request sent! Check your order management page.",
+                    message: t("cartOrderSentSuccess"),
                     type: 'success'
                 });
                 setItems(items.filter(item => !item.selected));
             } else {
-                setNotification({ message: "Failed to send order request.", type: 'error' });
+                setNotification({ message: t("cartOrderSendFail"), type: 'error' });
             }
         } catch (error) {
-            setNotification({ message: "Network error. Could not send order request.", type: 'error' });
+            setNotification({ message: t("cartOrderNetworkErr"), type: 'error' });
         }
     }
 
@@ -197,14 +199,14 @@ export default function Cart() {
                 <main className="flex-1 w-full overflow-hidden flex flex-col p-8">
                     <div className="max-w-6xl mx-auto w-full">
                         <div className="mb-8">
-                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">Your Cart</h1>
-                            <p className="text-[#A3ACBA] font-medium">Manage your selected agricultural products</p>
+                            <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("cartTitle")}</h1>
+                            <p className="text-[#A3ACBA] font-medium">{t("cartSubtitle")}</p>
                         </div>
 
                         {loading ? (
                             <div className="flex flex-col items-center justify-center py-32">
                                 <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
-                                <p className="text-[#03230F] font-bold">Loading your fresh picks...</p>
+                                <p className="text-[#03230F] font-bold">{t("cartLoadingPicks")}</p>
                             </div>
                         ) : (
                             <div className="grid gap-8 lg:grid-cols-3">
@@ -218,7 +220,7 @@ export default function Cart() {
                                                 onCheckedChange={handleSelectAll}
                                                 className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F]" />
                                             <label htmlFor="select-all" className="cursor-pointer font-black text-[#03230F] text-sm uppercase tracking-widest">
-                                                Select All Items ({items.length})
+                                                {t("cartSelectAllItems").replace("{count}", items.length.toString())}
                                             </label>
                                         </div>
 
@@ -226,8 +228,8 @@ export default function Cart() {
                                             {items.length === 0 ? (
                                                 <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
                                                     <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                                    <p className="text-[#03230F] font-bold text-lg">Your cart is feeling light</p>
-                                                    <p className="text-gray-500 text-sm mt-1">Add some fresh produce from the marketplace!</p>
+                                                    <p className="text-[#03230F] font-bold text-lg">{t("cartEmptyTitleAlt")}</p>
+                                                    <p className="text-gray-500 text-sm mt-1">{t("cartEmptyDescAlt")}</p>
                                                 </div>
                                             ) : (
                                                 items.map((item) => (
@@ -255,20 +257,20 @@ export default function Cart() {
                                 {/* Right Column: Summary */}
                                 <div className="lg:col-span-1">
                                     <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sticky top-24">
-                                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
+                                        <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("cartSummaryTitle")}</h2>
 
                                         <div className="space-y-4 mb-6">
                                             <div className="flex justify-between text-gray-600">
-                                                <span>Subtotal ({selectedItems.length} items)</span>
+                                                <span>{t("cartSubtotalItems").replace("{count}", selectedItems.length.toString())}</span>
                                                 <span className="font-medium">Rs. {subtotal.toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-600">
-                                                <span>Total Delivery Fee</span>
+                                                <span>{t("cartTotalDeliveryFee")}</span>
                                                 <span className="font-medium">Rs. {totalDeliveryFees.toFixed(2)}</span>
                                             </div>
                                             <div className="h-px bg-gray-200 my-4"></div>
                                             <div className="flex justify-between text-[#03230F] text-lg font-bold">
-                                                <span>Total Amount</span>
+                                                <span>{t("cartTotalAmount")}</span>
                                                 <span className="text-primary">Rs. {totalPrice.toFixed(2)}</span>
                                             </div>
                                         </div>
@@ -276,7 +278,7 @@ export default function Cart() {
                                         <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4 text-center">
                                             <p className="text-sm font-medium text-orange-800 flex items-center justify-center gap-1.5">
                                                 <AlertCircle className="w-4 h-4" />
-                                                Only Cash on Delivery is available
+                                                {t("cartCodOnly")}
                                             </p>
                                         </div>
 
@@ -286,9 +288,9 @@ export default function Cart() {
                                             className="w-full bg-[#EEC044] text-[#03230F] hover:bg-[#EEC044]/90 font-bold py-6 text-base shadow-md active:scale-95 transition-all whitespace-normal h-auto"
                                         >
                                             {notification?.type === 'loading' ? (
-                                                <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing...</>
+                                                <><Loader2 className="w-5 h-5 animate-spin mr-2" /> {t("cartProcessing")}</>
                                             ) : (
-                                                "Send order request"
+                                                t("cartSendOrderBtn")
                                             )}
                                         </Button>
                                     </div>

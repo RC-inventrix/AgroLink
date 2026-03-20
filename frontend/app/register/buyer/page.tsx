@@ -1,4 +1,3 @@
-/* fileName: page.tsx */
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -6,9 +5,12 @@ import { useRouter } from "next/navigation"
 import ProtectedRoute from "@/components/protected-route"
 import { X, Check, AlertCircle, ShieldCheck } from "lucide-react"
 import LocationPicker from "@/components/LocationPicker"
+import { useLanguage } from "@/context/LanguageContext" // Imported the translation hook
 
 export default function BuyerRegistration() {
     const router = useRouter()
+    const { t } = useLanguage() // Initialized the hook
+
     const [formData, setFormData] = useState({
         businessName: "",
         location: {
@@ -58,7 +60,7 @@ export default function BuyerRegistration() {
 
         // Basic validation before showing modal (Business Name is optional for buyers)
         if (!formData.location.streetAddress) {
-            setNotification({ message: "Please fill in your delivery address.", type: 'error' });
+            setNotification({ message: t("authBuyerFillDeliveryAddress"), type: 'error' });
             return;
         }
 
@@ -96,7 +98,7 @@ export default function BuyerRegistration() {
             })
 
             if (response.ok) {
-                setNotification({ message: "Account Created Successfully!", type: 'success' });
+                setNotification({ message: t("authBuyerRegistrationSuccess"), type: 'success' });
                 sessionStorage.removeItem("registerDataStep1")
                 setShowGuidelinesModal(false)
 
@@ -106,18 +108,18 @@ export default function BuyerRegistration() {
                 }, 2000);
             } else {
                 const msg = await response.text()
-                setNotification({ message: "Registration Failed: " + msg, type: 'error' });
+                setNotification({ message: t("authRegistrationFailedPrefix") + msg, type: 'error' });
                 setShowGuidelinesModal(false)
             }
         } catch (error: any) {
             console.error("Full Registration Error:", error);
             if (error.message === "Failed to fetch") {
                 setNotification({
-                    message: "Connection Error: Backend server is unreachable.",
+                    message: t("authConnectionServerUnreachable"),
                     type: 'error'
                 });
             } else {
-                setNotification({ message: "Error: " + error.message, type: 'error' });
+                setNotification({ message: t("authErrorPrefix") + error.message, type: 'error' });
             }
             setShowGuidelinesModal(false)
         } finally {
@@ -138,9 +140,9 @@ export default function BuyerRegistration() {
                     }`}>
                         <div className="flex items-center gap-3">
                             {notification.type === 'success' ? (
-                                <Check className="w-5 h-5 text-green-400" />
+                                <Check className="w-5 h-5 text-green-400 shrink-0" />
                             ) : (
-                                <AlertCircle className="w-5 h-5 text-red-400" />
+                                <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
                             )}
                             <p className="font-medium pr-4">{notification.message}</p>
                         </div>
@@ -161,62 +163,63 @@ export default function BuyerRegistration() {
                             {/* Modal Header */}
                             <div className="p-6 bg-gray-50 border-b border-gray-100 flex items-center gap-3 shrink-0">
                                 <div className="p-2 bg-[#03230F]/10 rounded-lg">
-                                    <ShieldCheck className="w-6 h-6 text-[#03230F]" />
+                                    <ShieldCheck className="w-6 h-6 text-[#03230F] shrink-0" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-[#03230F]">AgroLink Community Guidelines</h2>
-                                    <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">Safety & Trust Rules</p>
+                                    <h2 className="text-xl font-bold text-[#03230F]">{t("authGuidelinesTitle")}</h2>
+                                    <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">{t("authGuidelinesSubtitle")}</p>
                                 </div>
                             </div>
 
                             {/* Modal Body (Scrollable) */}
                             <div className="p-6 overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                                 <p className="text-sm text-gray-600 mb-6 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                    To ensure a safe and profitable environment for everyone, please read and acknowledge our community rules before finalizing your account.
+                                    {t("authGuidelinesIntro")}
                                 </p>
 
                                 <ul className="space-y-5">
-
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">🤝</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">1. Trade with Verified Users</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have good reputation among the community while we are developing our highly accurate user verification system.</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline1Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline1Desc")}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
-                                        <span className="text-2xl leading-none">💬</span>
+                                        <span className="text-2xl leading-none">📸</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">2. Communicate & Request Proof</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">Always use the in-app chat to communicate. Ask for real-time images and confirm product details before finalizing any orders.</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline2Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline2Desc")}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">📍</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">3. Shop Local to Save</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">You and the seller/buyer are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline3Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline3Desc")}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">💵</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">4. Cash on Delivery (COD) Only</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">While we are developing a highly secure online payment gateway, <strong>all platform transactions are strictly Cash on Delivery</strong>. Do not send money online.</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline4Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">
+                                                {t("authGuideline4DescPrefix")} <strong>{t("authGuideline4DescStrong")}</strong>. {t("authGuideline4DescSuffix")}
+                                            </span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">⭐</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">5. Check Ratings</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a user before agreeing to a trade.</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline5Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline5Desc")}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start gap-4">
                                         <span className="text-2xl leading-none">🚩</span>
                                         <div>
-                                            <strong className="text-gray-900 block mb-0.5">6. Report Suspicious Activity</strong>
-                                            <span className="text-gray-600 text-sm leading-relaxed">Help us keep AgroLink safe! Use the "Report" button immediately if you encounter fraud, fake items, or unfair behavior.</span>
+                                            <strong className="text-gray-900 block mb-0.5">{t("authGuideline6Title")}</strong>
+                                            <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline6Desc")}</span>
                                         </div>
                                     </li>
                                 </ul>
@@ -230,21 +233,21 @@ export default function BuyerRegistration() {
                                     disabled={isLoading}
                                     className="px-6 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
                                 >
-                                    Cancel
+                                    {t("commonCancel")}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={confirmRegistration}
                                     disabled={isLoading}
-                                    className="px-6 py-3 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-lg hover:bg-[#03230F]/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center min-w-[200px]"
+                                    className="px-6 py-3 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-lg hover:bg-[#03230F]/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center min-w-[200px] h-auto"
                                 >
                                     {isLoading ? (
                                         <span className="flex items-center gap-2">
-                                            <div className="w-5 h-5 border-2 border-[#EEC044] border-t-transparent rounded-full animate-spin"></div>
-                                            Registering...
+                                            <div className="w-5 h-5 border-2 border-[#EEC044] border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                            {t("authRegistering")}
                                         </span>
                                     ) : (
-                                        "I Acknowledge & Register"
+                                        t("authAcknowledgeAndRegister")
                                     )}
                                 </button>
                             </div>
@@ -257,16 +260,16 @@ export default function BuyerRegistration() {
                         {/* Scrollbar and Layout Container */}
                         <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                             <div className="mb-6">
-                                <h1 className="text-4xl md:text-4xl font-bold text-white mb-2 leading-tight">Buyer Registration</h1>
-                                <p className="text-[#EEC044] text-sm font-medium">Step 2: Finish Profile</p>
+                                <h1 className="text-4xl md:text-4xl font-bold text-white mb-2 leading-tight">{t("authBuyerTitle")}</h1>
+                                <p className="text-[#EEC044] text-sm font-medium">{t("authStep2FinishProfile")}</p>
                             </div>
 
                             <form onSubmit={handleInitialSubmit} className="flex flex-col space-y-4 w-full">
                                 <div className="space-y-1">
-                                    <label className="text-white text-xs font-semibold ml-1">Business Name</label>
+                                    <label className="text-white text-xs font-semibold ml-1">{t("authBusinessName")}</label>
                                     <input
                                         name="businessName"
-                                        placeholder="Company Name (Optional)"
+                                        placeholder={t("authCompanyNameOptional")}
                                         onChange={handleInputChange}
                                         className="w-full px-5 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#EEC044]/50 transition-all"
                                     />
@@ -279,15 +282,15 @@ export default function BuyerRegistration() {
                                     variant="dark"
                                     showStreetAddress={true}
                                     required={true}
-                                    label="Delivery Address"
+                                    label={t("authDeliveryAddress")}
                                 />
 
                                 <button
                                     type="submit"
                                     disabled={isLoading || showGuidelinesModal}
-                                    className="w-full py-3 px-6 mt-6 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3 px-6 mt-6 bg-[#EEC044] text-[#03230F] font-bold rounded-lg shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed h-auto"
                                 >
-                                    Complete Registration
+                                    {t("authCompleteRegistration")}
                                 </button>
                             </form>
                         </div>

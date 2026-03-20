@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Package, TrendingUp } from "lucide-react"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 interface StatsProps {
     totalOrders: number
@@ -9,16 +10,18 @@ interface StatsProps {
 }
 
 export function StatsOverview({ totalOrders, totalRevenue }: StatsProps) {
+    const { t } = useLanguage() // Initialized the hook
+
     const stats = [
         {
             icon: Package,
-            label: "Total Orders",
+            label: t("ordersTotalCount"), // Translated
             value: totalOrders.toString(),
             color: "bg-blue-50 text-blue-600",
         },
         {
             icon: TrendingUp,
-            label: "Total Revenue",
+            label: t("ordersTotalRevenue"), // Translated
             value: `Rs. ${totalRevenue.toLocaleString()}`,
             color: "bg-green-50 text-green-600",
         },
@@ -35,7 +38,7 @@ export function StatsOverview({ totalOrders, totalRevenue }: StatsProps) {
                                 <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
                                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                             </div>
-                            <div className={`p-3 rounded-full ${stat.color}`}>
+                            <div className={`p-3 rounded-full ${stat.color} shrink-0`}>
                                 <Icon className="w-5 h-5" />
                             </div>
                         </div>

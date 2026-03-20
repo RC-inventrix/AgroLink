@@ -1,4 +1,3 @@
-/* fileName: product-list.tsx */
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -12,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import LocationPicker from "@/components/LocationPicker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast, Toaster } from "sonner"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -66,6 +66,7 @@ interface Product {
 }
 
 export default function ProductList() {
+    const { t } = useLanguage(); // Initialized the hook
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -178,7 +179,7 @@ export default function ProductList() {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this product?")) return;
+        if (!confirm(t("prodListDeleteConfirm"))) return;
         try {
             const token = sessionStorage.getItem("token");
             const res = await fetch(`${API_URL}/products/${id}`, {
@@ -186,13 +187,13 @@ export default function ProductList() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
-                toast.success("Product deleted successfully");
+                toast.success(t("prodListDeleteSuccess"));
                 fetchProducts();
             } else {
-                toast.error("Failed to delete product");
+                toast.error(t("prodListDeleteFailed"));
             }
         } catch (error) {
-            toast.error("Network error");
+            toast.error(t("prodListNetworkError"));
         }
     };
 
@@ -205,13 +206,11 @@ export default function ProductList() {
         });
     };
 
-    // --- NEW: Setup state for quick quantity update ---
     const handleUpdateQuantityClick = (product: Product) => {
         setQuantityUpdateProduct(product);
         setNewQuantity(product.quantity.toString());
     };
 
-    // --- NEW: Process the quick quantity update logic ---
     const executeQuantityUpdate = async () => {
         if (!quantityUpdateProduct || !newQuantity) return;
         setIsUpdatingQuantity(true);
@@ -219,7 +218,6 @@ export default function ProductList() {
             const token = sessionStorage.getItem("token");
             const farmerId = sessionStorage.getItem("id");
 
-            // Construct payload mirroring the full DTO, but substituting ONLY the new quantity
             const payload = {
                 farmerId: parseInt(farmerId || "0"),
                 vegetableName: quantityUpdateProduct.name,
@@ -244,15 +242,15 @@ export default function ProductList() {
             });
 
             if (res.ok) {
-                toast.success("Quantity updated successfully!");
+                toast.success(t("prodListUpdateQtySuccess"));
                 setQuantityUpdateProduct(null);
                 fetchProducts();
             } else {
                 const err = await res.text();
-                toast.error(`Failed to update quantity: ${err}`);
+                toast.error(`${t("prodListUpdateQtyFailed")}${err}`);
             }
         } catch (err) {
-            toast.error("Network error");
+            toast.error(t("prodListNetworkError"));
         } finally {
             setIsUpdatingQuantity(false);
         }
@@ -306,16 +304,16 @@ export default function ProductList() {
             });
 
             if (res.ok) {
-                toast.success("Product updated successfully!");
+                toast.success(t("prodListUpdateSuccess"));
                 setShowSaveConfirm(false);
                 setEditingProduct(null);
                 fetchProducts();
             } else {
                 const err = await res.text();
-                toast.error(`Update failed: ${err}`);
+                toast.error(`${t("prodListUpdateFailed")}${err}`);
             }
         } catch (error) {
-            toast.error("Network error during update");
+            toast.error(t("prodListUpdateNetError"));
         } finally {
             setIsSaving(false);
         }
@@ -326,8 +324,8 @@ export default function ProductList() {
             <Toaster position="top-center" richColors />
             <div className="max-w-6xl mx-auto">
                 <div className="mb-8">
-                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">My Products</h1>
-                    <p className="text-[#A3ACBA] font-medium">Manage and update your currently listed inventory.</p>
+                    <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("prodListTitle")}</h1>
+                    <p className="text-[#A3ACBA] font-medium">{t("prodListSubtitle")}</p>
                 </div>
 
                 {loading ? (
@@ -337,8 +335,8 @@ export default function ProductList() {
                 ) : products.length === 0 ? (
                     <div className="text-center py-20 bg-muted/10 border border-border rounded-xl">
                         <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-foreground">No Products Found</h3>
-                        <p className="text-muted-foreground mt-2">You haven't listed any products yet.</p>
+                        <h3 className="text-lg font-bold text-foreground">{t("prodListNoProducts")}</h3>
+                        <p className="text-muted-foreground mt-2">{t("prodListNoProductsDesc")}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -361,15 +359,17 @@ export default function ProductList() {
                 <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-card w-full max-w-sm rounded-xl shadow-2xl border border-border animate-in fade-in zoom-in-95">
                         <div className="p-5 border-b flex justify-between items-center bg-muted/20">
-                            <h2 className="text-lg font-bold">Update Quantity</h2>
+                            <h2 className="text-lg font-bold">{t("prodListUpdateQtyTitle")}</h2>
                             <Button variant="ghost" size="icon" onClick={() => setQuantityUpdateProduct(null)}>
-                                <X className="w-4 h-4" />
+                                <X className="w-4 h-4 shrink-0" />
                             </Button>
                         </div>
                         <div className="p-6 space-y-4">
-                            <p className="text-sm text-muted-foreground">Adjust the available stock for <strong>{quantityUpdateProduct.name}</strong>.</p>
+                            <p className="text-sm text-muted-foreground">
+                                {t("prodListAdjustStock")} <strong>{quantityUpdateProduct.name}</strong>.
+                            </p>
                             <div className="space-y-2">
-                                <Label>New Quantity (kg)</Label>
+                                <Label>{t("prodListNewQty")}</Label>
                                 <Input
                                     type="number"
                                     value={newQuantity}
@@ -378,12 +378,12 @@ export default function ProductList() {
                                 />
                             </div>
                             <Button
-                                className="w-full mt-2 bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold h-11"
+                                className="w-full mt-2 bg-[#03230F] hover:bg-[#03230F]/90 text-[#EEC044] font-bold h-auto py-2"
                                 onClick={executeQuantityUpdate}
                                 disabled={isUpdatingQuantity || !newQuantity}
                             >
-                                {isUpdatingQuantity ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
-                                Update Quantity
+                                {isUpdatingQuantity ? <Loader2 className="w-4 h-4 animate-spin mr-2 shrink-0"/> : null}
+                                {t("prodListUpdateQtyBtn")}
                             </Button>
                         </div>
                     </div>
@@ -396,11 +396,11 @@ export default function ProductList() {
                     <div className="bg-card w-full max-w-2xl rounded-xl shadow-2xl border border-border my-8 flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b flex justify-between items-center bg-muted/20 sticky top-0 z-10">
                             <div>
-                                <h2 className="text-xl font-bold text-foreground">Edit Product</h2>
-                                <p className="text-xs text-muted-foreground mt-1">Update details for {editingProduct.name}</p>
+                                <h2 className="text-xl font-bold text-foreground">{t("prodListEditTitle")}</h2>
+                                <p className="text-xs text-muted-foreground mt-1">{t("prodListEditSubtitle")} {editingProduct.name}</p>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => setEditingProduct(null)}>
-                                <X className="w-5 h-5" />
+                                <X className="w-5 h-5 shrink-0" />
                             </Button>
                         </div>
 
@@ -408,32 +408,32 @@ export default function ProductList() {
                             <div className="flex gap-6 items-start">
                                 <img src={editingProduct.image || "/placeholder.svg"} className="w-24 h-24 object-cover rounded-lg border shadow-sm" alt="Preview"/>
                                 <div className="flex-1 space-y-2">
-                                    <Label className="text-muted-foreground text-xs">Note</Label>
-                                    <p className="text-sm">To change the product image, please delete this listing and create a new one.</p>
+                                    <Label className="text-muted-foreground text-xs">{t("prodListNote")}</Label>
+                                    <p className="text-sm">{t("prodListImageNote")}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Vegetable Name</Label>
+                                    <Label>{t("prodListVegName")}</Label>
                                     <Input
                                         value={editingProduct.name ?? ""}
                                         onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Category</Label>
+                                    <Label>{t("prodListCategory")}</Label>
                                     <Select
                                         value={editingProduct.category ?? ""}
                                         onValueChange={(val) => setEditingProduct({ ...editingProduct, category: val })}
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent className="z-[10000]">
-                                            <SelectItem value="Leafy">Leafy Vegetables</SelectItem>
-                                            <SelectItem value="Root">Root Vegetables</SelectItem>
-                                            <SelectItem value="Fruit">Fruit Vegetables</SelectItem>
-                                            <SelectItem value="Organic">Organic</SelectItem>
-                                            <SelectItem value="Vegetable">General Vegetable</SelectItem>
+                                            <SelectItem value="Leafy">{t("prodListCatLeafy")}</SelectItem>
+                                            <SelectItem value="Root">{t("prodListCatRoot")}</SelectItem>
+                                            <SelectItem value="Fruit">{t("prodListCatFruit")}</SelectItem>
+                                            <SelectItem value="Organic">{t("prodListCatOrganic")}</SelectItem>
+                                            <SelectItem value="Vegetable">{t("prodListCatGeneral")}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -441,7 +441,7 @@ export default function ProductList() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Quantity (kg)</Label>
+                                    <Label>{t("prodListQtyKg")}</Label>
                                     <Input
                                         type="number"
                                         value={editingProduct.quantity ?? ""}
@@ -452,12 +452,12 @@ export default function ProductList() {
 
                             <div className="bg-muted/30 p-4 rounded-lg">
                                 <Label className="mb-3 block font-semibold text-base border-b pb-2">
-                                    Pricing ({editingProduct.pricingType === "FIXED" ? "Fixed Price" : "Auction Based"})
+                                    {t("prodListPricing")} ({editingProduct.pricingType === "FIXED" ? t("prodListFixedPrice") : t("prodListAuctionBased")})
                                 </Label>
 
                                 {editingProduct.pricingType === "FIXED" ? (
                                     <div className="space-y-2 mt-3">
-                                        <Label className="text-xs text-muted-foreground">Price per Kg (LKR)</Label>
+                                        <Label className="text-xs text-muted-foreground">{t("prodListPricePerKg")}</Label>
                                         <Input
                                             type="number"
                                             value={editingProduct.pricePerKg ?? ""}
@@ -466,7 +466,7 @@ export default function ProductList() {
                                     </div>
                                 ) : (
                                     <div className="space-y-2 mt-3">
-                                        <Label className="text-xs text-muted-foreground">Starting Bid (LKR)</Label>
+                                        <Label className="text-xs text-muted-foreground">{t("prodListStartingBid")}</Label>
                                         <Input
                                             type="number"
                                             value={editingProduct.biddingPrice ?? ""}
@@ -477,7 +477,7 @@ export default function ProductList() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Description</Label>
+                                <Label>{t("prodListDesc")}</Label>
                                 <Textarea
                                     rows={3}
                                     value={editingProduct.description ?? ""}
@@ -486,19 +486,19 @@ export default function ProductList() {
                             </div>
 
                             <div className="space-y-4 pt-4 border-t">
-                                <Label className="text-base">Pickup Location Update</Label>
+                                <Label className="text-base">{t("prodListPickupLocation")}</Label>
                                 <RadioGroup value={addressOption} onValueChange={(v: any) => setAddressOption(v)}>
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="keep" id="keep" />
-                                        <Label htmlFor="keep">Keep Current Address ({editingProduct.pickupAddress})</Label>
+                                        <Label htmlFor="keep">{t("prodListKeepAddress")} ({editingProduct.pickupAddress})</Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="default" id="default" />
-                                        <Label htmlFor="default">Use My Registration Address ({userDefaultAddress?.address || "Loading..."})</Label>
+                                        <Label htmlFor="default">{t("prodListUseRegAddress")} ({userDefaultAddress?.address || "Loading..."})</Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="custom" id="custom" />
-                                        <Label htmlFor="custom">Select New Custom Location on Map</Label>
+                                        <Label htmlFor="custom">{t("prodListCustomLocation")}</Label>
                                     </div>
                                 </RadioGroup>
 
@@ -510,14 +510,14 @@ export default function ProductList() {
                                             variant="light"
                                             showStreetAddress={true}
                                             required={true}
-                                            label="Select New Location"
+                                            label={t("prodListSelectNewLoc")}
                                         />
                                     </div>
                                 )}
                             </div>
 
                             <div className="space-y-4 pt-4 border-t">
-                                <Label className="text-base">Delivery Options</Label>
+                                <Label className="text-base">{t("prodListDeliveryOptions")}</Label>
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
@@ -526,13 +526,13 @@ export default function ProductList() {
                                         checked={editingProduct.deliveryAvailable}
                                         onChange={(e) => setEditingProduct({ ...editingProduct, deliveryAvailable: e.target.checked })}
                                     />
-                                    <Label htmlFor="deliveryToggle" className="cursor-pointer font-normal">Yes, I provide delivery</Label>
+                                    <Label htmlFor="deliveryToggle" className="cursor-pointer font-normal">{t("prodListYesDelivery")}</Label>
                                 </div>
 
                                 {editingProduct.deliveryAvailable && (
                                     <div className="grid grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border">
                                         <div className="space-y-2">
-                                            <Label className="text-xs">Base Charge (First 3km)</Label>
+                                            <Label className="text-xs">{t("prodListBaseCharge")}</Label>
                                             <Input
                                                 type="number"
                                                 value={editingProduct.baseCharge ?? ""}
@@ -540,7 +540,7 @@ export default function ProductList() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-xs">Extra Rate (Per km)</Label>
+                                            <Label className="text-xs">{t("prodListExtraRate")}</Label>
                                             <Input
                                                 type="number"
                                                 value={editingProduct.extraRatePerKm ?? ""}
@@ -552,12 +552,12 @@ export default function ProductList() {
                             </div>
                         </div>
 
-                        <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100">
-                            <Button size="lg" className="flex-1 bg-[#03230F] text-[#EEC044] font-bold uppercase tracking-widest text-xs hover:bg-black transition-all shadow-lg" onClick={() => setShowSaveConfirm(true)}>
-                                Save Changes
+                        <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100 p-6">
+                            <Button size="lg" className="flex-1 bg-[#03230F] h-auto py-3 text-[#EEC044] font-bold uppercase tracking-widest text-xs hover:bg-black transition-all shadow-lg" onClick={() => setShowSaveConfirm(true)}>
+                                {t("prodListSaveChanges")}
                             </Button>
-                            <Button size="lg" variant="outline" className="flex-1 border-gray-200 text-gray-500 font-bold uppercase tracking-widest text-xs hover:bg-gray-50" onClick={() => setEditingProduct(null)}>
-                                Cancel
+                            <Button size="lg" variant="outline" className="flex-1 border-gray-200 h-auto py-3 text-gray-500 font-bold uppercase tracking-widest text-xs hover:bg-gray-50" onClick={() => setEditingProduct(null)}>
+                                {t("commonCancel")}
                             </Button>
                         </div>
                     </div>
@@ -570,17 +570,17 @@ export default function ProductList() {
                     <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden text-center">
                         <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
                         <div className="bg-yellow-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Check className="w-10 h-10 text-[#EEC044]" />
+                            <Check className="w-10 h-10 text-[#EEC044] shrink-0" />
                         </div>
-                        <h3 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">Confirm Updates?</h3>
-                        <p className="text-sm text-gray-500 mb-8 font-medium">These changes will be visible to buyers immediately.</p>
+                        <h3 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">{t("prodListConfirmUpdates")}</h3>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">{t("prodListVisibleImmediate")}</p>
                         <div className="flex flex-col gap-3">
-                            <Button className="w-full bg-[#03230F] text-[#EEC044] font-bold py-6 uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all" onClick={executeSave} disabled={isSaving}>
-                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : null}
-                                {isSaving ? "Saving..." : "Confirm"}
+                            <Button className="w-full bg-[#03230F] text-[#EEC044] font-bold h-auto py-4 uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all" onClick={executeSave} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2 shrink-0"/> : null}
+                                {isSaving ? t("prodListSaving") : t("prodListConfirm")}
                             </Button>
                             <button className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors" onClick={() => setShowSaveConfirm(false)} disabled={isSaving}>
-                                Back
+                                {t("prodListBack")}
                             </button>
                         </div>
                     </div>

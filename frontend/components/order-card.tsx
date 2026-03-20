@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -44,7 +45,8 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardProps) {
-    const [buyerName, setBuyerName] = useState<string>("Loading...")
+    const { t } = useLanguage() // Initialized the hook
+    const [buyerName, setBuyerName] = useState<string>(t("authProcessing") || "Loading...")
 
     // Modals & Inputs
     const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
@@ -75,7 +77,6 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
    useEffect(() => {
     const fetchBuyerName = async () => {
         try {
-            // Use the token for authorized access if your gateway/auth service requires it
             const res = await fetch(`${API_URL}/auth/user/${order.userId}`, {
                 headers: { 
                     "Authorization": `Bearer ${sessionStorage.getItem("token")}` 
@@ -84,27 +85,26 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
 
             if (res.ok) {
                 const userData = await res.json();
-                // FIX: Explicitly check for 'fullname' or 'username' from the User model
                 if (userData.fullname) {
                     setBuyerName(userData.fullname);
                 } else if (userData.username) {
                     setBuyerName(userData.username);
                 } else {
-                    setBuyerName(`User #${order.userId}`);
+                    setBuyerName(`${t("purchaseBuyerFallback")} #${order.userId}`);
                 }
             } else {
-                setBuyerName(`User #${order.userId}`);
+                setBuyerName(`${t("purchaseBuyerFallback")} #${order.userId}`);
             }
         } catch (error) {
             console.error("Error fetching name:", error);
-            setBuyerName("Unknown Buyer");
+            setBuyerName(t("orderCardUnknownBuyer"));
         }
     };
 
     if (order.userId) {
         fetchBuyerName();
     }
-}, [order.userId, API_URL]); // Added API_URL to dependency array for safety
+}, [order.userId, API_URL, t]);
 
     const handleVerifyOtp = async () => { /* unchanged logic */ };
     const handleCancelOrder = async () => { /* unchanged logic */ };
@@ -133,38 +133,52 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
     const finalTotal = order.amount / 100;
     const goodsTotal = finalTotal - deliveryFee;
 
+    // Helper to translate status badges dynamically
+    const getTranslatedStatus = (statusStr: string) => {
+        if (!statusStr) return "";
+        const s = statusStr.toUpperCase();
+        if (s === "PENDING") return t("ordersTabPending");
+        if (s === "PROCESSING") return t("ordersTabProcessing");
+        if (s === "COMPLETED") return t("ordersTabCompleted");
+        if (s === "CANCELLED") return t("ordersTabCancelled");
+        if (s === "CREATED") return t("ordersStatusCreated");
+        if (s === "PAID") return t("ordersStatusPaid");
+        if (s === "COD_CONFIRMED") return t("ordersStatusCodConfirmed");
+        return statusStr.toLowerCase();
+    };
+
     return (
         <>
             <Card className={`p-0 border border-gray-100 bg-white rounded-[20px] shadow-sm overflow-hidden mb-4 transition-all hover:shadow-md ${isCancelled ? 'opacity-70 grayscale-[0.5]' : ''}`}>
                 <div className="flex p-8 gap-8 relative flex-col sm:flex-row items-center sm:items-start">
-                    <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-[#F1F1F1] border border-gray-50 flex items-center justify-center">
+                    <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-[#F1F1F1] border border-gray-50 flex items-center justify-center shrink-0">
                         <img src={itemDetails.image} alt={itemDetails.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 w-full">
-                        <div className="flex justify-between items-start">
-                            <div className="space-y-1">
+                        <div className="flex justify-between items-start gap-4">
+                            <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-1 text-[#A3ACBA] mb-1">
-                                    <Hash className="w-3 h-3" />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider">order #{order.id}</span>
+                                    <Hash className="w-3 h-3 shrink-0" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">{t("orderCardOrderHash")}{order.id}</span>
                                 </div>
                                 <h3 className="text-[22px] font-[800] text-[#0A2540] tracking-tight leading-none mb-1">{itemDetails.name}</h3>
                                 <div className="flex items-center gap-1.5 text-[#697386]">
-                                    <User className="w-4 h-4" />
-                                    <p className="text-[15px] font-medium">Buyer: <Link href={`/user/${order.userId}`} className="text-[#0A2540] font-bold hover:text-[#166534] hover:underline transition-all cursor-pointer">{buyerName}</Link></p>
+                                    <User className="w-4 h-4 shrink-0" />
+                                    <p className="text-[15px] font-medium">{t("orderCardBuyerLabel")} <Link href={`/user/${order.userId}`} className="text-[#0A2540] font-bold hover:text-[#166534] hover:underline transition-all cursor-pointer">{buyerName}</Link></p>
                                 </div>
                             </div>
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isCompleted ? "bg-[#F0FDF4] text-[#166534] border-[#DCFCE7]" : isCancelled ? "bg-red-50 text-red-600 border-red-100" : "bg-[#FFFBEB] text-[#92400E] border-[#FEF3C7]"}`}>
-                                {isCancelled ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                                <span className="text-[13px] font-bold capitalize">{order.status?.toLowerCase()}</span>
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 ${isCompleted ? "bg-[#F0FDF4] text-[#166534] border-[#DCFCE7]" : isCancelled ? "bg-red-50 text-red-600 border-red-100" : "bg-[#FFFBEB] text-[#92400E] border-[#FEF3C7]"}`}>
+                                {isCancelled ? <XCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                                <span className="text-[13px] font-bold capitalize">{getTranslatedStatus(order.status)}</span>
                             </div>
                         </div>
 
-                        {/* --- NEW: DELIVERY/PICKUP INFO BADGE --- */}
+                        {/* --- DELIVERY/PICKUP INFO BADGE --- */}
                         {isDelivery ? (
                             <div className="mt-5 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
                                 <div className="flex items-center gap-2 text-[#0A2540] mb-2">
-                                    <Truck className="w-5 h-5 text-blue-600" />
-                                    <span className="font-bold text-sm tracking-tight">Delivery Order</span>
+                                    <Truck className="w-5 h-5 text-blue-600 shrink-0" />
+                                    <span className="font-bold text-sm tracking-tight">{t("orderCardDeliveryOrder")}</span>
                                 </div>
                                 {order.deliveryAddress && (
                                     <p className="text-[13px] text-gray-700 font-medium flex items-start gap-1.5">
@@ -173,47 +187,47 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                                     </p>
                                 )}
                                 {order.buyerLatitude && order.buyerLongitude && (
-                                    <a href={`https://www.google.com/maps?q=${order.buyerLatitude},${order.buyerLongitude}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-[12px] font-bold text-blue-600 hover:text-blue-800 hover:underline">
-                                        View on Google Maps &rarr;
+                                    <a href={`https://maps.google.com/?q=${order.buyerLatitude},${order.buyerLongitude}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-[12px] font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                        {t("orderCardViewMaps")}
                                     </a>
                                 )}
                             </div>
                         ) : (
                             <div className="mt-5 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
                                 <div className="flex items-center gap-2 text-[#0A2540]">
-                                    <Store className="w-5 h-5 text-emerald-600" />
-                                    <span className="font-bold text-sm tracking-tight">Pickup Order</span>
+                                    <Store className="w-5 h-5 text-emerald-600 shrink-0" />
+                                    <span className="font-bold text-sm tracking-tight">{t("orderCardPickupOrder")}</span>
                                 </div>
-                                <p className="text-[13px] text-gray-600 font-medium mt-1">The buyer will pick up these items directly from your farm.</p>
+                                <p className="text-[13px] text-gray-600 font-medium mt-1">{t("orderCardPickupDesc")}</p>
                             </div>
                         )}
 
                         {/* --- UPDATED: 4-COLUMN PRICING GRID --- */}
                         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl">
-                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Quantity</p><p className="text-[16px] font-[700] text-[#1A1F25]">{itemDetails.quantity} kg</p></div>
-                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Goods Total</p><p className="text-[16px] font-[700] text-[#1A1F25]">Rs. {goodsTotal.toLocaleString()}</p></div>
-                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Delivery Fee</p><p className="text-[16px] font-[700] text-[#1A1F25]">Rs. {deliveryFee.toLocaleString()}</p></div>
-                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">Final Total</p><p className="text-[16px] font-[900] text-[#166534]">Rs. {finalTotal.toLocaleString()}</p></div>
+                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">{t("orderCardQuantity")}</p><p className="text-[16px] font-[700] text-[#1A1F25]">{itemDetails.quantity} {t("purchaseKgUnit")}</p></div>
+                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">{t("orderCardGoodsTotal")}</p><p className="text-[16px] font-[700] text-[#1A1F25]">Rs. {goodsTotal.toLocaleString()}</p></div>
+                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">{t("orderCardDeliveryFee")}</p><p className="text-[16px] font-[700] text-[#1A1F25]">Rs. {deliveryFee.toLocaleString()}</p></div>
+                            <div className="space-y-1"><p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">{t("orderCardFinalTotal")}</p><p className="text-[16px] font-[900] text-[#166534]">Rs. {finalTotal.toLocaleString()}</p></div>
                         </div>
 
-                        <p className="mt-5 text-[13px] text-[#A3ACBA] font-medium">Ordered on <span className="text-[#697386] font-semibold">{orderDate}</span></p>
+                        <p className="mt-5 text-[13px] text-[#A3ACBA] font-medium">{t("orderCardOrderedOn")} <span className="text-[#697386] font-semibold">{orderDate}</span></p>
                     </div>
                 </div>
 
-                {/* --- Review Section & Buttons remain unchanged below --- */}
+                {/* --- Review Section --- */}
                 {isCompleted && (
                     <div className="bg-[#F8FAFC] px-8 py-6 border-t border-gray-100 grid md:grid-cols-2 gap-8">
                         <div>
-                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">Buyer's Feedback</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">{t("orderCardBuyerFeedback")}</h4>
                             {buyerHasReviewed ? (
                                 <div className="space-y-3">
                                     <StarRating rating={order.orderReview.buyerRating} />
                                     <p className="text-sm italic bg-white p-3 rounded-lg border border-gray-100 shadow-sm text-[#4A5568]">"{order.orderReview.buyerComment}"</p>
                                 </div>
-                            ) : <p className="text-xs text-gray-400 font-medium italic">No review yet.</p>}
+                            ) : <p className="text-xs text-gray-400 font-medium italic">{t("orderCardNoReview")}</p>}
                         </div>
                         <div className="md:border-l md:pl-8 border-gray-200">
-                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">Rate the Buyer</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-[#03230F] mb-4">{t("orderCardRateBuyer")}</h4>
                             {sellerHasReviewed ? (
                                 <div className="space-y-3">
                                     <StarRating rating={order.orderReview.sellerRating} />
@@ -222,17 +236,22 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             ) : (
                                 <div className="flex flex-col gap-3">
                                     <StarRating rating={reviewRating} setRating={setReviewRating} interactive />
-                                    <textarea placeholder="How was the transaction?" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#03230F] outline-none transition-all" rows={2} value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} />
-                                    <Button onClick={handleSubmitReview} disabled={isSubmittingReview || reviewRating === 0} className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-[10px] h-9 px-6 font-bold rounded-lg uppercase tracking-widest transition-all">Submit Review</Button>
+                                    <textarea placeholder={t("orderCardReviewPlaceholder")} className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#03230F] outline-none transition-all" rows={2} value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} />
+                                    <Button onClick={handleSubmitReview} disabled={isSubmittingReview || reviewRating === 0} className="w-fit bg-[#03230F] hover:bg-black text-[#EEC044] text-[10px] h-auto py-2 px-6 font-bold rounded-lg uppercase tracking-widest transition-all">
+                                        {t("orderCardSubmitReview")}
+                                    </Button>
                                 </div>
                             )}
                         </div>
                     </div>
                 )}
 
+                {/* --- Action Buttons --- */}
                 {!isCompleted && !isCancelled && (
-                    <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex justify-end gap-6">
-                        <button onClick={() => { setError(null); setIsCancelModalOpen(true); }} className="text-[12px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors">Cancel Order</button>
+                    <div className="bg-[#F8FAFC] px-8 py-4 border-t border-gray-100 flex flex-wrap justify-end gap-6">
+                        <button onClick={() => { setError(null); setIsCancelModalOpen(true); }} className="text-[12px] font-black uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors h-auto py-2">
+                            {t("orderCardCancelOrder")}
+                        </button>
                         <button onClick={(e) => {
                             e.stopPropagation();
                             if (isProcessing || isOfferOrder) {
@@ -241,8 +260,8 @@ export function OrderCard({ order, onStatusUpdate, onOfferAction }: OrderCardPro
                             } else if (onStatusUpdate) {
                                 onStatusUpdate();
                             }
-                        }} className="text-[12px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700 transition-colors">
-                            {isProcessing || isOfferOrder ? "Verify & Complete" : "Accept This Order"}
+                        }} className="text-[12px] font-black uppercase tracking-widest text-[#03230F] hover:text-green-700 transition-colors h-auto py-2">
+                            {isProcessing || isOfferOrder ? t("orderCardVerifyComplete") : t("orderCardAcceptOrder")}
                         </button>
                     </div>
                 )}

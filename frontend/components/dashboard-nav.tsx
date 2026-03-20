@@ -1,4 +1,3 @@
-/* fileName: dashboard-nav.tsx */
 "use client"
 
 import React, { useEffect, useState } from "react"
@@ -9,16 +8,18 @@ import {
     BookOpen, ShieldCheck, X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
+// Replaced 'label' with 'key' for translations
 const navItems = [
-    { href: "/buyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/VegetableList", label: "Browse Products", icon: ShoppingBag },
-    { href: "/cart", label: "Cart", icon: ShoppingCart },
-    { href: "/buyer/order-history", label: "My Orders", icon: Package },
-    { href: "/buyer/bargain-history", label: "Bargains", icon: TrendingUp },
-    { href: "/buyer/requests", label: "Item Requests", icon: FileText },
-    { href: "/buyer/chat", label: "Chat", icon: MessageSquare },
-    { href: "/buyer/bids", label: "My Bids", icon: Gavel },
+    { href: "/buyer/dashboard", key: "navDashboard", icon: LayoutDashboard },
+    { href: "/VegetableList", key: "navBrowseProducts", icon: ShoppingBag },
+    { href: "/cart", key: "navCart", icon: ShoppingCart },
+    { href: "/buyer/order-history", key: "navMyOrders", icon: Package },
+    { href: "/buyer/bargain-history", key: "navBargains", icon: TrendingUp },
+    { href: "/buyer/requests", key: "navItemRequests", icon: FileText },
+    { href: "/buyer/chat", key: "navChat", icon: MessageSquare },
+    { href: "/buyer/bids", key: "navMyBids", icon: Gavel },
 ]
 
 interface DashboardNavProps {
@@ -27,6 +28,7 @@ interface DashboardNavProps {
 
 export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProps) {
     const pathname = usePathname()
+    const { t } = useLanguage() // Initialized the hook
     const [showInstructions, setShowInstructions] = useState(false);
     const [liveUnreadCount, setLiveUnreadCount] = useState(initialCount)
     const CHAT_SERVICE_URL = "http://localhost:8083"
@@ -79,33 +81,33 @@ export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProp
                                 key={item.href}
                                 href={item.href}
                                 className={cn(
-                                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                                    "flex items-center gap-3 rounded-lg px-4 py-3 h-auto min-h-[44px] text-sm font-medium transition-colors",
                                     isActive
                                         ? "bg-accent text-accent-foreground shadow-sm"
                                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                                 )}
                             >
-                                <div className="relative">
-                                    <Icon className="h-5 w-5" />
-                                    {/* FIX: Changed unreadCount to liveUnreadCount below */}
-                                    {item.label === "Chat" && liveUnreadCount > 0 && (
-                                        <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
+                                <div className="relative shrink-0">
+                                    <Icon className="h-5 w-5 shrink-0" />
+                                    {/* Using key to check for Chat */}
+                                    {item.key === "navChat" && liveUnreadCount > 0 && (
+                                        <span className="absolute -right-2 -top-2 flex h-4 min-w-[1rem] px-1 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
                                             {liveUnreadCount > 9 ? "9+" : liveUnreadCount}
                                         </span>
                                     )}
                                 </div>
-                                <span>{item.label}</span>
+                                <span>{t(item.key)}</span>
                             </Link>
                         )
                     })}
 
-                    {/* NEW: Instructions Button placed immediately under "My Bids" */}
+                    {/* Instructions Button */}
                     <button
                         onClick={() => setShowInstructions(true)}
-                        className="flex items-center gap-3 w-full mt-2 px-4 py-3 rounded-lg transition-all text-sm font-bold bg-[#03230F] text-[#EEC044] hover:bg-[#03230F]/90 shadow-sm active:scale-95"
+                        className="flex items-center gap-3 w-full mt-2 px-4 py-3 h-auto min-h-[44px] rounded-lg transition-all text-sm font-bold bg-[#03230F] text-[#EEC044] hover:bg-[#03230F]/90 shadow-sm active:scale-95"
                     >
-                        <BookOpen className="h-5 w-5" />
-                        <span>Instructions</span>
+                        <BookOpen className="h-5 w-5 shrink-0" />
+                        <span>{t("navInstructions")}</span>
                     </button>
                 </div>
             </nav>
@@ -118,68 +120,69 @@ export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProp
                         {/* Modal Header */}
                         <div className="p-6 bg-gray-50 border-b border-gray-100 flex items-center gap-3 shrink-0">
                             <div className="p-2 bg-[#03230F]/10 rounded-lg">
-                                <ShieldCheck className="w-6 h-6 text-[#03230F]" />
+                                <ShieldCheck className="w-6 h-6 text-[#03230F] shrink-0" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-[#03230F]">AgroLink Community Guidelines</h2>
-                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">Safety & Trust Rules</p>
+                                <h2 className="text-xl font-bold text-[#03230F]">{t("authGuidelinesTitle")}</h2>
+                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">{t("authGuidelinesSubtitle")}</p>
                             </div>
                             <button
                                 onClick={() => setShowInstructions(false)}
-                                className="ml-auto p-2 hover:bg-gray-200 rounded-full transition-colors"
+                                className="ml-auto p-2 hover:bg-gray-200 rounded-full transition-colors shrink-0"
                             >
-                                <X className="w-5 h-5 text-gray-500" />
+                                <X className="w-5 h-5 text-gray-500 shrink-0" />
                             </button>
                         </div>
 
                         {/* Modal Body (Scrollable) */}
                         <div className="p-6 overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <p className="text-sm text-gray-600 mb-6 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                To ensure a safe and profitable environment for everyone, please review our community rules.
+                                {t("authGuidelinesIntro")}
                             </p>
 
                             <ul className="space-y-5">
-
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🤝</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">1. Trade with Verified Users</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have good reputation among the community while we are developing our highly accurate user verification system.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline1Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline1Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
-                                    <span className="text-2xl leading-none">💬</span>
+                                    <span className="text-2xl leading-none">📸</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">2. Communicate & Request Proof</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always use the in-app chat to communicate. Ask for real-time images and confirm product details before finalizing any orders.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline2Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline2Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">📍</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">3. Shop Local to Save</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">You and the seller/buyer are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline3Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline3Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">💵</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">4. Cash on Delivery (COD) Only</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">While we are developing a highly secure online payment gateway, <strong>all platform transactions are strictly Cash on Delivery</strong>. Do not send money online.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline4Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">
+                                            {t("authGuideline4DescPrefix")} <strong>{t("authGuideline4DescStrong")}</strong>. {t("authGuideline4DescSuffix")}
+                                        </span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">⭐</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">5. Check Ratings</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a user before agreeing to a trade.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline5Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline5Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🚩</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">6. Report Suspicious Activity</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Help us keep AgroLink safe! Use the "Report" button immediately if you encounter fraud, fake items, or unfair behavior.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline6Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline6Desc")}</span>
                                     </div>
                                 </li>
                             </ul>
@@ -190,9 +193,9 @@ export function DashboardNav({ unreadCount: initialCount = 0 }: DashboardNavProp
                             <button
                                 type="button"
                                 onClick={() => setShowInstructions(false)}
-                                className="px-8 py-2.5 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-md hover:bg-[#03230F]/90 active:scale-[0.98] transition-all"
+                                className="px-8 py-2.5 h-auto bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-md hover:bg-[#03230F]/90 active:scale-[0.98] transition-all"
                             >
-                                Close
+                                {t("commonClose")}
                             </button>
                         </div>
                     </div>

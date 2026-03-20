@@ -8,9 +8,11 @@ import { Bell, User, LogOut, Settings, Check, MessageSquare, ShoppingBag, CheckC
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import logo from "../../public/images/Group-6.png"
+import { useLanguage } from "@/context/LanguageContext" // Added Translation Hook
 
 export default function SellerHeader() {
     const router = useRouter()
+    const { t } = useLanguage() // Initialize hook
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
@@ -114,7 +116,7 @@ export default function SellerHeader() {
 
     const handleLogout = () => {
         sessionStorage.clear();
-        setNotification({ message: "Logged out successfully!", type: 'success' });
+        setNotification({ message: t("sellerHeaderLogoutSuccess"), type: 'success' });
         setTimeout(() => router.push("/login"), 1500);
     };
 
@@ -123,7 +125,7 @@ export default function SellerHeader() {
             {/* Notification Toast */}
             {notification && (
                 <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900">
-                    <Check className="w-5 h-5 mr-3 text-green-500" />
+                    <Check className="w-5 h-5 mr-3 shrink-0 text-green-500" />
                     <p className="font-semibold pr-4">{notification.message}</p>
                 </div>
             )}
@@ -140,7 +142,7 @@ export default function SellerHeader() {
                         <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 relative flex items-center justify-center">
                             <Bell className="w-6 h-6 text-white" />
                             {totalNotifications > 0 && (
-                                <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
+                                <span className="absolute top-0 right-0 h-5 min-w-[1.25rem] px-1 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
                                     {totalNotifications > 99 ? "99+" : totalNotifications}
                                 </span>
                             )}
@@ -148,7 +150,7 @@ export default function SellerHeader() {
 
                         {isNotifOpen && (
                             <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 max-h-[400px] overflow-y-auto">
-                                <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">Notifications</div>
+                                <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">{t("sellerHeaderNotifTitle")}</div>
 
                                 {/* --- NEW: OFFER ACCEPTED SECTION --- */}
                                 {offerNotifications.map((notif) => (
@@ -157,9 +159,9 @@ export default function SellerHeader() {
                                         onClick={() => { setIsNotifOpen(false); router.push("/seller/orders"); }} 
                                         className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50"
                                     >
-                                        <div className="p-2 rounded-full bg-blue-100 text-blue-600"><CheckCircle className="w-4 h-4" /></div>
+                                        <div className="p-2 rounded-full shrink-0 bg-blue-100 text-blue-600"><CheckCircle className="w-4 h-4" /></div>
                                         <div className="text-left">
-                                            <p className="text-sm font-bold">Offer Accepted!</p>
+                                            <p className="text-sm font-bold">{t("sellerHeaderOfferAccepted")}</p>
                                             <p className="text-xs text-gray-500">{notif.message}</p>
                                         </div>
                                     </button>
@@ -167,26 +169,26 @@ export default function SellerHeader() {
 
                                 {orderUnread > 0 && (
                                     <button onClick={() => { setIsNotifOpen(false); router.push("/seller/orders"); }} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50">
-                                        <div className="p-2 rounded-full bg-green-100 text-green-600"><ShoppingBag className="w-4 h-4" /></div>
+                                        <div className="p-2 rounded-full shrink-0 bg-green-100 text-green-600"><ShoppingBag className="w-4 h-4" /></div>
                                         <div className="text-left">
-                                            <p className="text-sm font-bold">New Orders</p>
-                                            <p className="text-xs text-gray-500">You have {orderUnread} orders waiting</p>
+                                            <p className="text-sm font-bold">{t("sellerHeaderNewOrders")}</p>
+                                            <p className="text-xs text-gray-500">{t("sellerHeaderOrdersWaiting").replace("{n}", orderUnread.toString())}</p>
                                         </div>
                                     </button>
                                 )}
 
                                 {unreadChatCount > 0 && (
                                     <button onClick={() => { setIsNotifOpen(false); router.push("/seller/chat"); }} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50">
-                                        <div className="p-2 rounded-full bg-orange-100 text-orange-600"><MessageSquare className="w-4 h-4" /></div>
+                                        <div className="p-2 rounded-full shrink-0 bg-orange-100 text-orange-600"><MessageSquare className="w-4 h-4" /></div>
                                         <div className="text-left">
-                                            <p className="text-sm font-bold">Messages</p>
-                                            <p className="text-xs text-gray-500">You have {unreadChatCount} unread chats</p>
+                                            <p className="text-sm font-bold">{t("sellerHeaderMessages")}</p>
+                                            <p className="text-xs text-gray-500">{t("sellerHeaderUnreadChats").replace("{n}", unreadChatCount.toString())}</p>
                                         </div>
                                     </button>
                                 )}
 
                                 {totalNotifications === 0 && (
-                                    <div className="px-4 py-8 text-center text-sm text-gray-400">No new notifications</div>
+                                    <div className="px-4 py-8 text-center text-sm text-gray-400">{t("sellerHeaderNoNotif")}</div>
                                 )}
                             </div>
                         )}
@@ -194,19 +196,19 @@ export default function SellerHeader() {
 
                     <div className="relative" ref={dropdownRef}>
                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 pl-6 border-l border-white/20">
-                            <div className="w-10 h-10 rounded-full border-2 border-[#EEC044] overflow-hidden bg-white/10 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full border-2 border-[#EEC044] overflow-hidden shrink-0 bg-white/10 flex items-center justify-center">
                                 <User className="w-6 h-6 text-[#EEC044]" />
                             </div>
-                            <p className="hidden md:block text-sm font-bold">My Account</p>
+                            <p className="hidden md:block text-sm font-bold">{t("sellerHeaderMyAccount")}</p>
                         </button>
 
                         {isMenuOpen && (
                             <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100">
                                 <Link href="/seller/user-profile" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm font-medium" onClick={() => setIsMenuOpen(false)}>
-                                    <Settings className="w-4 h-4 text-gray-400" /> Profile
+                                    <Settings className="w-4 h-4 text-gray-400 shrink-0" /> {t("sellerHeaderProfile")}
                                 </Link>
                                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 font-bold border-t">
-                                    <LogOut className="w-4 h-4" /> Log out
+                                    <LogOut className="w-4 h-4 shrink-0" /> {t("sellerHeaderLogout")}
                                 </button>
                             </div>
                         )}
