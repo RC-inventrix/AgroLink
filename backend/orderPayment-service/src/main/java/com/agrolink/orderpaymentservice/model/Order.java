@@ -76,6 +76,8 @@ public class Order {
     @Column(name = "buyer_longitude")
     private Double buyerLongitude;
 
+    private Integer handlingTime; // Stores the days allowed for fulfillment
+
    
 
 }

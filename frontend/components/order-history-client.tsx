@@ -1,10 +1,11 @@
+/* fileName: order-history.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, Loader2 } from "lucide-react"
+import { Package, KeyRound, Hash, Star, MessageSquare, CheckCircle2, Clock, User, AlertCircle, Loader2, Timer } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { toast, Toaster } from "sonner"
@@ -13,7 +14,7 @@ import Link from "next/link"
 import ReportProblemModalBuyer from "./buyers/reportProblemModelBuyer"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Footer2 from "@/components/footer/Footer"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -39,7 +40,7 @@ function StarRating({ rating, setRating, interactive = false }: { rating: number
 
 // --- FETCHES CANCELLATION REASON ---
 function CancelledReasonBlock({ orderId }: { orderId: string | number }) {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const [reason, setReason] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -87,19 +88,20 @@ interface OrderItem {
     image: string
     sellerName: string
     orderDate: Date
-    status: "completed" | "pending" | "cancelled"
+    status: string
     totalPrice: number
     otp?: string
     orderReview?: any
     sellerId?: string
+    rawStatus: string
+    handlingTime?: number // Stores the handling limit in days
 }
 
 export function OrderHistoryClient() {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const [orders, setOrders] = useState<OrderItem[]>([])
     const [loading, setLoading] = useState(true)
     const [navUnread, setNavUnread] = useState(0)
-    const gatewayUrl = API_URL
 
     useEffect(() => {
         fetchOrders()
@@ -111,7 +113,7 @@ export function OrderHistoryClient() {
         if (!userId) { setLoading(false); return; }
 
         try {
-            const res = await fetch(`${gatewayUrl}/api/buyer/orders/${userId}`, {
+            const res = await fetch(`${API_URL}/api/buyer/orders/${userId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
 
@@ -134,13 +136,13 @@ export function OrderHistoryClient() {
                         rawItemsList.push({
                             orderId: order.id,
                             itemData: item,
-                            status: order.status === "COMPLETED" ? "completed" :
-                                order.status === "CANCELLED" ? "cancelled" : "pending",
+                            rawStatus: order.status,
                             createdAt: order.createdAt,
                             amount: order.amount,
                             sellerId: sId,
                             otp: order.otp,
-                            orderReview: order.orderReview
+                            orderReview: order.orderReview,
+                            handlingTime: order.handlingTime // Capture handling time from backend
                         })
                     })
                 })
@@ -148,7 +150,7 @@ export function OrderHistoryClient() {
                 let sellerNameMap: Record<string, string> = {}
                 if (sellerIds.size > 0) {
                     const idsParam = Array.from(sellerIds).join(',')
-                    const nameRes = await fetch(`${gatewayUrl}/auth/fullnames?ids=${idsParam}`, {
+                    const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${idsParam}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (nameRes.ok) sellerNameMap = await nameRes.json()
@@ -166,10 +168,12 @@ export function OrderHistoryClient() {
                         sellerId: entry.sellerId,
                         sellerName: sellerNameMap[entry.sellerId] || t("orderHistAgroSeller"),
                         orderDate: new Date(entry.createdAt),
-                        status: entry.status,
+                        status: entry.rawStatus.toLowerCase(),
+                        rawStatus: entry.rawStatus,
                         totalPrice: (entry.amount / 100),
                         otp: entry.otp,
-                        orderReview: entry.orderReview
+                        orderReview: entry.orderReview,
+                        handlingTime: entry.handlingTime
                     }))
 
                 setOrders(finalOrders)
@@ -182,37 +186,33 @@ export function OrderHistoryClient() {
         <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
             <Toaster position="top-center" richColors />
             <BuyerHeader />
-            
             <div className="flex flex-1">
                 <DashboardNav unreadCount={navUnread} />
                 <main className="flex-1 w-full overflow-x-hidden flex flex-col">
                     <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 w-full flex-1">
-                        
                         <div className="mb-8">
                             <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("orderHistTitle")}</h1>
                             <p className="text-[#A3ACBA] font-medium">{t("orderHistSubtitle")}</p>
                         </div>
-
                         <Tabs defaultValue="all" className="w-full">
                             <TabsList className="bg-gray-100 border border-gray-200 shadow-sm rounded-xl p-1 mb-6 flex flex-wrap h-auto min-h-[44px]">
                                 <TabsTrigger value="all" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabAll")} ({orders.length})</TabsTrigger>
-                                <TabsTrigger value="completed" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCompleted")} ({orders.filter(o => o.status === "completed").length})</TabsTrigger>
-                                <TabsTrigger value="pending" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabPending")} ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
-                                <TabsTrigger value="cancelled" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCancelled")} ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
+                                <TabsTrigger value="completed" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCompleted")} ({orders.filter(o => o.rawStatus === "COMPLETED").length})</TabsTrigger>
+                                <TabsTrigger value="pending" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabPending")} ({orders.filter(o => ["PENDING", "PROCESSING", "PAID", "COD_CONFIRMED"].includes(o.rawStatus)).length})</TabsTrigger>
+                                <TabsTrigger value="cancelled" className="flex-1 h-auto py-2 data-[state=active]:bg-white data-[state=active]:text-[#03230F] data-[state=active]:shadow-sm font-bold text-gray-500 rounded-lg">{t("orderHistTabCancelled")} ({orders.filter(o => o.rawStatus === "CANCELLED").length})</TabsTrigger>
                             </TabsList>
-
                             <div className="mt-2">
                                 <TabsContent value="all">
                                     <OrderList orders={orders} loading={loading} onRefresh={fetchOrders} />
                                 </TabsContent>
                                 <TabsContent value="completed">
-                                    <OrderList orders={orders.filter(o => o.status === "completed")} loading={loading} onRefresh={fetchOrders} />
+                                    <OrderList orders={orders.filter(o => o.rawStatus === "COMPLETED")} loading={loading} onRefresh={fetchOrders} />
                                 </TabsContent>
                                 <TabsContent value="pending">
-                                    <OrderList orders={orders.filter(o => o.status === "pending")} loading={loading} onRefresh={fetchOrders} />
+                                    <OrderList orders={orders.filter(o => ["PENDING", "PROCESSING", "PAID", "COD_CONFIRMED"].includes(o.rawStatus))} loading={loading} onRefresh={fetchOrders} />
                                 </TabsContent>
                                 <TabsContent value="cancelled">
-                                    <OrderList orders={orders.filter(o => o.status === "cancelled")} loading={loading} onRefresh={fetchOrders} />
+                                    <OrderList orders={orders.filter(o => o.rawStatus === "CANCELLED")} loading={loading} onRefresh={fetchOrders} />
                                 </TabsContent>
                             </div>
                         </Tabs>
@@ -225,8 +225,7 @@ export function OrderHistoryClient() {
 }
 
 function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loading: boolean, onRefresh: () => void }) {
-    const { t } = useLanguage() // Initialized the hook
-
+    const { t } = useLanguage()
     if (loading) return (
         <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4 shrink-0" />
@@ -240,7 +239,6 @@ function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loadin
             <p className="text-gray-500 text-sm mt-1">{t("orderHistNoOrdersDesc")}</p>
         </div>
     )
-
     return (
         <div className="space-y-6">
             {orders.map((order) => (
@@ -251,28 +249,61 @@ function OrderList({ orders, loading, onRefresh }: { orders: OrderItem[], loadin
 }
 
 function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () => void }) {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const [showReportModal, setShowReportModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
 
+    // Countdown States
+    const [timeLeft, setTimeLeft] = useState<string>("")
+    const [isOverdue, setIsOverdue] = useState(false)
+
     const hasReviewed = order.orderReview && order.orderReview.buyerRating !== null;
     const sellerHasReviewed = order.orderReview && order.orderReview.sellerRating !== null;
+
+    // --- EFFECT: REAL-TIME COUNTDOWN ---
+    useEffect(() => {
+        const isFinal = order.rawStatus === "COMPLETED" || order.rawStatus === "CANCELLED";
+        if (isFinal) return;
+
+        const calculateTime = () => {
+            const start = new Date(order.orderDate).getTime();
+            const limitMs = (order.handlingTime || 1) * 24 * 60 * 60 * 1000; 
+            const deadline = start + limitMs;
+            const now = new Date().getTime();
+            const diff = deadline - now;
+
+            if (diff <= 0) {
+                setTimeLeft("Overdue");
+                setIsOverdue(true);
+                return;
+            }
+
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            setTimeLeft(`${d > 0 ? d + "d " : ""}${h}h ${m}m`);
+            setIsOverdue(false);
+        };
+
+        calculateTime();
+        const timer = setInterval(calculateTime, 60000); 
+        return () => clearInterval(timer);
+    }, [order.orderDate, order.handlingTime, order.rawStatus]);
 
     const handleSubmitReview = async () => {
         if (rating === 0) { toast.error(t("orderHistSelectRating")); return; }
         setIsSubmitting(true);
         const userId = sessionStorage.getItem("id");
         const token = sessionStorage.getItem("token");
-
         try {
             const res = await fetch(`${API_URL}/api/reviews/${order.displayOrderId}?userId=${userId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ rating, comment })
             });
-
             if (res.ok) {
                 toast.success(t("orderHistReviewSuccess"));
                 onRefresh();
@@ -281,15 +312,17 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
         finally { setIsSubmitting(false); }
     };
 
-    const getTranslatedStatus = (status: string) => {
-        if (status === "completed") return t("orderHistTabCompleted");
-        if (status === "pending") return t("orderHistTabPending");
-        if (status === "cancelled") return t("orderHistTabCancelled");
-        return status;
+    const getTranslatedStatus = (statusStr: string) => {
+        const s = statusStr.toUpperCase();
+        if (s === "COMPLETED") return t("orderHistTabCompleted");
+        if (s === "CANCELLED") return t("orderHistTabCancelled");
+        if (s === "PROCESSING") return t("orderCardAcceptOrder") || "Accepted"; 
+        if (s === "PENDING" || s === "PAID" || s === "COD_CONFIRMED") return t("orderHistTabPending");
+        return statusStr;
     };
 
     return (
-        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md rounded-2xl border-gray-200 ${order.status === 'cancelled' ? 'border-l-red-500 opacity-90' : 'border-l-[#03230F]'}`}>
+        <Card className={`p-0 overflow-hidden bg-white shadow-sm border-l-4 transition-all hover:shadow-md rounded-2xl border-gray-200 ${order.rawStatus === 'CANCELLED' ? 'border-l-red-500 opacity-90' : 'border-l-[#03230F]'}`}>
             <div className="p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-start">
                     <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0 shadow-sm">
@@ -304,13 +337,24 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                     {t("orderHistSoldBy")} <Link href={`/user/${order.sellerId}?role=SELLER`} className="text-[#03230F] hover:text-[#EEC044] hover:underline transition-colors truncate">{order.sellerName}</Link>
                                 </p>
                             </div>
-                            <Badge variant={order.status === "completed" ? "default" : "secondary"} className={`capitalize font-bold px-3 py-1 text-[10px] tracking-widest uppercase h-auto shrink-0 ${
-                                order.status === 'completed' ? 'bg-[#03230F] text-[#EEC044]' :
-                                order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-none' : 
-                                'bg-[#EEC044]/20 text-[#03230F] border-none'
-                            }`}>
-                                {getTranslatedStatus(order.status)}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-2">
+                                <Badge className={`capitalize font-bold px-3 py-1 text-[10px] tracking-widest uppercase h-auto shrink-0 ${
+                                    order.rawStatus === 'COMPLETED' ? 'bg-[#03230F] text-[#EEC044]' :
+                                    order.rawStatus === 'CANCELLED' ? 'bg-red-50 text-red-600 border-none' : 
+                                    order.rawStatus === 'PROCESSING' ? 'bg-green-100 text-green-800 border-none' :
+                                    'bg-[#EEC044]/20 text-[#03230F] border-none'
+                                }`}>
+                                    {getTranslatedStatus(order.rawStatus)}
+                                </Badge>
+
+                                {/* --- BUYER COUNTDOWN BADGE --- */}
+                                {order.rawStatus !== "COMPLETED" && order.rawStatus !== "CANCELLED" && (
+                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider shadow-sm animate-pulse ${isOverdue ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                                        <Timer className="w-3 h-3" />
+                                        <span>{timeLeft} {isOverdue ? "" : "Left"}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100">
@@ -320,7 +364,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{t("orderHistTotal")}</p><p className="font-black text-lg text-[#03230F] whitespace-nowrap">Rs. {order.totalPrice.toFixed(2)}</p></div>
                         </div>
 
-                        {order.status === "pending" && order.otp && (
+                        {order.rawStatus === "PROCESSING" && order.otp && (
                             <div className="mt-6 p-4 bg-[#EEC044]/10 border-2 border-dashed border-[#EEC044]/50 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <div>
                                     <p className="flex items-center gap-2 text-xs font-black uppercase text-[#03230F]">
@@ -334,32 +378,22 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             </div>
                         )}
 
-                        {order.status === "cancelled" && (
+                        {order.rawStatus === "CANCELLED" && (
                             <div className="mt-4">
                                 <CancelledReasonBlock orderId={order.displayOrderId} />
                                 <div className="mt-4">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setShowReportModal(true)}
-                                        className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest transition-colors rounded-lg h-auto py-2"
-                                    >
-                                        <AlertCircle size={12} className="mr-1.5 shrink-0" />
-                                        {t("orderHistReportProblem")}
+                                    <Button variant="outline" size="sm" onClick={() => setShowReportModal(true)} className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-[10px] uppercase tracking-widest transition-colors rounded-lg h-auto py-2">
+                                        <AlertCircle size={12} className="mr-1.5 shrink-0" /> {t("orderHistReportProblem")}
                                     </Button>
                                 </div>
-                                <ReportProblemModalBuyer
-                                    orderId={order.displayOrderId}
-                                    isOpen={showReportModal}
-                                    onClose={() => setShowReportModal(false)}
-                                />
+                                <ReportProblemModalBuyer orderId={order.displayOrderId} isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {order.status === "completed" && (
+            {order.rawStatus === "COMPLETED" && (
                 <div className="bg-gray-50 border-t border-gray-100 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
@@ -370,9 +404,7 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                         <span className="text-xs font-black uppercase tracking-widest text-green-600">{t("orderHistYourFeedback")}</span>
                                     </div>
                                     <StarRating rating={order.orderReview.buyerRating} />
-                                    <p className="text-sm text-gray-600 italic bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium">
-                                        "{order.orderReview.buyerComment}"
-                                    </p>
+                                    <p className="text-sm text-gray-600 italic bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium">"{order.orderReview.buyerComment}"</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -382,25 +414,14 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                     </div>
                                     <div className="flex flex-col gap-3">
                                         <StarRating rating={rating} setRating={setRating} interactive={true} />
-                                        <textarea
-                                            placeholder={t("orderHistReviewPlaceholder")}
-                                            className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/50 transition-all font-medium text-[#03230F]"
-                                            rows={3}
-                                            value={comment}
-                                            onChange={(e) => setComment(e.target.value)}
-                                        />
-                                        <Button
-                                            onClick={handleSubmitReview}
-                                            disabled={isSubmitting}
-                                            className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2.5 h-auto rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-black shadow-md mt-1"
-                                        >
+                                        <textarea placeholder={t("orderHistReviewPlaceholder")} className="w-full p-4 rounded-xl border border-gray-200 text-sm outline-none bg-white focus:ring-2 focus:ring-[#EEC044]/50 transition-all font-medium text-[#03230F]" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} />
+                                        <Button onClick={handleSubmitReview} disabled={isSubmitting} className="w-fit bg-[#03230F] text-[#EEC044] font-bold px-8 py-2.5 h-auto rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-black shadow-md mt-1">
                                             {isSubmitting ? t("orderHistSubmitting") : t("orderHistSubmitReview")}
                                         </Button>
                                     </div>
                                 </div>
                             )}
                         </div>
-
                         <div className="space-y-4 border-l-0 md:border-l md:border-gray-200 md:pl-8">
                             <div className="flex items-center gap-2 mb-2">
                                 <User className="w-4 h-4 text-[#EEC044] shrink-0" />
@@ -409,16 +430,12 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                             {sellerHasReviewed ? (
                                 <div className="space-y-3">
                                     <StarRating rating={order.orderReview.sellerRating} />
-                                    <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium italic">
-                                        "{order.orderReview.sellerComment}"
-                                    </p>
+                                    <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-xl border border-gray-200 shadow-sm font-medium italic">"{order.orderReview.sellerComment}"</p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
                                     <Clock className="w-8 h-8 text-gray-300 mb-2 shrink-0" />
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-4">
-                                        {t("orderHistPendingReview")}
-                                    </p>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-4">{t("orderHistPendingReview")}</p>
                                 </div>
                             )}
                         </div>
