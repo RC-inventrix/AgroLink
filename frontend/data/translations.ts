@@ -30,7 +30,7 @@ export const translations: Record<Language, TranslationDictionary> = {
         homeMarquee1: "Fresh Produce",
         homeMarquee2: "Fair Pricing",
         homeMarquee3: "Direct from Farmers",
-        homeMarquee4: "AI Price Insights",
+        homeMarquee4: "AI chatbot Assistance",
         homeMarquee5: "Secure Payment",
 
         // Features Section (Home)
@@ -1837,7 +1837,7 @@ export const translations: Record<Language, TranslationDictionary> = {
         homeMarquee1: "නැවුම් නිෂ්පාදන",
         homeMarquee2: "සාධාරණ මිල ගණන්",
         homeMarquee3: "ගොවීන්ගෙන් සෘජුවම",
-        homeMarquee4: "AI මිල අවබෝධය",
+        homeMarquee4: "AI චැට්බෝට් සහාය",
         homeMarquee5: "ආරක්ෂිත ගෙවීම්",
 
         // Features Section (Home)

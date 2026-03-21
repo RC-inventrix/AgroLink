@@ -396,6 +396,8 @@ export default function FeaturesPage() {
                 </motion.div>
             </section>
 
+            
+
             {/* AI Features Section */}
             <section className="bg-[#EBEFEA] py-16">
                 <div className="container mx-auto px-4 lg:px-8">
@@ -414,15 +416,16 @@ export default function FeaturesPage() {
                         </p>
                     </motion.div>
 
+                
                     <motion.div
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto gap-6"
+                        className="flex flex-col md:flex-row justify-center max-w-6xl mx-auto gap-6"
                         variants={staggerContainer}
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true, amount: 0.2 }}
                     >
-
-                        <motion.div variants={fadeUpVariant}>
+                        {/* Card 1 */}
+                        <motion.div variants={fadeUpVariant} className="w-full md:w-[400px]">
                             <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
                                 <CardHeader>
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
@@ -438,7 +441,8 @@ export default function FeaturesPage() {
                             </Card>
                         </motion.div>
 
-                        <motion.div variants={fadeUpVariant}>
+                        {/* Card 2 */}
+                        <motion.div variants={fadeUpVariant} className="w-full md:w-[400px]">
                             <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
                                 <CardHeader>
                                     <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
@@ -449,22 +453,6 @@ export default function FeaturesPage() {
                                 <CardContent>
                                     <p className="text-sm text-foreground/70 leading-relaxed">
                                         {t("featAiCard3Desc")}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-
-                        <motion.div variants={fadeUpVariant}>
-                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
-                                <CardHeader>
-                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
-                                        <BarChart3 className="h-6 w-6 text-[#EEC044]" />
-                                    </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard4Title")}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-foreground/70 leading-relaxed">
-                                        {t("featAiCard4Desc")}
                                     </p>
                                 </CardContent>
                             </Card>
