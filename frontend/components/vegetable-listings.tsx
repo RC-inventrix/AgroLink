@@ -100,8 +100,12 @@ export default function VegetableListings() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
 
-    // Set max price limit to 500
-    const [priceRange, setPriceRange] = useState([0, 2000])
+    // New Sale Type Filter
+    const [saleType, setSaleType] = useState("All")
+
+    // Separate Price Filters
+    const [fixedPriceMax, setFixedPriceMax] = useState(2000)
+    const [auctionPriceMax, setAuctionPriceMax] = useState(500000)
 
     // Location Filters
     const [selectedProvince, setSelectedProvince] = useState("All")
@@ -232,7 +236,20 @@ export default function VegetableListings() {
         return vegetables.filter((veg) => {
             const matchesSearch = veg.name.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory || (veg.isAuction && selectedCategory === "All")
-            const matchesPrice = veg.price1kg >= priceRange[0] && veg.price1kg <= priceRange[1]
+
+            // --- New Sale Type Filter Match ---
+            const matchesSaleType = saleType === "All" ||
+                (saleType === "Fixed" && !veg.isAuction) ||
+                (saleType === "Auction" && veg.isAuction);
+
+            // --- Dynamic Price Filter Logic ---
+            let matchesPrice = true;
+            if (saleType === "Fixed" && !veg.isAuction) {
+                matchesPrice = veg.price1kg <= fixedPriceMax;
+            } else if (saleType === "Auction" && veg.isAuction) {
+                matchesPrice = veg.price1kg <= auctionPriceMax;
+            }
+            // If saleType === "All", matchesPrice stays true (unfiltered)
 
             // --- Enhanced Nested Location Match Logic ---
             const address = veg.pickupAddress?.toLowerCase() || "";
@@ -242,7 +259,6 @@ export default function VegetableListings() {
                 const districts = Object.keys(SRI_LANKA_LOCATIONS[selectedProvince] || {});
                 const citiesInProvince = districts.flatMap(d => SRI_LANKA_LOCATIONS[selectedProvince][d] || []);
 
-                // Matches if address contains Province OR any of its Districts OR any of its Cities
                 matchesProvince = address.includes(selectedProvince.toLowerCase()) ||
                     districts.some(d => address.includes(d.toLowerCase())) ||
                     citiesInProvince.some(c => address.includes(c.toLowerCase()));
@@ -252,29 +268,29 @@ export default function VegetableListings() {
             if (!matchesDistrict) {
                 const citiesInDistrict = SRI_LANKA_LOCATIONS[selectedProvince]?.[selectedDistrict] || [];
 
-                // Matches if address contains District OR any of its Cities
                 matchesDistrict = address.includes(selectedDistrict.toLowerCase()) ||
                     citiesInDistrict.some(c => address.includes(c.toLowerCase()));
             }
 
             let matchesCity = selectedCity === "All";
             if (!matchesCity) {
-                // Direct check for specific city
                 matchesCity = address.includes(selectedCity.toLowerCase());
             }
 
-            return matchesSearch && matchesCategory && matchesPrice && matchesProvince && matchesDistrict && matchesCity
+            return matchesSearch && matchesCategory && matchesSaleType && matchesPrice && matchesProvince && matchesDistrict && matchesCity
         })
-    }, [searchQuery, selectedCategory, priceRange, selectedProvince, selectedDistrict, selectedCity, vegetables])
+    }, [searchQuery, selectedCategory, saleType, fixedPriceMax, auctionPriceMax, selectedProvince, selectedDistrict, selectedCity, vegetables])
 
     // Reset Filters Function
     const resetFilters = () => {
         setSearchQuery("");
         setSelectedCategory("All");
+        setSaleType("All");
         setSelectedProvince("All");
         setSelectedDistrict("All");
         setSelectedCity("All");
-        setPriceRange([0, 2000]);
+        setFixedPriceMax(2000);
+        setAuctionPriceMax(500000);
     }
 
     return (
@@ -295,6 +311,8 @@ export default function VegetableListings() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {/* Row 1 */}
+
                             {/* 1. Search */}
                             <div className="space-y-2">
                                 <Label className="text-muted-foreground font-semibold">{t("browseSearchName")}</Label>
@@ -325,7 +343,65 @@ export default function VegetableListings() {
                                 </Select>
                             </div>
 
-                            {/* 3. Province */}
+                            {/* 3. Sale Type (New) */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground font-semibold">Sale Type</Label>
+                                <Select value={saleType} onValueChange={setSaleType}>
+                                    <SelectTrigger><SelectValue placeholder="All Types" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Types</SelectItem>
+                                        <SelectItem value="Fixed">Fixed Price</SelectItem>
+                                        <SelectItem value="Auction">Auction</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* 4. Dynamic Price Range */}
+                            <div className="space-y-2">
+                                {saleType === "All" ? (
+                                    <div className="flex flex-col justify-center h-full pt-6 pb-2">
+                                        <span className="text-xs text-muted-foreground italic text-center">
+                                            Select 'Fixed Price' or 'Auction' to unlock price filters.
+                                        </span>
+                                    </div>
+                                ) : saleType === "Fixed" ? (
+                                    <>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label className="text-muted-foreground font-semibold text-xs">Price per kg (LKR)</Label>
+                                            <span className="text-xs font-bold text-[#2d5016] bg-[#2d5016]/10 px-2 py-1 rounded-full">
+                                                Up to {fixedPriceMax.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0" max="2000" step="10"
+                                            value={fixedPriceMax}
+                                            onChange={(e) => setFixedPriceMax(parseInt(e.target.value))}
+                                            className="w-full accent-[#2d5016]"
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label className="text-muted-foreground font-semibold text-xs">Auction Price (LKR)</Label>
+                                            <span className="text-xs font-bold text-[#2d5016] bg-[#2d5016]/10 px-2 py-1 rounded-full">
+                                                Up to {auctionPriceMax.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0" max="500000" step="5000"
+                                            value={auctionPriceMax}
+                                            onChange={(e) => setAuctionPriceMax(parseInt(e.target.value))}
+                                            className="w-full accent-[#2d5016]"
+                                        />
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Row 2 */}
+
+                            {/* 5. Province */}
                             <div className="space-y-2">
                                 <Label className="text-muted-foreground font-semibold">{t("browseProv")}</Label>
                                 <Select
@@ -346,7 +422,7 @@ export default function VegetableListings() {
                                 </Select>
                             </div>
 
-                            {/* 4. District */}
+                            {/* 6. District */}
                             <div className="space-y-2">
                                 <Label className="text-muted-foreground font-semibold">{t("browseDist")}</Label>
                                 <Select
@@ -367,7 +443,7 @@ export default function VegetableListings() {
                                 </Select>
                             </div>
 
-                            {/* 5. City */}
+                            {/* 7. City */}
                             <div className="space-y-2">
                                 <Label className="text-muted-foreground font-semibold">{t("browseCity")}</Label>
                                 <Select
@@ -385,25 +461,7 @@ export default function VegetableListings() {
                                 </Select>
                             </div>
 
-                            {/* 6. Price Range */}
-                            {/* Adjusted col-span to make room for the Reset Button */}
-                            <div className="space-y-2 lg:col-span-2">
-                                <div className="flex items-center justify-between mb-2">
-                                    <Label className="text-muted-foreground font-semibold">{t("browsePriceRange")}</Label>
-                                    <span className="text-sm font-bold text-[#2d5016] bg-[#2d5016]/10 px-3 py-1 rounded-full">
-                                        {t("browseUpTo")} {priceRange[1].toLocaleString()}
-                                    </span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0" max="2000" step="10"
-                                    value={priceRange[1]}
-                                    onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
-                                    className="w-full accent-[#2d5016]"
-                                />
-                            </div>
-
-                            {/* 7. Reset Filters Button */}
+                            {/* 8. Reset Filters Button */}
                             <div className="space-y-2 flex items-end">
                                 <Button
                                     onClick={resetFilters}

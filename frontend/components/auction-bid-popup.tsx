@@ -196,8 +196,8 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000)
                 
-                if (days > 0) setTimeLeft(`${days}${t("bidPopupTimeDay")} ${hours}${t("bidPopupTimeHour")} ${minutes}${t("bidPopupTimeMin")}`)
-                else setTimeLeft(`${hours}${t("bidPopupTimeHour")} ${minutes}${t("bidPopupTimeMin")} ${seconds}${t("bidPopupTimeSec")}`)
+                if (days > 0) setTimeLeft(`${days}${t("Day")} ${hours}${t("Hour")} ${minutes}${t("Min")}`)
+                else setTimeLeft(`${hours}${t("Hour")} ${minutes}${t("Min")} ${seconds}${t("Sec")}`)
             }
         }, 1000)
         return () => clearInterval(timer)
@@ -544,7 +544,7 @@ export default function AuctionBidPopup({ isOpen, onClose, vegetable }: AuctionB
                                 )}
 
                                 <Button size="lg" className="w-full h-auto py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all" onClick={initiateBid}>
-                                    {t("bidPopupPlaceBidBtn")}
+                                    {t("PlaceBid")}
                                 </Button>
                             </div>
                         </div>
