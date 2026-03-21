@@ -269,7 +269,7 @@ function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: num
                     </div>
                     <div className="hidden md:flex flex-1 flex-col relative bg-white">
                         {activeConversation ? (
-                            <div className="flex-1 flex flex-col h-full overflow-hidden p-0 m-0">
+                            <div className="flex-1 flex flex-col h-screen overflow-hidden p-0 m-0">
                                 <MessageView 
                                     conversation={activeConversation} 
                                     messages={messages} 

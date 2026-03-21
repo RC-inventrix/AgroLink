@@ -186,7 +186,7 @@ export default function GenericProfilePage() {
                                 </Avatar>
                                 
                                 <h1 className="text-2xl font-black text-[#03230F] mb-1">{user.fullname}</h1>
-                                <p className="text-sm font-medium text-gray-400 mb-6">@{user.username}</p>
+                                <p className="text-sm font-medium text-gray-400 mb-6">{user.username}</p>
 
                                 <div className="flex items-center gap-2 px-4 py-2 bg-[#F0FDF4] text-[#166534] rounded-full text-xs font-bold uppercase tracking-wider mb-8">
                                     <ShieldCheck className="w-4 h-4" /> 
@@ -204,7 +204,7 @@ export default function GenericProfilePage() {
                                     </div>
                                     <div className="flex items-center gap-3 text-sm text-gray-600 p-3 rounded-xl hover:bg-gray-50 transition-colors">
                                         <Calendar className="w-4 h-4 text-[#EEC044]" />
-                                        <span>Member since 2024</span>
+                                        <span>Member since 2026</span>
                                     </div>
                                 </div>
                             </div>
@@ -223,11 +223,7 @@ export default function GenericProfilePage() {
                                     <h3 className="text-3xl font-black text-[#03230F]">{stats.count}</h3>
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Activities</p>
                                 </Card>
-                                <Card className="p-6 border-none shadow-md bg-white rounded-3xl flex flex-col items-center justify-center text-center gap-2">
-                                    <CheckCircle2 className="w-8 h-8 text-green-500" />
-                                    <h3 className="text-3xl font-black text-[#03230F]">100%</h3>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Reliability</p>
-                                </Card>
+                                
                             </div>
 
                             <div className="space-y-4">

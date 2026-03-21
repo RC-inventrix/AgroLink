@@ -593,9 +593,7 @@ export default function FeaturesPage() {
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold uppercase max-w-4xl mx-auto leading-tight text-center text-white mb-4">
                             {t("featPayTitle")}
                         </h2>
-                        <p className="text-lg text-white/80 max-w-2xl mx-auto">
-                            {t("featPaySubtitle")}
-                        </p>
+                        
                     </motion.div>
 
                     <motion.div

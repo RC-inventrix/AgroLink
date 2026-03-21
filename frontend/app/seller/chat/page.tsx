@@ -10,6 +10,7 @@ import { Loader2, MessageCircle } from "lucide-react"
 import SellerHeader from "@/components/headers/SellerHeader"
 import SellerSidebar from "../../seller/dashboard/SellerSideBar"
 import Footer2 from "@/components/footer/Footer"
+import '../../seller/dashboard/SellerDashboard.css'
 
 function ChatContent({ onTotalUnreadChange }: { onTotalUnreadChange: (count: number) => void }) {
     const searchParams = useSearchParams();
