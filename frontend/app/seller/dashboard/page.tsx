@@ -28,6 +28,7 @@ import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import Footer2 from "@/components/footer/Footer";
 import { useLanguage } from "@/context/LanguageContext"; // Added Translation Hook
+import "./SellerDashboard.css"
 
 
 
