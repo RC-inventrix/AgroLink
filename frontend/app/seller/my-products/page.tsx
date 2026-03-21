@@ -2,6 +2,7 @@ import SellerHeader from "@/components/headers/SellerHeader"
 import ProductList from "@/components/product-list"
 import SellerSidebar from "../dashboard/SellerSideBar"
 import Footer2 from "@/components/footer/Footer"
+import '../dashboard/SellerDashboard.css'
 
 export default function Page() {
   return (
