@@ -137,4 +137,35 @@ public class SellerOrderController {
             return ResponseEntity.ok().body(Map.of("message", "Order cancelled and notification sent."));
         }).orElse(ResponseEntity.notFound().build());
     }
+
+    // Inside SellerOrderController.java
+    @PostMapping("/{orderId}/cancel-overdue")
+    @Transactional
+    public ResponseEntity<?> cancelOverdueOrder(@PathVariable Long orderId) {
+        return orderRepository.findById(orderId).map(order -> {
+            // 1. Update Order Status to CANCELLED
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+
+            // 2. Save Audit Record with "Overdue" reason
+            CancelledOrder cancellationRecord = CancelledOrder.builder()
+                    .orderId(order.getId())
+                    .cancelledById(null) // System-triggered or specific System ID
+                    .otherPartyId(order.getUserId())
+                    .reason("Cancelled because order was overdue.")
+                    .build();
+            cancelledOrderRepository.save(cancellationRecord);
+
+            // 3. Notify Buyer
+            CancelledOrderNotification notification = CancelledOrderNotification.builder()
+                    .buyerId(order.getUserId())
+                    .orderId(order.getId())
+                    .message("Your Order #" + order.getId() + " was cancelled automatically because it exceeded the handling time.")
+                    .read(false)
+                    .build();
+            notificationRepository.save(notification);
+
+            return ResponseEntity.ok().body(Map.of("message", "Order marked as cancelled due to overdue status."));
+        }).orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -69,6 +69,25 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
     }, [initialOrders, sellerId, activeTab]);
 
     /**
+     * NEW: Mark notifications as read for a specific order
+     * This calls the endpoint defined in your BuyerOrderController/Notification logic
+     */
+    const markNotificationsAsRead = async (orderId: number) => {
+        const token = sessionStorage.getItem("token");
+        try {
+            // This assumes you have a way to fetch notification IDs for an order, 
+            // or your backend has an endpoint to mark all notifications for a specific orderId as read.
+            // Based on your provided AuthController/OrderControllers, we trigger the update.
+            await fetch(`${API_URL}/api/buyer/orders/notifications/mark-order-read/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (error) {
+            console.error("Failed to mark notifications as read:", error);
+        }
+    }
+
+    /**
      * FIX: Accepts forcedStatus as the priority. 
      * If forcedStatus is "CANCELLED", it will actually send "CANCELLED" to your API.
      */
@@ -99,7 +118,9 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             })
 
             if (response.ok) {
-                // Using translated toast message
+                // Clear unread status visually when the order is updated
+                await markNotificationsAsRead(orderId);
+                
                 toast.success(t("ordersUpdateSuccess").replace("{status}", nextStatus.toLowerCase()))
                 onOrderUpdated()
             } else {
@@ -149,7 +170,6 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
                         <OrderCard
                             key={order.id}
                             order={order}
-                            // Pass forcedStatus correctly to the card
                             onStatusUpdate={(forcedStatus?: string) => 
                                 handleUpdateStatus(order.id, order.status, forcedStatus)
                             }

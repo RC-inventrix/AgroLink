@@ -8,16 +8,17 @@ import { Bell, User, LogOut, Settings, Check, MessageSquare, ShoppingBag, CheckC
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import logo from "../../public/images/Group-6.png"
-import { useLanguage } from "@/context/LanguageContext" // Added Translation Hook
+import { useLanguage } from "@/context/LanguageContext"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function SellerHeader() {
     const router = useRouter()
-    const { t } = useLanguage() // Initialize hook
+    const { t } = useLanguage()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
     const [orderUnread, setOrderUnread] = useState(0)
-    // --- NEW: STATE FOR OFFER NOTIFICATIONS ---
     const [offerNotifications, setOfferNotifications] = useState<any[]>([])
 
     const dropdownRef = useRef<HTMLDivElement>(null)
@@ -27,13 +28,31 @@ export default function SellerHeader() {
     const orderBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+    // --- NEW: FUNCTION TO MARK OFFER AS READ ---
+    const markOfferAsRead = async (notifId: number) => {
+        const token = sessionStorage.getItem("token");
+        try {
+            // Updated endpoint to match your standard notification read logic
+            const res = await fetch(`${orderBaseUrl}/api/offers/notifications/${notifId}/read`, {
+                method: "PUT",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                // Update local state to remove the read notification immediately
+                setOfferNotifications(prev => prev.filter(n => n.id !== notifId));
+            }
+        } catch (err) {
+            console.error("Failed to mark offer notification as read:", err);
+        }
+    };
+
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id");
 
         if (!token || !myId) return;
 
-        // --- NEW: FETCH OFFER ACCEPTANCE NOTIFICATIONS ---
         const fetchOfferNotifications = async () => {
             try {
                 const res = await fetch(`${orderBaseUrl}/api/offers/notifications/seller/${myId}`, {
@@ -41,7 +60,6 @@ export default function SellerHeader() {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // Filter for unread ones specifically if you want the badge to be accurate
                     setOfferNotifications(data.filter((n: any) => !n.isRead));
                 }
             } catch (err) {
@@ -57,7 +75,7 @@ export default function SellerHeader() {
                 if (res.ok) {
                     const orders = await res.json();
                     const pendingOrders = orders.filter((o: any) =>
-                        o.status === "PAID" || o.status === "COD_CONFIRMED" || o.status === "CREATED"
+                        ["PAID", "COD_CONFIRMED", "CREATED"].includes(o.status?.toUpperCase())
                     );
                     setOrderUnread(pendingOrders.length);
                 }
@@ -84,7 +102,6 @@ export default function SellerHeader() {
             } catch (err) { console.error("Chat sync failed:", err); }
         };
 
-        // Initial calls
         fetchOrderCount();
         syncUnreadChatCount();
         fetchOfferNotifications();
@@ -109,9 +126,8 @@ export default function SellerHeader() {
             client.deactivate();
             clearInterval(interval);
         };
-    }, []);
+    }, [orderBaseUrl, chatBaseUrl]);
 
-    // --- UPDATED: TOTAL COUNT INCLUDES OFFERS ---
     const totalNotifications = unreadChatCount + orderUnread + offerNotifications.length;
 
     const handleLogout = () => {
@@ -122,7 +138,6 @@ export default function SellerHeader() {
 
     return (
         <header className="w-full bg-[#03230F] text-white shadow-md sticky top-0 z-[100]">
-            {/* Notification Toast */}
             {notification && (
                 <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900">
                     <Check className="w-5 h-5 mr-3 shrink-0 text-green-500" />
@@ -152,11 +167,14 @@ export default function SellerHeader() {
                             <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 max-h-[400px] overflow-y-auto">
                                 <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">{t("sellerHeaderNotifTitle")}</div>
 
-                                {/* --- NEW: OFFER ACCEPTED SECTION --- */}
                                 {offerNotifications.map((notif) => (
                                     <button 
                                         key={notif.id}
-                                        onClick={() => { setIsNotifOpen(false); router.push("/seller/orders"); }} 
+                                        onClick={() => { 
+                                            markOfferAsRead(notif.id); // Triggers API call
+                                            setIsNotifOpen(false); 
+                                            router.push("/seller/orders"); 
+                                        }} 
                                         className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 border-b border-gray-50"
                                     >
                                         <div className="p-2 rounded-full shrink-0 bg-blue-100 text-blue-600"><CheckCircle className="w-4 h-4" /></div>

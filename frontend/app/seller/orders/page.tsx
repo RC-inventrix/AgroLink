@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import { OrdersList } from "@/components/orders-list"
@@ -8,18 +9,17 @@ import SellerSidebar from "../dashboard/SellerSideBar";
 import "../dashboard/SellerDashboard.css"
 import { Toaster } from "sonner"
 import Footer2 from "@/components/footer/Footer";
-import { useLanguage } from "@/context/LanguageContext"; // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function OrdersPage() {
-    const { t } = useLanguage(); // Initialized the hook
+    const { t } = useLanguage();
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     const fetchOrders = async () => {
         try {
-            
             const token = sessionStorage.getItem("token");
             const farmerId = sessionStorage.getItem("id");
 
@@ -28,7 +28,7 @@ export default function OrdersPage() {
                 return;
             }
 
-            
+            // Fetches orders assigned to this seller
             const res = await fetch(`${API_URL}/api/seller/orders/${farmerId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -37,6 +37,7 @@ export default function OrdersPage() {
 
             if (res.ok) {
                 const data = await res.json()
+                // Ensure the data includes 'createdAt' and 'handlingTime' for the countdown
                 setOrders(data)
             } else {
                 console.error("API Error:", res.status, res.statusText);
@@ -52,16 +53,17 @@ export default function OrdersPage() {
         fetchOrders()
     }, [])
 
+    // Revenue calculation based on fetched order amounts
     const totalRevenue = orders.reduce((acc, order) => acc + (order.amount / 100), 0)
 
     return (
-        
         <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
             <Toaster position="top-center" richColors /> 
             
             <SellerHeader />
             
             <div className="flex flex-1">
+                {/* Sidebar handles polling for live chat updates */}
                 <SellerSidebar unreadCount={0} activePage="orders" />
                 
                 <main className="flex-1 p-8">
@@ -95,7 +97,6 @@ export default function OrdersPage() {
                     </div>
                 </main>
             </div>
-            
             
             <Footer2 />
         </div>
