@@ -3,9 +3,10 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Menu, X } from "lucide-react"
+import { useLanguage } from "@/context/LanguageContext" // Added Translation Hook
 
 export default function Headerall() {
-
+    const { t } = useLanguage() // Initialize hook
     const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false)
 
     return (
@@ -27,27 +28,27 @@ export default function Headerall() {
                     {/* Desktop Menu */}
                     <div className="hidden md:flex items-center gap-5 lg:gap-15">
                         <Link href="/" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            Home
+                            {t("navHome")}
                         </Link>
                         <Link href="/about" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            About
+                            {t("navAbout")}
                         </Link>
                         <Link href="/features" className="text-white hover:text-[#EEC044] transition font-medium text-sm lg:text-base">
-                            Features
+                            {t("navFeatures")}
                         </Link>
                     </div>
 
                     {/* Auth Buttons - Desktop */}
                     <div className="hidden md:flex items-center gap-2 lg:gap-3">
                         <Link href="/login">
-                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-lg hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold">
-                                Login
+                            <button className="px-3 lg:px-4 py-1.5 lg:py-2 border-2 border-[#EEC044] text-white text-sm lg:text-base rounded-lg hover:bg-[#EEC044] hover:text-[#03230F] transition font-semibold h-auto">
+                                {t("login")}
                             </button>
                         </Link>
 
                         <Link href="/register">
-                            <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-lg hover:bg-[#d9a83d] transition font-semibold">
-                                Register
+                            <button className="px-4 lg:px-6 py-1.5 lg:py-2 bg-[#EEC044] text-[#03230F] text-sm lg:text-base rounded-lg hover:bg-[#d9a83d] transition font-semibold h-auto">
+                                {t("register")}
                             </button>
                         </Link>
                     </div>
@@ -62,23 +63,23 @@ export default function Headerall() {
                 {isMenuOpen && (
                     <div className="md:hidden pb-4 space-y-3 bg-[#03230F] border-t border-gray-700">
                         <Link href="/" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                            Home
+                            {t("navHome")}
                         </Link>
                         <Link href="/about" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                            About
+                            {t("navAbout")}
                         </Link>
                         <Link href="/features" className="block text-white hover:text-[#EEC044] px-2 text-sm">
-                            Features
+                            {t("navFeatures")}
                         </Link>
                         <div className="flex gap-2 pt-2 px-2">
                             <Link href="/login" className="flex-1">
-                                <button className="w-full px-3 py-2 border-2 border-[#EEC044] text-[#EEC044] rounded-lg text-xs font-semibold">
-                                    Login
+                                <button className="w-full h-auto px-3 py-2 border-2 border-[#EEC044] text-[#EEC044] rounded-lg text-xs font-semibold">
+                                    {t("login")}
                                 </button>
                             </Link>
                             <Link href="/register" className="flex-1">
-                                <button className="w-full px-3 py-2 bg-[#EEC044] text-[#03230F] rounded-lg text-xs font-semibold">
-                                    Register
+                                <button className="w-full h-auto px-3 py-2 bg-[#EEC044] text-[#03230F] rounded-lg text-xs font-semibold">
+                                    {t("register")}
                                 </button>
                             </Link>
                         </div>

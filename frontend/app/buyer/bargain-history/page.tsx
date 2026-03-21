@@ -9,6 +9,7 @@ import { Loader2, CheckCircle2, XCircle, Handshake } from "lucide-react"
 import { DashboardNav } from "@/components/dashboard-nav"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import Footer2 from "@/components/footer/Footer"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -35,6 +36,7 @@ interface BargainItem {
 }
 
 export default function BuyerBargainPage() {
+    const { t } = useLanguage(); // Initialized the hook
     const [items, setItems] = useState<BargainItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [addedToCartIds, setAddedToCartIds] = useState<string[]>([])
@@ -97,7 +99,7 @@ export default function BuyerBargainPage() {
 
                         // Logistics & Coordinates Mapped Here
                         deliveryRequired: item.deliveryRequired || false,
-                        buyerAddress: item.buyerAddress || "Pickup at Farm",
+                        buyerAddress: item.buyerAddress || t("bargainBuyerPickupFarm"),
                         deliveryFee: item.deliveryFee || 0,
                         buyerLatitude: item.buyerLatitude || null,
                         buyerLongitude: item.buyerLongitude || null
@@ -113,7 +115,7 @@ export default function BuyerBargainPage() {
         }
 
         fetchBargainsAndCartState()
-    }, [router])
+    }, [router, t])
 
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type })
@@ -137,11 +139,11 @@ export default function BuyerBargainPage() {
             })
             if (res.ok) {
                 setItems((prev) => prev.filter((item) => item.id !== id))
-                showNotification("Request removed successfully", "success")
+                showNotification(t("bargainBuyerMsgRemoved"), "success")
             }
         } catch (error) {
             console.error("Error deleting bargain:", error)
-            showNotification("Failed to remove request", "error")
+            showNotification(t("bargainBuyerMsgRemoveFail"), "error")
         }
     }
 
@@ -150,12 +152,12 @@ export default function BuyerBargainPage() {
         const token = sessionStorage.getItem("token")
 
         if (!currentUserId) {
-            showNotification("Please log in to add items to the cart.", "error")
+            showNotification(t("bargainBuyerMsgLoginReq"), "error")
             return
         }
 
-        if (item.deliveryRequired && (!item.buyerAddress || item.buyerAddress === "Pickup at Farm")) {
-            showNotification("Missing delivery information. Cannot add to cart.", "error")
+        if (item.deliveryRequired && (!item.buyerAddress || item.buyerAddress === "Pickup at Farm" || item.buyerAddress === t("bargainBuyerPickupFarm"))) {
+            showNotification(t("bargainBuyerMsgMissingDel"), "error")
             return
         }
 
@@ -200,13 +202,13 @@ export default function BuyerBargainPage() {
 
             if (res.ok) {
                 setAddedToCartIds(prev => [...prev, item.id])
-                showNotification(`Item successfully added to cart`, "success")
+                showNotification(t("bargainBuyerMsgAddedCart"), "success")
             } else {
-                showNotification("Failed to add item to cart", "error")
+                showNotification(t("bargainBuyerMsgAddFail"), "error")
             }
         } catch (error) {
             console.error("Error adding to cart:", error)
-            showNotification("Server error. Could not add to cart.", "error")
+            showNotification(t("bargainBuyerMsgServerError"), "error")
         }
     }
 
@@ -222,7 +224,7 @@ export default function BuyerBargainPage() {
                 <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-6 duration-300 ${
                     notification.type === 'success' ? 'bg-white text-green-800 border border-green-500' : 'bg-white text-red-800 border border-red-500'
                 }`}>
-                    {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-green-500"/> : <XCircle className="w-5 h-5 text-red-500"/>}
+                    {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0"/> : <XCircle className="w-5 h-5 text-red-500 shrink-0"/>}
                     <span className="font-bold text-sm tracking-wide">{notification.message}</span>
                 </div>
             )}
@@ -238,48 +240,48 @@ export default function BuyerBargainPage() {
                                 <Handshake className="w-10 h-10 text-[#03230F]" />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-black tracking-tight mb-1 text-white">Buyer Bargains</h1>
-                                <p className="text-gray-300 font-medium">Review and manage price negotiations from buyers</p>
+                                <h1 className="text-3xl font-black tracking-tight mb-1 text-white">{t("bargainBuyerTitle")}</h1>
+                                <p className="text-gray-300 font-medium">{t("bargainBuyerSubtitle")}</p>
                             </div>
                         </div>
 
                         {isLoading ? (
                             <div className="flex flex-col min-h-[40vh] items-center justify-center">
-                                <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4" />
-                                <p className="text-[#03230F] font-bold text-lg">Harvesting your requests...</p>
+                                <Loader2 className="h-12 w-12 animate-spin text-[#EEC044] mb-4 shrink-0" />
+                                <p className="text-[#03230F] font-bold text-lg">{t("bargainBuyerLoading")}</p>
                             </div>
                         ) : (
                             <Tabs defaultValue="all" className="w-full">
-                                <TabsList className="flex w-full h-14 p-0 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+                                <TabsList className="flex w-full h-14 p-0 bg-white border border-gray-200 rounded-xl overflow-x-auto shadow-sm mb-6 no-scrollbar">
                                     <TabsTrigger 
                                         value="all" 
-                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#03230F] data-[state=active]:text-[#03230F] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50"
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#03230F] data-[state=active]:text-[#03230F] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 whitespace-nowrap px-4"
                                     >
-                                        All Requests ({items.length})
+                                        {t("bargainBuyerTabAll")} ({items.length})
                                     </TabsTrigger>
                                     <TabsTrigger 
                                         value="in-progress" 
-                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#EEC044] data-[state=active]:text-[#EEC044] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50"
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-[#EEC044] data-[state=active]:text-[#EEC044] data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 whitespace-nowrap px-4"
                                     >
-                                        Pending ({pendingItems.length})
+                                        {t("bargainBuyerTabPending")} ({pendingItems.length})
                                     </TabsTrigger>
                                     <TabsTrigger 
                                         value="accepted" 
-                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50"
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-green-600 data-[state=active]:text-green-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 whitespace-nowrap px-4"
                                     >
-                                        Accepted ({acceptedItems.length})
+                                        {t("bargainBuyerTabAccepted")} ({acceptedItems.length})
                                     </TabsTrigger>
                                     <TabsTrigger 
                                         value="rejected" 
-                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-red-600 data-[state=active]:text-red-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50"
+                                        className="flex-1 h-full rounded-none border border-transparent border-r-gray-200 last:border-r-transparent data-[state=active]:border-red-600 data-[state=active]:text-red-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 whitespace-nowrap px-4"
                                     >
-                                        Rejected ({rejectedItems.length})
+                                        {t("bargainBuyerTabRejected")} ({rejectedItems.length})
                                     </TabsTrigger>
                                     <TabsTrigger 
                                         value="added-to-cart" 
-                                        className="flex-1 h-full rounded-none border border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50"
+                                        className="flex-1 h-full rounded-none border border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:z-10 text-gray-500 font-bold transition-all bg-transparent hover:bg-gray-50 whitespace-nowrap px-4"
                                     >
-                                        Cart ({addedToCartItems.length})
+                                        {t("bargainBuyerTabAddedToCart")} ({addedToCartItems.length})
                                     </TabsTrigger>
                                 </TabsList>
 
@@ -287,8 +289,8 @@ export default function BuyerBargainPage() {
                                     <TabsContent value="all" className="space-y-6">
                                         {items.length === 0 ? (
                                             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                                                <p className="text-[#03230F] font-bold text-lg mb-1">No bargaining requests found.</p>
-                                                <p className="text-gray-500 text-sm">When buyers negotiate prices, they will appear here.</p>
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">{t("bargainBuyerEmptyAllTitle")}</p>
+                                                <p className="text-gray-500 text-sm">{t("bargainBuyerEmptyAllDesc")}</p>
                                             </div>
                                         ) : (
                                             items.map((item) => (
@@ -305,8 +307,8 @@ export default function BuyerBargainPage() {
                                     <TabsContent value="in-progress" className="space-y-6">
                                         {pendingItems.length === 0 ? (
                                             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                                                <p className="text-[#03230F] font-bold text-lg mb-1">No pending negotiations.</p>
-                                                <p className="text-gray-500 text-sm">You don't have any active bargain requests right now.</p>
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">{t("bargainBuyerEmptyPendingTitle")}</p>
+                                                <p className="text-gray-500 text-sm">{t("bargainBuyerEmptyPendingDesc")}</p>
                                             </div>
                                         ) : (
                                             pendingItems.map((item) => (
@@ -323,8 +325,8 @@ export default function BuyerBargainPage() {
                                     <TabsContent value="accepted" className="space-y-6">
                                         {acceptedItems.length === 0 ? (
                                             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                                                <p className="text-[#03230F] font-bold text-lg mb-1">No new accepted offers.</p>
-                                                <p className="text-gray-500 text-sm">Check back later for seller responses.</p>
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">{t("bargainBuyerEmptyAcceptedTitle")}</p>
+                                                <p className="text-gray-500 text-sm">{t("bargainBuyerEmptyAcceptedDesc")}</p>
                                             </div>
                                         ) : (
                                             acceptedItems.map((item) => (
@@ -342,8 +344,8 @@ export default function BuyerBargainPage() {
                                     <TabsContent value="rejected" className="space-y-6">
                                         {rejectedItems.length === 0 ? (
                                             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                                                <p className="text-[#03230F] font-bold text-lg mb-1">No rejected requests.</p>
-                                                <p className="text-gray-500 text-sm">None of your bargains have been rejected.</p>
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">{t("bargainBuyerEmptyRejectedTitle")}</p>
+                                                <p className="text-gray-500 text-sm">{t("bargainBuyerEmptyRejectedDesc")}</p>
                                             </div>
                                         ) : (
                                             rejectedItems.map((item) => (
@@ -361,8 +363,8 @@ export default function BuyerBargainPage() {
                                     <TabsContent value="added-to-cart" className="space-y-6">
                                         {addedToCartItems.length === 0 ? (
                                             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                                                <p className="text-[#03230F] font-bold text-lg mb-1">No items added to cart yet.</p>
-                                                <p className="text-gray-500 text-sm">Accepted bargains that you add to cart will appear here.</p>
+                                                <p className="text-[#03230F] font-bold text-lg mb-1">{t("bargainBuyerEmptyCartTitle")}</p>
+                                                <p className="text-gray-500 text-sm">{t("bargainBuyerEmptyCartDesc")}</p>
                                             </div>
                                         ) : (
                                             addedToCartItems.map((item) => (

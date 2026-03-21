@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Bell, ShoppingCart, User, LogOut, Settings, Check, MessageSquare, AlertCircle, CheckCircle2, Send } from "lucide-react"
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 interface OrderNotification {
     id: number;
@@ -18,6 +19,7 @@ interface OrderNotification {
 
 export default function DashboardHeader() {
     const router = useRouter()
+    const { t } = useLanguage() // Initialized the hook
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isNotifOpen, setIsNotifOpen] = useState(false)
     const [unreadChatCount, setUnreadChatCount] = useState(0)
@@ -159,9 +161,9 @@ export default function DashboardHeader() {
         <header className="w-full bg-[#03230F] text-white shadow-md sticky top-0 z-[100]">
             {/* Notification Toast */}
             {logoutSuccess && (
-                <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900 animate-in slide-in-from-right-10 duration-500">
-                    <Check className="w-5 h-5 mr-3 text-green-500" />
-                    <p className="font-semibold pr-4">Logged out successfully!</p>
+                <div className="fixed top-5 right-5 z-[110] flex items-center p-4 rounded-lg shadow-2xl border bg-white border-green-500 text-green-900 animate-in slide-in-from-right duration-300">
+                    <Check className="w-5 h-5 mr-3 text-green-500 shrink-0" />
+                    <p className="font-semibold pr-4">{t("buyerHeaderLogoutSuccess")}</p>
                 </div>
             )}
 
@@ -176,10 +178,10 @@ export default function DashboardHeader() {
                 <div className="flex items-center gap-4 sm:gap-8">
                     {/* Notification Section */}
                     <div className="relative" ref={notifRef}>
-                        <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 relative flex items-center justify-center">
+                        <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 relative flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
                             <Bell className="w-6 h-6 text-white" />
                             {totalUnreadCount > 0 && (
-                                <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
+                                <span className="absolute top-0 right-0 h-5 min-w-[1.25rem] px-1 rounded-full bg-[#EEC044] text-[#03230F] text-[10px] flex items-center justify-center font-bold border-2 border-[#03230F]">
                                     {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                                 </span>
                             )}
@@ -187,7 +189,7 @@ export default function DashboardHeader() {
 
                         {isNotifOpen && (
                             <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
-                                <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">Notifications</div>
+                                <div className="px-4 py-2 border-b font-bold text-sm text-gray-500 uppercase">{t("buyerHeaderNotifTitle")}</div>
                                 <div className="max-h-[400px] overflow-y-auto">
                                     {orderNotifs.map((notif) => {
                                         const msg = notif.message.toLowerCase();
@@ -195,53 +197,55 @@ export default function DashboardHeader() {
                                         const isAccepted = msg.includes("accepted");
                                         return (
                                             <div key={notif.id} onClick={() => handleNotifClick(notif)} className={`px-4 py-3 border-b border-gray-50 flex gap-3 items-start cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/30 hover:bg-gray-100' : 'hover:bg-gray-50'}`}>
-                                                <div className={`mt-1 p-1.5 rounded-full ${isOffer ? 'bg-blue-100 text-blue-600' : isAccepted ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                    {isOffer ? <Send size={14} /> : isAccepted ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                                <div className={`mt-1 p-1.5 rounded-full shrink-0 ${isOffer ? 'bg-blue-100 text-blue-600' : isAccepted ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                    {isOffer ? <Send size={14} className="shrink-0" /> : isAccepted ? <CheckCircle2 size={14} className="shrink-0" /> : <AlertCircle size={14} className="shrink-0" />}
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="text-xs font-bold text-gray-900">{isOffer ? "New Offer Received" : isAccepted ? "Order Accepted" : "Order Cancelled"}</p>
+                                                    <p className="text-xs font-bold text-gray-900">
+                                                        {isOffer ? t("buyerHeaderNewOffer") : isAccepted ? t("buyerHeaderOrderAccepted") : t("buyerHeaderOrderCancelled")}
+                                                    </p>
                                                     <p className="text-[11px] text-gray-600 leading-tight mt-0.5">{notif.message}</p>
                                                 </div>
-                                                {!notif.read && <div className="w-2 h-2 rounded-full mt-2 bg-blue-500" />}
+                                                {!notif.read && <div className="w-2 h-2 rounded-full mt-2 bg-blue-500 shrink-0" />}
                                             </div>
                                         );
                                     })}
                                     {unreadChatCount > 0 && (
                                         <button onClick={() => { setIsNotifOpen(false); router.push("/buyer/chat"); }} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors border-b">
-                                            <div className="p-2 rounded-full bg-orange-100 text-orange-600"><MessageSquare className="w-4 h-4" /></div>
+                                            <div className="p-2 rounded-full bg-orange-100 text-orange-600 shrink-0"><MessageSquare className="w-4 h-4 shrink-0" /></div>
                                             <div className="text-left">
-                                                <p className="text-sm font-bold text-gray-900">New Messages</p>
-                                                <p className="text-xs text-gray-500">You have {unreadChatCount} unread messages</p>
+                                                <p className="text-sm font-bold text-gray-900">{t("buyerHeaderNewMessages")}</p>
+                                                <p className="text-xs text-gray-500">{t("buyerHeaderUnreadMessages").replace("{count}", unreadChatCount.toString())}</p>
                                             </div>
                                         </button>
                                     )}
-                                    {totalUnreadCount === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">All caught up!</div>}
+                                    {totalUnreadCount === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">{t("buyerHeaderAllCaughtUp")}</div>}
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Cart Icon */}
-                    <Link href="/cart" className="p-2 relative flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
-                        <ShoppingCart className="w-6 h-6 text-white" />
+                    <Link href="/cart" className="p-2 relative flex items-center justify-center hover:bg-white/10 rounded-full transition-colors group">
+                        <ShoppingCart className="w-6 h-6 text-white group-hover:text-[#EEC044] transition-colors" />
                     </Link>
 
                     {/* Profile Section */}
                     <div className="relative" ref={dropdownRef}>
-                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 pl-6 border-l border-white/20">
-                            <div className="w-10 h-10 rounded-full border-2 border-[#EEC044] overflow-hidden bg-white/10 flex items-center justify-center">
-                                <User className="w-6 h-6 text-[#EEC044]" />
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 pl-6 border-l border-white/20 hover:opacity-80 transition-opacity">
+                            <div className="w-10 h-10 rounded-full border-2 border-[#EEC044] overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
+                                <User className="w-6 h-6 text-[#EEC044] shrink-0" />
                             </div>
-                            <p className="hidden md:block text-sm font-bold">My Account</p>
+                            <p className="hidden md:block text-sm font-bold">{t("buyerHeaderMyAccount")}</p>
                         </button>
 
                         {isMenuOpen && (
                             <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-                                <Link href="/buyer/user-profile" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm font-medium" onClick={() => setIsMenuOpen(false)}>
-                                    <Settings className="w-4 h-4 text-gray-400" /> Profile
+                                <Link href="/buyer/user-profile" className="flex items-center gap-3 px-4 py-3 h-auto hover:bg-gray-50 text-sm font-medium transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                    <Settings className="w-4 h-4 text-gray-400 shrink-0" /> {t("buyerHeaderProfile")}
                                 </Link>
-                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 font-bold border-t">
-                                    <LogOut className="w-4 h-4" /> Log out
+                                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 h-auto hover:bg-red-50 text-red-600 font-bold border-t border-gray-50 transition-colors">
+                                    <LogOut className="w-4 h-4 shrink-0" /> {t("buyerHeaderLogout")}
                                 </button>
                             </div>
                         )}

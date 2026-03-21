@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { AuctionCard } from "@/components/auction-card"
 import { AuctionDetailsModal } from "./auction-details-modal"
-import { CalendarClock } from "lucide-react" // Import new icon
+import { CalendarClock } from "lucide-react"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 interface AuctionsListProps {
     initialAuctions: any[]
@@ -15,7 +16,7 @@ export function AuctionsList({
                                  initialAuctions,
                                  onAuctionUpdated,
                              }: AuctionsListProps) {
-    // Added DRAFT to the state type
+    const { t } = useLanguage() // Initialized the hook
     const [activeTab, setActiveTab] = useState<"ACTIVE" | "COMPLETED" | "CANCELLED" | "DRAFT">(
         "ACTIVE"
     )
@@ -62,51 +63,54 @@ export function AuctionsList({
         return acc
     }, [initialAuctions])
 
-    // Updated Tab Config with Draft
+    // Updated Tab Config with Translations
     const tabConfig = [
-        { key: "ACTIVE" as const, label: "Ongoing", icon: "⏱️", color: "text-blue-600" },
+        { key: "ACTIVE" as const, label: t("auctionTabOngoing"), icon: "⏱️", color: "text-blue-600" },
         {
             key: "DRAFT" as const,
-            label: "Draft",
-            icon: <CalendarClock className="w-4 h-4" />, // New Icon
+            label: t("auctionTabDraft"),
+            icon: <CalendarClock className="w-4 h-4 shrink-0" />, 
             color: "text-orange-600"
         },
         {
             key: "COMPLETED" as const,
-            label: "Sold",
+            label: t("auctionTabSold"),
             icon: "✓",
             color: "text-green-600",
         },
         {
             key: "CANCELLED" as const,
-            label: "Cancelled",
+            label: t("auctionTabCancelled"),
             icon: "✕",
             color: "text-red-600",
         },
     ]
 
+    // Helper to get the current tab's translated label for the empty state
+    const currentTabLabel = tabConfig.find(tab => tab.key === activeTab)?.label.toLowerCase() || "";
+
     return (
         <div className="space-y-8">
-            {/* Vertical Tabs */}
+            {/* Vertical Tabs (Horizontal on mobile) */}
             <div className="flex flex-col sm:flex-row gap-8">
-                <div className="flex sm:flex-col gap-3 border-b sm:border-b-0 sm:border-r border-gray-200 pb-4 sm:pb-0 sm:pr-6 min-w-fit">
+                <div className="flex sm:flex-col gap-3 border-b sm:border-b-0 sm:border-r border-gray-200 pb-4 sm:pb-0 sm:pr-6 min-w-fit overflow-x-auto no-scrollbar">
                     {tabConfig.map((tab) => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
-                            className={`px-4 py-3 rounded-lg text-[13px] font-bold uppercase tracking-widest transition-all whitespace-nowrap flex items-center ${
+                            className={`px-4 py-3 rounded-lg text-[13px] font-bold uppercase tracking-widest transition-all whitespace-nowrap flex items-center h-auto ${
                                 activeTab === tab.key
                                     ? "bg-[#03230F] text-white shadow-md"
                                     : "bg-gray-50 text-[#697386] hover:bg-gray-100"
                             }`}
                         >
-              <span className="mr-2 flex items-center justify-center w-4 h-4">
-                {typeof tab.icon === "string" ? tab.icon : tab.icon}
-              </span>
+                            <span className="mr-2 flex items-center justify-center w-4 h-4 shrink-0">
+                                {typeof tab.icon === "string" ? tab.icon : tab.icon}
+                            </span>
                             {tab.label}
-                            <span className="ml-2 inline-block bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                {counts[tab.key]}
-              </span>
+                            <span className="ml-2 inline-block bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0">
+                                {counts[tab.key]}
+                            </span>
                         </button>
                     ))}
                 </div>
@@ -125,8 +129,8 @@ export function AuctionsList({
                         <Card className="p-12 text-center border-none shadow-sm bg-gradient-to-br from-gray-50 to-gray-100">
                             <p className="text-[#A3ACBA] font-medium">
                                 {!sellerId
-                                    ? "Verifying seller identity..."
-                                    : `No ${activeTab.toLowerCase()} auctions at the moment.`}
+                                    ? t("auctionVerifyingSeller")
+                                    : t("auctionNoAuctions").replace("{status}", currentTabLabel)}
                             </p>
                         </Card>
                     )}

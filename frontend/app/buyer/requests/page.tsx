@@ -18,6 +18,7 @@ import BuyerHeader from "@/components/headers/BuyerHeader"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Footer2 from "@/components/footer/Footer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -55,6 +56,7 @@ interface Offer {
 }
 
 export default function MyRequirementsPage() {
+    const { t } = useLanguage() // Initialized the hook
     const router = useRouter();
     const [requirements, setRequirements] = useState<Requirement[]>([])
     const [offers, setOffers] = useState<Record<number, Offer[]>>({}) 
@@ -142,10 +144,10 @@ export default function MyRequirementsPage() {
                 body: JSON.stringify(reqPayload)
             });
             if (reqRes.ok) {
-                alert("Deal Confirmed! This request is now closed and the offer is accepted.");
+                alert(t("reqAlertDealConfirmed"));
                 fetchMyRequirements();
             }
-        } catch (err) { alert("Could not accept offer. Please try again."); }
+        } catch (err) { alert(t("reqAlertDealFailed")); }
     };
 
     const handleUpdate = async (id: number) => {
@@ -183,15 +185,15 @@ export default function MyRequirementsPage() {
                     <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-2xl bg-white text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
                         <div className="bg-red-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertTriangle className="w-10 h-10 text-red-500" />
+                            <AlertTriangle className="w-10 h-10 text-red-500 shrink-0" />
                         </div>
-                        <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">Delete Request?</h2>
-                        <p className="text-sm text-gray-500 mb-8 font-medium">This action cannot be undone.</p>
+                        <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">{t("reqDeleteTitle")}</h2>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">{t("reqDeleteDesc")}</p>
                         <div className="flex flex-col gap-3">
-                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-6 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all">
-                                {isDeleting ? <Loader2 className="animate-spin" /> : "Yes, Delete"}
+                            <Button onClick={confirmDelete} disabled={isDeleting} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-auto py-4 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all">
+                                {isDeleting ? <Loader2 className="animate-spin shrink-0" /> : t("reqDeleteConfirm")}
                             </Button>
-                            <button onClick={() => setShowDeletePopup(false)} className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors">Cancel</button>
+                            <button onClick={() => setShowDeletePopup(false)} className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors h-auto">{t("commonCancel")}</button>
                         </div>
                     </Card>
                 </div>
@@ -205,19 +207,19 @@ export default function MyRequirementsPage() {
                         
                         <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4">
                             <div>
-                                <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">My Item Requests</h1>
-                                <p className="text-[#A3ACBA] font-medium">Manage your requirements and accept seller proposals</p>
+                                <h1 className="text-[32px] font-black text-[#03230F] mb-2 tracking-tight">{t("reqPageTitle")}</h1>
+                                <p className="text-[#A3ACBA] font-medium">{t("reqPageSubtitle")}</p>
                             </div>
                             <Link href="/buyer/requests/new-request" className="w-full md:w-auto">
-                                <button className="w-full bg-[#03230F] text-[#EEC044] rounded-full px-8 py-3.5 font-bold uppercase text-xs tracking-widest shadow-md hover:bg-black transition-all flex items-center justify-center gap-2">
-                                    <AlignLeft className="w-4 h-4" /> New Request
+                                <button className="w-full bg-[#03230F] text-[#EEC044] rounded-full px-8 py-3.5 h-auto font-bold uppercase text-xs tracking-widest shadow-md hover:bg-black transition-all flex items-center justify-center gap-2">
+                                    <AlignLeft className="w-4 h-4 shrink-0" /> {t("reqNewRequestBtn")}
                                 </button>
                             </Link>
                         </div>
 
                         {loading ? (
                             <div className="flex justify-center py-20">
-                                <Loader2 className="w-10 h-10 animate-spin text-[#03230F]" />
+                                <Loader2 className="w-10 h-10 animate-spin text-[#03230F] shrink-0" />
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-6">
@@ -233,33 +235,33 @@ export default function MyRequirementsPage() {
                                                 <div className="p-10 space-y-6">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <div className="space-y-2">
-                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Crop Name</Label>
-                                                            <Input value={editData.cropName || ""} onChange={e => setEditData({...editData, cropName: e.target.value})} className="rounded-md font-bold text-[#03230F]" />
+                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelCropName")}</Label>
+                                                            <Input value={editData.cropName || ""} onChange={e => setEditData({...editData, cropName: e.target.value})} className="rounded-md font-bold text-[#03230F] h-auto" />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quantity (kg)</Label>
-                                                            <Input type="number" value={editData.quantity || ""} onChange={e => setEditData({...editData, quantity: parseFloat(e.target.value) || 0})} className="rounded-md font-bold text-[#03230F]" />
+                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelQuantity")}</Label>
+                                                            <Input type="number" value={editData.quantity || ""} onChange={e => setEditData({...editData, quantity: parseFloat(e.target.value) || 0})} className="rounded-md font-bold text-[#03230F] h-auto" />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expected Price (Rs.)</Label>
-                                                            <Input type="number" value={editData.expectedUnitPrice || ""} onChange={e => setEditData({...editData, expectedUnitPrice: parseFloat(e.target.value) || 0})} className="rounded-md font-bold text-[#03230F]" />
+                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelExpectedPrice")}</Label>
+                                                            <Input type="number" value={editData.expectedUnitPrice || ""} onChange={e => setEditData({...editData, expectedUnitPrice: parseFloat(e.target.value) || 0})} className="rounded-md font-bold text-[#03230F] h-auto" />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expected Date</Label>
-                                                            <Input type="date" value={editData.expectedDate || ""} onChange={e => setEditData({...editData, expectedDate: e.target.value})} className="rounded-md font-bold text-[#03230F]" />
+                                                            <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelExpectedDate")}</Label>
+                                                            <Input type="date" value={editData.expectedDate || ""} onChange={e => setEditData({...editData, expectedDate: e.target.value})} className="rounded-md font-bold text-[#03230F] h-auto" />
                                                         </div>
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Delivery Address</Label>
-                                                        <Input value={editData.deliveryAddress || ""} onChange={e => setEditData({...editData, deliveryAddress: e.target.value})} className="rounded-md font-bold text-[#03230F]" />
+                                                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelDeliveryAddress")}</Label>
+                                                        <Input value={editData.deliveryAddress || ""} onChange={e => setEditData({...editData, deliveryAddress: e.target.value})} className="rounded-md font-bold text-[#03230F] h-auto" />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Description</Label>
+                                                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("reqLabelDescription")}</Label>
                                                         <Textarea value={editData.description || ""} onChange={e => setEditData({...editData, description: e.target.value})} className="rounded-md font-bold min-h-[100px] text-[#03230F]" />
                                                     </div>
                                                     <div className="flex gap-4">
-                                                        <Button onClick={() => handleUpdate(req.id)} className="flex-1 bg-[#03230F] text-[#EEC044] font-black rounded-md py-6 uppercase text-xs tracking-widest">Save Changes</Button>
-                                                        <Button variant="ghost" onClick={() => setEditingId(null)} className="bg-gray-100 rounded-md font-bold px-8">Cancel</Button>
+                                                        <Button onClick={() => handleUpdate(req.id)} className="flex-1 bg-[#03230F] text-[#EEC044] font-black rounded-md h-auto py-4 uppercase text-xs tracking-widest">{t("reqBtnSaveChanges")}</Button>
+                                                        <Button variant="ghost" onClick={() => setEditingId(null)} className="bg-gray-100 rounded-md font-bold px-8 h-auto py-4">{t("commonCancel")}</Button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -275,19 +277,19 @@ export default function MyRequirementsPage() {
 
                                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-gray-500 font-bold text-sm">
                                                                 <div className="flex flex-col gap-1">
-                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Scale className="w-3.5 h-3.5 text-[#EEC044]" /> Qty</span>
+                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Scale className="w-3.5 h-3.5 text-[#EEC044] shrink-0" /> {t("reqMetricQty")}</span>
                                                                     <p className="text-gray-900 font-black text-xl">{req.quantity}kg</p>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
-                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Banknote className="w-3.5 h-3.5 text-[#EEC044]" /> Price</span>
+                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Banknote className="w-3.5 h-3.5 text-[#EEC044] shrink-0" /> {t("reqMetricPrice")}</span>
                                                                     <p className="text-gray-900 font-black text-xl">Rs.{req.expectedUnitPrice}</p>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
-                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Calendar className="w-3.5 h-3.5 text-[#EEC044]" /> Needed By</span>
+                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><Calendar className="w-3.5 h-3.5 text-[#EEC044] shrink-0" /> {t("reqMetricNeededBy")}</span>
                                                                     <p className="text-gray-900 font-black text-sm">{new Date(req.expectedDate).toLocaleDateString()}</p>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
-                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><MapPin className="w-3.5 h-3.5 text-[#EEC044]" /> Address</span>
+                                                                    <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-400"><MapPin className="w-3.5 h-3.5 text-[#EEC044] shrink-0" /> {t("reqMetricAddress")}</span>
                                                                     <p className="text-gray-900 font-black text-xs truncate max-w-[150px]">{req.deliveryAddress}</p>
                                                                 </div>
                                                             </div>
@@ -296,15 +298,15 @@ export default function MyRequirementsPage() {
                                                         <div className="flex flex-col items-end gap-5 min-w-[200px] w-full md:w-auto">
                                                             <button 
                                                                 onClick={() => setExpandedReqId(isExpanded ? null : req.id)}
-                                                                className={`w-full px-8 py-4 rounded-md font-black text-[11px] uppercase tracking-widest flex items-center justify-between border transition-all ${reqOffers.length > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-100'}`}
+                                                                className={`w-full px-8 py-4 h-auto rounded-md font-black text-[11px] uppercase tracking-widest flex items-center justify-between border transition-all ${reqOffers.length > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-100'}`}
                                                             >
-                                                                <span>{reqOffers.length} Responses</span>
-                                                                <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                <span>{reqOffers.length} {t("reqResponses")}</span>
+                                                                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                                             </button>
                                                             {req.status === 'OPEN' && (
                                                                 <div className="flex gap-3">
-                                                                    <Button variant="ghost" onClick={() => { setEditingId(req.id); setEditData(req); }} className="p-4 bg-gray-50 border border-gray-100 rounded-md hover:bg-gray-100"><Edit3 className="w-5 h-5 text-gray-600" /></Button>
-                                                                    <Button variant="ghost" onClick={() => { setItemToDelete(req.id); setShowDeletePopup(true); }} className="p-4 bg-red-50 text-red-500 border border-red-100 rounded-md hover:bg-red-100"><Trash2 className="w-5 h-5" /></Button>
+                                                                    <Button variant="ghost" onClick={() => { setEditingId(req.id); setEditData(req); }} className="p-4 h-auto bg-gray-50 border border-gray-100 rounded-md hover:bg-gray-100"><Edit3 className="w-5 h-5 text-gray-600 shrink-0" /></Button>
+                                                                    <Button variant="ghost" onClick={() => { setItemToDelete(req.id); setShowDeletePopup(true); }} className="p-4 h-auto bg-red-50 text-red-500 border border-red-100 rounded-md hover:bg-red-100"><Trash2 className="w-5 h-5 shrink-0" /></Button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -313,7 +315,7 @@ export default function MyRequirementsPage() {
                                                     {isExpanded && (
                                                         <div className="mt-10 pt-10 border-t border-gray-100 space-y-8">
                                                             {reqOffers.length === 0 ? (
-                                                                <p className="text-center py-10 text-gray-400 font-bold uppercase text-[11px] tracking-widest">No responses yet.</p>
+                                                                <p className="text-center py-10 text-gray-400 font-bold uppercase text-[11px] tracking-widest">{t("reqNoResponses")}</p>
                                                             ) : (
                                                                 reqOffers.map((offer) => (
                                                                     <div key={offer.id} className="bg-white rounded-md p-0 overflow-hidden border border-gray-200 shadow-sm transition-all hover:shadow-md">
@@ -323,8 +325,8 @@ export default function MyRequirementsPage() {
                                                                                     <img src={offer.imageUrl} alt="Product" className="w-full h-full object-cover" />
                                                                                 ) : (
                                                                                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
-                                                                                        <ImageIcon className="w-12 h-12" />
-                                                                                        <span className="text-[10px] font-bold uppercase tracking-widest">No Image Available</span>
+                                                                                        <ImageIcon className="w-12 h-12 shrink-0" />
+                                                                                        <span className="text-[10px] font-bold uppercase tracking-widest">{t("reqNoImage")}</span>
                                                                                     </div>
                                                                                 )}
                                                                                 <div className="absolute top-4 left-4">
@@ -342,14 +344,14 @@ export default function MyRequirementsPage() {
                                                                                         <div>
                                                                                             <h4 className="font-black text-[#03230F] uppercase text-xl leading-none">{offer.sellerName}</h4>
                                                                                             <div className="flex flex-wrap gap-4 text-[11px] text-gray-500 font-bold mt-2 uppercase tracking-tighter">
-                                                                                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-[#EEC044]"/> {offer.contactNumber}</span>
-                                                                                                <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-[#EEC044]"/> {offer.deliveryOption}</span>
+                                                                                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-[#EEC044] shrink-0"/> {offer.contactNumber}</span>
+                                                                                                <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-[#EEC044] shrink-0"/> {offer.deliveryOption}</span>
                                                                                             </div>
                                                                                         </div>
                                                                                         {offer.deliveryOption === 'Buyer Pickup' && offer.pickupAddress && (
                                                                                             <div className="flex flex-col gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
                                                                                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                                                                                                    <MapPin className="w-3 h-3 text-[#EEC044]" /> Seller Collection Point
+                                                                                                    <MapPin className="w-3 h-3 text-[#EEC044] shrink-0" /> {t("reqSellerCollectionPoint")}
                                                                                                 </span>
                                                                                                 <div className="flex justify-between items-center gap-4">
                                                                                                     <p className="text-xs font-bold text-[#03230F]">{offer.pickupAddress}</p>
@@ -364,23 +366,23 @@ export default function MyRequirementsPage() {
                                                                                                                 });
                                                                                                                 setIsMapModalOpen(true);
                                                                                                             }}
-                                                                                                            className="text-[9px] font-black text-[#EEC044] uppercase bg-[#03230F] px-3 py-1.5 rounded-lg hover:bg-black transition-colors shrink-0"
+                                                                                                            className="text-[9px] h-auto py-2 font-black text-[#EEC044] uppercase bg-[#03230F] px-3 rounded-lg hover:bg-black transition-colors shrink-0"
                                                                                                         >
-                                                                                                            View Map
+                                                                                                            {t("reqBtnViewMap")}
                                                                                                         </button>
                                                                                                     )}
                                                                                                 </div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
-                                                                                    <div className="flex gap-8 items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 w-full lg:w-auto justify-center lg:justify-start">
+                                                                                    <div className="flex gap-8 items-center bg-gray-50 p-4 rounded-2xl border border-gray-100 w-full lg:w-auto justify-center lg:justify-start shrink-0">
                                                                                         <div className="text-center">
-                                                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Supply</p>
+                                                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{t("reqOfferSupply")}</p>
                                                                                             <p className="text-2xl font-black text-[#03230F]">{offer.supplyQty}kg</p>
                                                                                         </div>
                                                                                         <div className="w-px h-8 bg-gray-200" />
                                                                                         <div className="text-center">
-                                                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Unit Price</p>
+                                                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{t("reqOfferUnitPrice")}</p>
                                                                                             <p className="text-2xl font-black text-[#03230F]">Rs.{offer.unitPrice}</p>
                                                                                         </div>
                                                                                     </div>
@@ -389,22 +391,22 @@ export default function MyRequirementsPage() {
                                                                                     {req.status === 'OPEN' ? (
                                                                                         <Button 
                                                                                             onClick={() => handleAcceptOffer(req.id, offer.id)} 
-                                                                                            className="flex-1 bg-[#EEC044] text-[#03230F] rounded-xl h-14 font-black uppercase text-xs shadow-lg tracking-widest flex items-center justify-center gap-2 hover:bg-[#d4b43a]"
+                                                                                            className="flex-1 bg-[#EEC044] text-[#03230F] rounded-xl h-auto py-4 min-h-[56px] font-black uppercase text-xs shadow-lg tracking-widest flex items-center justify-center gap-2 hover:bg-[#d4b43a]"
                                                                                         >
-                                                                                            <CheckCircle className="w-5 h-5" /> Accept Seller Offer
+                                                                                            <CheckCircle className="w-5 h-5 shrink-0" /> {t("reqBtnAcceptOffer")}
                                                                                         </Button>
                                                                                     ) : (
-                                                                                        <div className={`flex-1 h-14 flex items-center justify-center border-2 rounded-xl font-black text-xs uppercase tracking-widest ${
+                                                                                        <div className={`flex-1 h-auto min-h-[56px] py-4 flex items-center justify-center border-2 rounded-xl font-black text-xs uppercase tracking-widest ${
                                                                                             offer.status === 'ACCEPTED' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-300 border-gray-100'
                                                                                         }`}>
-                                                                                            {offer.status === 'ACCEPTED' ? 'Offer Accepted' : 'Requirement Closed'}
+                                                                                            {offer.status === 'ACCEPTED' ? t("reqOfferAccepted") : t("reqRequirementClosed")}
                                                                                         </div>
                                                                                     )}
                                                                                     <Button 
                                                                                         onClick={() => router.push(`/buyer/chat/?receiverId=${offer.sellerId}`)} 
-                                                                                        className="flex-1 bg-[#03230F] text-[#EEC044] rounded-xl h-14 font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg"
+                                                                                        className="flex-1 bg-[#03230F] text-[#EEC044] rounded-xl h-auto py-4 min-h-[56px] font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg"
                                                                                     >
-                                                                                        <MessageCircle className="w-5 h-5 mr-2" /> Message Seller
+                                                                                        <MessageCircle className="w-5 h-5 mr-2 shrink-0" /> {t("reqBtnMessageSeller")}
                                                                                     </Button>
                                                                                 </div>
                                                                             </div>
@@ -431,7 +433,7 @@ export default function MyRequirementsPage() {
                 <DialogContent className="max-w-3xl rounded-[35px] p-0 overflow-hidden border-none shadow-2xl">
                     <DialogHeader className="p-6 bg-white border-b">
                         <DialogTitle className="flex items-center gap-2 text-[#03230F] font-black uppercase tracking-tight">
-                            <MapPin className="text-[#EEC044]" /> {mapData.city}
+                            <MapPin className="text-[#EEC044] shrink-0" /> {mapData.city}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="h-[450px] w-full relative z-0 bg-gray-100">
@@ -449,14 +451,14 @@ export default function MyRequirementsPage() {
                     </div>
                     <div className="p-8 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-6 text-[#03230F]">
                         <div className="space-y-1 flex-1 text-center sm:text-left">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Address</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("reqMapFullAddress")}</p>
                             <p className="text-sm font-bold">{mapData.address}</p>
                         </div>
                         <Button 
                             onClick={() => window.open(`https://www.google.com/maps?q=${mapData.lat},${mapData.lng}`, '_blank')}
-                            className="bg-[#03230F] text-[#EEC044] font-black gap-2 rounded-2xl h-14 px-8 shadow-xl hover:bg-black"
+                            className="bg-[#03230F] text-[#EEC044] font-black gap-2 rounded-2xl h-auto py-4 px-8 shadow-xl hover:bg-black"
                         >
-                            <Navigation className="w-4 h-4" /> Open GPS
+                            <Navigation className="w-4 h-4 shrink-0" /> {t("reqBtnOpenGPS")}
                         </Button>
                     </div>
                 </DialogContent>

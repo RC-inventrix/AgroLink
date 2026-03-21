@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { OrderCard } from "./order-card"
 import { toast } from "sonner"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -15,6 +16,7 @@ interface OrdersListProps {
 }
 
 export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: OrdersListProps) {
+    const { t } = useLanguage() // Initialized the hook
     const [activeTab, setActiveTab] = useState<"pending" | "processing" | "completed" | "cancelled">("pending")
     const [isUpdating, setIsUpdating] = useState(false)
     const [sellerId, setSellerId] = useState<string | null>(null)
@@ -97,32 +99,44 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
             })
 
             if (response.ok) {
-                toast.success(`Order marked as ${nextStatus.toLowerCase()}`)
+                // Using translated toast message
+                toast.success(t("ordersUpdateSuccess").replace("{status}", nextStatus.toLowerCase()))
                 onOrderUpdated()
             } else {
-                toast.error("Failed to update order status")
+                toast.error(t("ordersUpdateFailed"))
             }
         } catch (error) {
             console.error("Update Error:", error)
-            toast.error("Server error.")
+            toast.error(t("ordersServerError"))
         } finally {
             setIsUpdating(false)
         }
     }
 
+    // Helper function to translate tab labels for UI display while keeping actual logic values intact
+    const getTabLabel = (tab: string) => {
+        switch (tab) {
+            case "pending": return t("ordersTabPending");
+            case "processing": return t("ordersTabProcessing");
+            case "completed": return t("ordersTabCompleted");
+            case "cancelled": return t("ordersTabCancelled");
+            default: return tab;
+        }
+    }
+
     return (
         <div className="space-y-6">
-            <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto">
+            <div className="flex gap-4 border-b border-border pb-4 overflow-x-auto no-scrollbar">
                 {(["pending", "processing", "completed", "cancelled"] as const).map((tab) => (
                     <Button
                         key={tab}
                         variant={activeTab === tab ? "default" : "outline"}
                         onClick={() => setActiveTab(tab)}
                         disabled={isUpdating}
-                        className={`flex items-center gap-2 capitalize ${tab === 'cancelled' && activeTab === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                        className={`flex items-center gap-2 h-auto py-2.5 ${tab === 'cancelled' && activeTab === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''}`}
                     >
-                        {tab}
-                        <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${activeTab === tab ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
+                        {getTabLabel(tab)}
+                        <span className={`px-2 py-0.5 text-[10px] rounded-full font-bold shrink-0 ${activeTab === tab ? 'bg-white text-primary' : 'bg-primary/10 text-primary'}`}>
                             {counts[tab]}
                         </span>
                     </Button>
@@ -144,10 +158,10 @@ export function OrdersList({ initialOrders, onOrderUpdated, onOfferAction }: Ord
                     ))
                 ) : (
                     <Card className="p-12 text-center border-none shadow-sm">
-                        <p className="text-muted-foreground">
+                        <p className="text-muted-foreground font-medium">
                             {!sellerId
-                                ? "Verifying seller identity..."
-                                : `No orders found in ${activeTab}.`}
+                                ? t("ordersVerifyingSeller")
+                                : t("ordersNoOrders").replace("{status}", getTabLabel(activeTab))}
                         </p>
                     </Card>
                 )}

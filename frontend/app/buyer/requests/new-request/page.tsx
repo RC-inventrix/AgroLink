@@ -1,3 +1,4 @@
+/* fileName: page.tsx */
 "use client"
 
 import { useState } from "react"
@@ -23,10 +24,12 @@ import {
 import { useRouter } from "next/navigation"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import LocationPicker from "@/components/LocationPicker"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function RequirementForm() {
+    const { t } = useLanguage(); // Initialized the hook
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -80,7 +83,7 @@ export default function RequirementForm() {
                         latitude: location.latitude,
                         longitude: location.longitude
                     } : {
-                        deliveryAddress: "Buyer Pickup at Farm"
+                        deliveryAddress: "Buyer Pickup at Farm" // Kept as English for backend consistency
                     }),
                     quantity: parseFloat(formData.quantity) || 0,
                     expectedUnitPrice: parseFloat(formData.expectedUnitPrice) || 0
@@ -102,9 +105,9 @@ export default function RequirementForm() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Card className="p-12 text-center flex flex-col items-center space-y-4 border-2 border-[#EEC044] rounded-3xl shadow-xl">
-                    <CheckCircle className="w-16 h-16 text-green-600 animate-in zoom-in duration-300" />
-                    <h2 className="text-2xl font-bold text-[#03230F]">Requirement Posted Successfully!</h2>
-                    <p className="text-muted-foreground font-medium text-sm uppercase tracking-wider">Redirecting to Dashboard...</p>
+                    <CheckCircle className="w-16 h-16 text-green-600 animate-in zoom-in duration-300 shrink-0" />
+                    <h2 className="text-2xl font-bold text-[#03230F]">{t("reqFormSuccessTitle")}</h2>
+                    <p className="text-muted-foreground font-medium text-sm uppercase tracking-wider">{t("reqFormSuccessDesc")}</p>
                 </Card>
             </div>
         );
@@ -116,12 +119,12 @@ export default function RequirementForm() {
             <div className="max-w-3xl mx-auto py-8 px-4">
                 
                 <div className="mb-8 flex items-center gap-4">
-                    <div className="bg-[#03230F] p-3 rounded-2xl shadow-lg">
+                    <div className="bg-[#03230F] p-3 rounded-2xl shadow-lg shrink-0">
                         <ShoppingBag className="w-6 h-6 text-[#EEC044]" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black text-[#03230F] uppercase tracking-tight">Post Your Crop Need</h1>
-                        <p className="text-gray-500 font-medium">Inform farmers about your bulk requirements</p>
+                        <h1 className="text-3xl font-black text-[#03230F] uppercase tracking-tight">{t("reqFormTitle")}</h1>
+                        <p className="text-gray-500 font-medium">{t("reqFormSubtitle")}</p>
                     </div>
                 </div>
 
@@ -133,11 +136,11 @@ export default function RequirementForm() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <Leaf className="w-4 h-4" /> Vegetable Name
+                                    <Leaf className="w-4 h-4 shrink-0" /> {t("reqFormCropName")}
                                 </Label>
                                 <Input 
                                     required
-                                    placeholder="e.g. Carrots"
+                                    placeholder={t("reqFormCropNamePh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.cropName}
                                     onChange={(e) => setFormData({...formData, cropName: e.target.value})}
@@ -146,12 +149,12 @@ export default function RequirementForm() {
 
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <Scale className="w-4 h-4" /> Quantity (kg)
+                                    <Scale className="w-4 h-4 shrink-0" /> {t("reqFormQuantity")}
                                 </Label>
                                 <Input 
                                     required
                                     type="number"
-                                    placeholder="e.g. 100"
+                                    placeholder={t("reqFormQuantityPh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.quantity}
                                     maxLength={10}
@@ -161,12 +164,12 @@ export default function RequirementForm() {
 
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <Banknote className="w-4 h-4" /> Target Unit Price (LKR)
+                                    <Banknote className="w-4 h-4 shrink-0" /> {t("reqFormPrice")}
                                 </Label>
                                 <Input 
                                     required
                                     type="number"
-                                    placeholder="e.g. 150"
+                                    placeholder={t("reqFormPricePh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.expectedUnitPrice}
                                     onChange={(e) => setFormData({...formData, expectedUnitPrice: e.target.value})}
@@ -175,7 +178,7 @@ export default function RequirementForm() {
 
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <CalendarDays className="w-4 h-4" /> Expected Receive Date
+                                    <CalendarDays className="w-4 h-4 shrink-0" /> {t("reqFormDate")}
                                 </Label>
                                 <Input 
                                     required
@@ -186,15 +189,15 @@ export default function RequirementForm() {
                                 />
                             </div>
 
-                            {/* --- NEW CONTACT NUMBER FIELD --- */}
+                            {/* --- CONTACT NUMBER FIELD --- */}
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <Phone className="w-4 h-4" /> Contact Number
+                                    <Phone className="w-4 h-4 shrink-0" /> {t("reqFormContact")}
                                 </Label>
                                 <Input 
                                     required
                                     type="tel"
-                                    placeholder="e.g. 0712345678"
+                                    placeholder={t("reqFormContactPh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.contactNumber}
                                     maxLength={10}
@@ -206,38 +209,38 @@ export default function RequirementForm() {
                         {/* RADIO BUTTONS - Positioned Above Description */}
                         <div className="space-y-4 pt-4 border-t border-gray-100">
                             <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <Truck className="w-4 h-4" /> Fulfillment Method
+                                <Truck className="w-4 h-4 shrink-0" /> {t("reqFormMethod")}
                             </Label>
-                            <div className="flex gap-8 items-center bg-gray-50 p-4 rounded-2xl">
+                            <div className="flex flex-wrap gap-8 items-center bg-gray-50 p-4 rounded-2xl">
                                 <label className="flex items-center gap-3 cursor-pointer group">
-                                    <div className="relative flex items-center justify-center">
+                                    <div className="relative flex items-center justify-center shrink-0">
                                         <input 
                                             type="radio" 
                                             name="deliveryMethod"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all shrink-0"
                                             checked={deliveryMethod === "PICKUP"}
                                             onChange={() => setDeliveryMethod("PICKUP")}
                                         />
                                         <div className="absolute h-2.5 w-2.5 rounded-full bg-[#03230F] opacity-0 peer-checked:opacity-100 transition-opacity" />
                                     </div>
                                     <span className="text-sm font-bold text-gray-600 peer-checked:text-[#03230F] flex items-center gap-2">
-                                        <Store className="w-4 h-4" /> I will Pickup
+                                        <Store className="w-4 h-4 shrink-0" /> {t("reqFormPickup")}
                                     </span>
                                 </label>
 
                                 <label className="flex items-center gap-3 cursor-pointer group">
-                                    <div className="relative flex items-center justify-center">
+                                    <div className="relative flex items-center justify-center shrink-0">
                                         <input 
                                             type="radio" 
                                             name="deliveryMethod"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 checked:border-[#03230F] transition-all shrink-0"
                                             checked={deliveryMethod === "DELIVERY"}
                                             onChange={() => setDeliveryMethod("DELIVERY")}
                                         />
                                         <div className="absolute h-2.5 w-2.5 rounded-full bg-[#03230F] opacity-0 peer-checked:opacity-100 transition-opacity" />
                                     </div>
                                     <span className="text-sm font-bold text-gray-600 peer-checked:text-[#03230F] flex items-center gap-2">
-                                        <Truck className="w-4 h-4" /> Need Delivery
+                                        <Truck className="w-4 h-4 shrink-0" /> {t("reqFormDelivery")}
                                     </span>
                                 </label>
                             </div>
@@ -246,11 +249,11 @@ export default function RequirementForm() {
                         {/* Requirement Description */}
                         <div className="space-y-3">
                             <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                <FileText className="w-4 h-4" /> Requirement Description
+                                <FileText className="w-4 h-4 shrink-0" /> {t("reqFormDesc")}
                             </Label>
                             <Textarea 
                                 required
-                                placeholder="Provide details about quality standards, variety, or specific packaging needs..."
+                                placeholder={t("reqFormDescPh")}
                                 className="rounded-xl border-gray-200 bg-gray-50/50 min-h-[100px] focus:border-[#EEC044] focus:ring-0 transition-all font-medium"
                                 value={formData.description}
                                 onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -261,7 +264,7 @@ export default function RequirementForm() {
                         {deliveryMethod === "DELIVERY" && (
                             <div className="space-y-3 animate-in slide-in-from-top duration-500">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <MapPin className="w-4 h-4" /> Set Delivery Location
+                                    <MapPin className="w-4 h-4 shrink-0" /> {t("reqFormSetLoc")}
                                 </Label>
                                 <div className="rounded-2xl border-2 border-gray-100 p-4 bg-gray-50/30">
                                     <LocationPicker 
@@ -280,17 +283,17 @@ export default function RequirementForm() {
                             <Button 
                                 type="submit" 
                                 disabled={loading}
-                                className="flex bg-[#03230F] hover:bg-[#03230F]/90 text-white py-5 px-10 rounded-xl text-sm font-semibold shadow-xl transition-all active:scale-[0.98] gap-3"
+                                className="flex bg-[#03230F] hover:bg-[#03230F]/90 text-white h-auto py-5 px-10 rounded-xl text-sm font-semibold shadow-xl transition-all active:scale-[0.98] gap-3 flex-1 sm:flex-none"
                             >
-                                {loading ? <Loader2 className="animate-spin" /> : "Publish Need"}
+                                {loading ? <Loader2 className="animate-spin shrink-0" /> : t("reqFormPublishBtn")}
                             </Button>
                             <Button 
                                 type="button"
                                 variant="outline"
                                 onClick={() => router.back()}
-                                className="bg-gray-100 border-none text-gray-600 font-bold py-5 px-8 rounded-xl hover:bg-gray-200 transition-all uppercase tracking-widest"
+                                className="bg-gray-100 border-none text-gray-600 font-bold h-auto py-5 px-8 rounded-xl hover:bg-gray-200 transition-all uppercase tracking-widest flex-1 sm:flex-none"
                             >
-                                Cancel
+                                {t("commonCancel")}
                             </Button>
                         </div>
                     </form>

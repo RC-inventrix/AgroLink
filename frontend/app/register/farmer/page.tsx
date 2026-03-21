@@ -1,13 +1,15 @@
-/* fileName: page.tsx */
 "use client"
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { X, Check, AlertCircle, ShieldCheck } from "lucide-react"
 import LocationPicker from "@/components/LocationPicker"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 export default function FarmerRegistration() {
     const router = useRouter()
+    const { t } = useLanguage() // Initialized the hook
+
     const [formData, setFormData] = useState({
         businessName: "",
         location: {
@@ -39,10 +41,10 @@ export default function FarmerRegistration() {
 
     useEffect(() => {
         if (!sessionStorage.getItem("registerDataStep1")) {
-            setNotification({ message: "Please fill step 1 first.", type: 'error' });
+            setNotification({ message: t("authFillStep1First"), type: 'error' });
             setTimeout(() => router.push("/register"), 1500);
         }
-    }, [router])
+    }, [router, t])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -58,7 +60,7 @@ export default function FarmerRegistration() {
 
         // Basic validation before showing modal
         if (!formData.businessName || !formData.location.streetAddress) {
-            setNotification({ message: "Please fill in all required fields.", type: 'error' });
+            setNotification({ message: t("authFillRequiredFields"), type: 'error' });
             return;
         }
 
@@ -94,7 +96,7 @@ export default function FarmerRegistration() {
             })
 
             if (response.ok) {
-                setNotification({ message: "Registration completed successfully! Welcome to AgroLink.", type: 'success' });
+                setNotification({ message: t("authFarmerRegistrationSuccess"), type: 'success' });
                 sessionStorage.removeItem("registerDataStep1")
                 setShowGuidelinesModal(false)
 
@@ -103,7 +105,7 @@ export default function FarmerRegistration() {
                 }, 2000);
             } else {
                 const msg = await response.text()
-                setNotification({ message: "Registration failed: " + msg, type: 'error' });
+                setNotification({ message: t("authRegistrationFailedLowerPrefix") + msg, type: 'error' });
                 setShowGuidelinesModal(false)
             }
         } catch (error: any) {
@@ -111,11 +113,11 @@ export default function FarmerRegistration() {
 
             if (error.message === "Failed to fetch") {
                 setNotification({
-                    message: "Server error occurred. Cannot reach server. Please check your connection.",
+                    message: t("authServerUnreachable"),
                     type: 'error'
                 });
             } else {
-                setNotification({ message: "Invalid input data: " + error.message, type: 'error' });
+                setNotification({ message: t("authInvalidInputPrefix") + error.message, type: 'error' });
             }
             setShowGuidelinesModal(false)
         } finally {
@@ -135,9 +137,9 @@ export default function FarmerRegistration() {
                 }`}>
                     <div className="flex items-center gap-3">
                         {notification.type === 'success' ? (
-                            <Check className="w-5 h-5 text-green-400" />
+                            <Check className="w-5 h-5 text-green-400 shrink-0" />
                         ) : (
-                            <AlertCircle className="w-5 h-5 text-red-400" />
+                            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
                         )}
                         <p className="font-medium pr-4">{notification.message}</p>
                     </div>
@@ -158,62 +160,63 @@ export default function FarmerRegistration() {
                         {/* Modal Header */}
                         <div className="p-6 bg-gray-50 border-b border-gray-100 flex items-center gap-3 shrink-0">
                             <div className="p-2 bg-[#03230F]/10 rounded-lg">
-                                <ShieldCheck className="w-6 h-6 text-[#03230F]" />
+                                <ShieldCheck className="w-6 h-6 text-[#03230F] shrink-0" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-[#03230F]">AgroLink Community Guidelines</h2>
-                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">Safety & Trust Rules</p>
+                                <h2 className="text-xl font-bold text-[#03230F]">{t("authGuidelinesTitle")}</h2>
+                                <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">{t("authGuidelinesSubtitle")}</p>
                             </div>
                         </div>
 
                         {/* Modal Body (Scrollable) */}
                         <div className="p-6 overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <p className="text-sm text-gray-600 mb-6 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                To ensure a safe and profitable environment for everyone, please read and acknowledge our community rules before finalizing your account.
+                                {t("authGuidelinesIntro")}
                             </p>
 
                             <ul className="space-y-5">
-
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🤝</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">1. Trade with Verified Users</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">For your safety, prioritize contacting and dealing with users who have good reputation among the community while we are developing our highly accurate user verification system.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline1Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline1Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
-                                    <span className="text-2xl leading-none">💬</span>
+                                    <span className="text-2xl leading-none">📸</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">2. Communicate & Request Proof</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always use the in-app chat to communicate. Ask for real-time images and confirm product details before finalizing any orders.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline2Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline2Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">📍</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">3. Shop Local to Save</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">You and the seller/buyer are responsible for coordinating delivery. Deal locally to minimize travel time and delivery costs!</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline3Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline3Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">💵</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">4. Cash on Delivery (COD) Only</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">While we are developing a highly secure online payment gateway, <strong>all platform transactions are strictly Cash on Delivery</strong>. Do not send money online.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline4Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">
+                                            {t("authGuideline4DescPrefix")} <strong>{t("authGuideline4DescStrong")}</strong>. {t("authGuideline4DescSuffix")}
+                                        </span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">⭐</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">5. Check Ratings</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Always review the ratings and feedback of a user before agreeing to a trade.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline5Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline5Desc")}</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <span className="text-2xl leading-none">🚩</span>
                                     <div>
-                                        <strong className="text-gray-900 block mb-0.5">6. Report Suspicious Activity</strong>
-                                        <span className="text-gray-600 text-sm leading-relaxed">Help us keep AgroLink safe! Use the "Report" button immediately if you encounter fraud, fake items, or unfair behavior.</span>
+                                        <strong className="text-gray-900 block mb-0.5">{t("authGuideline6Title")}</strong>
+                                        <span className="text-gray-600 text-sm leading-relaxed">{t("authGuideline6Desc")}</span>
                                     </div>
                                 </li>
                             </ul>
@@ -227,21 +230,21 @@ export default function FarmerRegistration() {
                                 disabled={isLoading}
                                 className="px-6 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
                             >
-                                Cancel
+                                {t("commonCancel")}
                             </button>
                             <button
                                 type="button"
                                 onClick={confirmRegistration}
                                 disabled={isLoading}
-                                className="px-6 py-3 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-lg hover:bg-[#03230F]/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center min-w-[200px]"
+                                className="px-6 py-3 bg-[#03230F] text-[#EEC044] font-bold rounded-xl shadow-lg hover:bg-[#03230F]/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center min-w-[200px] h-auto"
                             >
                                 {isLoading ? (
                                     <span className="flex items-center gap-2">
-                                        <div className="w-5 h-5 border-2 border-[#EEC044] border-t-transparent rounded-full animate-spin"></div>
-                                        Registering...
+                                        <div className="w-5 h-5 border-2 border-[#EEC044] border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                        {t("authRegistering")}
                                     </span>
                                 ) : (
-                                    "I Acknowledge & Register"
+                                    t("authAcknowledgeAndRegister")
                                 )}
                             </button>
                         </div>
@@ -253,15 +256,14 @@ export default function FarmerRegistration() {
                 <div className="w-full lg:w-1/2 flex flex-col relative bg-[#03230F] bg-opacity-90">
                     <div className="relative z-10 flex flex-col px-8 py-10 md:px-12 max-w-md mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#EEC044] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-yellow-400">
                         <div className="mb-6">
-                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">Registration</h1>
-                            <p className="text-[#EEC044] text-sm font-medium tracking-wide">Step 2: Farm Details</p>
+                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-1 leading-tight">{t("authStep1Title")}</h1>
+                            <p className="text-[#EEC044] text-sm font-medium tracking-wide">{t("authFarmerStep2Subtitle")}</p>
                         </div>
 
-                        {/* Note: handleSubmit now intercepts the form via handleInitialSubmit */}
                         <form onSubmit={handleInitialSubmit} className="flex flex-col space-y-4 w-full">
                             <div className="space-y-1">
-                                <label className="text-white/70 text-xs font-semibold ml-1">Farm/Business Name</label>
-                                <input type="text" name="businessName" placeholder="e.g. Green Valley Farm" onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
+                                <label className="text-white/70 text-xs font-semibold ml-1">{t("authFarmBusinessName")}</label>
+                                <input type="text" name="businessName" placeholder={t("authFarmBusinessPlaceholder")} onChange={handleInputChange} className="w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#EEC044] transition-all" required />
                             </div>
 
                             {/* Location Picker */}
@@ -271,7 +273,7 @@ export default function FarmerRegistration() {
                                 variant="dark"
                                 showStreetAddress={true}
                                 required={true}
-                                label="Farm Location"
+                                label={t("authFarmLocation")}
                             />
 
                             <button
@@ -279,7 +281,7 @@ export default function FarmerRegistration() {
                                 disabled={isLoading || showGuidelinesModal}
                                 className="w-full py-4 px-5 mt-4 bg-[#EEC044] text-[#03230F] font-bold rounded-xl shadow-lg hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Complete Registration
+                                {t("authCompleteRegistration")}
                             </button>
                         </form>
                     </div>

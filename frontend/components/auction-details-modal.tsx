@@ -1,4 +1,3 @@
-/* fileName: auction-details-modal.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, Clock, TrendingUp, Calendar, User, Loader2, Truck, Gavel, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -29,6 +29,7 @@ export function AuctionDetailsModal({
                                         onClose,
                                         onUpdate,
                                     }: AuctionDetailsModalProps) {
+    const { t } = useLanguage() // Initialized the hook
     const [timeLeft, setTimeLeft] = useState("")
     const [newReservePrice, setNewReservePrice] = useState("")
 
@@ -78,7 +79,7 @@ export function AuctionDetailsModal({
         const interval = setInterval(() => {
             const diff = new Date(auction.endTime).getTime() - new Date().getTime()
             if (diff <= 0) {
-                setTimeLeft("Ended")
+                setTimeLeft(t("auctionEnded")) // Reused from previous key
                 clearInterval(interval)
                 return
             }
@@ -86,11 +87,11 @@ export function AuctionDetailsModal({
             const d = Math.floor(diff / (1000 * 60 * 60 * 24))
             const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
             const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-            setTimeLeft(d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`)
+            setTimeLeft(d > 0 ? `${d}${t("auctionTimeDay")} ${h}${t("auctionTimeHour")}` : `${h}${t("auctionTimeHour")} ${m}${t("auctionTimeMin")}`)
         }, 1000)
 
         return () => clearInterval(interval)
-    }, [auction?.endTime])
+    }, [auction?.endTime, t])
 
     if (!isOpen || !auction) return null
 
@@ -112,14 +113,14 @@ export function AuctionDetailsModal({
                 }),
             })
             if (res.ok) {
-                toast.success("Auction time updated successfully")
+                toast.success(t("auctionModalTimeUpdated"))
                 onUpdate()
             } else {
                 const errData = await res.text()
-                setError(errData || "Failed to update time.")
+                setError(errData || t("auctionModalTimeFailed"))
             }
         } catch (e: any) {
-            setError("Network error occurred.")
+            setError(t("auctionModalNetworkError"))
         } finally {
             setIsUpdatingTime(false)
         }
@@ -138,15 +139,15 @@ export function AuctionDetailsModal({
                 body: JSON.stringify({ reservePrice: parseFloat(newReservePrice) }),
             })
             if (res.ok) {
-                toast.success("Reserve price updated successfully")
+                toast.success(t("auctionModalReserveUpdated"))
                 setNewReservePrice("")
                 onUpdate()
             } else {
                 const errData = await res.text()
-                setError(errData || "Failed to update reserve price.")
+                setError(errData || t("auctionModalReserveFailed"))
             }
         } catch (e: any) {
-            setError("Network error occurred.")
+            setError(t("auctionModalNetworkError"))
         } finally {
             setIsUpdatingReserve(false)
         }
@@ -161,14 +162,14 @@ export function AuctionDetailsModal({
                 headers: { Authorization: `Bearer ${token}` },
             })
             if (res.ok) {
-                toast.success("Auction ended and winner selected!")
+                toast.success(t("auctionModalEndedEarly"))
                 onUpdate()
             } else {
                 const errData = await res.text()
-                setError(errData || "Failed to end auction.")
+                setError(errData || t("auctionModalEndFailed"))
             }
         } catch (e: any) {
-            setError("Network error occurred.")
+            setError(t("auctionModalNetworkError"))
         } finally {
             setIsEndingAuction(false)
         }
@@ -183,14 +184,14 @@ export function AuctionDetailsModal({
                 headers: { Authorization: `Bearer ${token}` },
             })
             if (res.ok) {
-                toast.success("Auction cancelled successfully")
+                toast.success(t("auctionModalCancelled"))
                 onUpdate()
             } else {
                 const errData = await res.text()
-                setError(errData || "Failed to cancel auction.")
+                setError(errData || t("auctionModalCancelFailed"))
             }
         } catch (e: any) {
-            setError("Network error occurred.")
+            setError(t("auctionModalNetworkError"))
         } finally {
             setIsCancelling(false)
         }
@@ -216,12 +217,12 @@ export function AuctionDetailsModal({
             <DialogContent className="!max-w-[1200px] w-[95vw] md:w-[90vw] p-0 overflow-hidden bg-white border-none rounded-2xl shadow-2xl">
                 {/* Header */}
                 <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center pr-10">
                         <DialogTitle className="text-xl font-bold text-[#03230F] flex items-center gap-2">
-                            <Gavel className="w-5 h-5 text-[#D4A017]" />
+                            <Gavel className="w-5 h-5 text-[#D4A017] shrink-0" />
                             {auction.productName}
                         </DialogTitle>
-                        <Badge className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 ${
+                        <Badge className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 h-auto ${
                             isCompleted ? "bg-green-100 text-green-700 hover:bg-green-200" :
                                 isCancelled ? "bg-red-100 text-red-700 hover:bg-red-200" :
                                     isDraft ? "bg-gray-100 text-gray-700 hover:bg-gray-200" :
@@ -251,16 +252,16 @@ export function AuctionDetailsModal({
                             </div>
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Badge variant="secondary" className="bg-gray-100 px-3 py-1 text-sm">{auction.productQuantity} kg</Badge>
+                                    <Badge variant="secondary" className="bg-gray-100 px-3 py-1 text-sm h-auto">{auction.productQuantity} {t("purchaseKgUnit")}</Badge>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Clock className="w-4 h-4 text-gray-400" />
+                                    <Clock className="w-4 h-4 text-gray-400 shrink-0" />
                                     <span className="font-medium text-orange-600 text-base">{timeLeft}</span>
                                 </div>
                                 {auction.isDeliveryAvailable && (
                                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <Truck className="w-4 h-4 text-green-600" />
-                                        <span className="text-base">Delivery available</span>
+                                        <Truck className="w-4 h-4 text-green-600 shrink-0" />
+                                        <span className="text-base">{t("auctionDeliveryAvailable")}</span>
                                     </div>
                                 )}
                             </div>
@@ -268,19 +269,19 @@ export function AuctionDetailsModal({
 
                         {/* Prices */}
                         <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 space-y-5">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Starting Price</span>
-                                <span className="font-bold text-lg text-gray-900">Rs. {formatCurrency(auction.startingPrice)}</span>
+                            <div className="flex justify-between items-center gap-4">
+                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t("auctionModalStartingPrice")}</span>
+                                <span className="font-bold text-lg text-gray-900 shrink-0">Rs. {formatCurrency(auction.startingPrice)}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Reserve Price</span>
-                                <span className="font-bold text-lg text-gray-900">
-                                    {auction.reservePrice ? `Rs. ${formatCurrency(auction.reservePrice)}` : "Not Set"}
+                            <div className="flex justify-between items-center gap-4">
+                                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t("auctionModalReservePrice")}</span>
+                                <span className="font-bold text-lg text-gray-900 shrink-0">
+                                    {auction.reservePrice ? `Rs. ${formatCurrency(auction.reservePrice)}` : t("auctionNotSet")}
                                 </span>
                             </div>
-                            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                                <span className="text-sm font-bold text-[#D4A017] uppercase tracking-wider">Highest Bid</span>
-                                <span className="text-2xl font-black text-[#D4A017]">
+                            <div className="flex justify-between items-center pt-4 border-t border-gray-200 gap-4">
+                                <span className="text-sm font-bold text-[#D4A017] uppercase tracking-wider">{t("auctionModalHighestBid")}</span>
+                                <span className="text-2xl font-black text-[#D4A017] shrink-0">
                                     Rs. {formatCurrency(detailedAuction?.currentHighestBidAmount || auction.currentHighestBidAmount || auction.startingPrice)}
                                 </span>
                             </div>
@@ -288,30 +289,30 @@ export function AuctionDetailsModal({
 
                         {/* LIVE BID HISTORY */}
                         <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col max-h-[350px]">
-                            <h4 className="text-sm font-bold uppercase text-blue-600 tracking-wider mb-4">Live Bid History</h4>
+                            <h4 className="text-sm font-bold uppercase text-blue-600 tracking-wider mb-4">{t("auctionModalLiveBidHistory")}</h4>
                             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                                 {loadingBids ? (
                                     <div className="flex flex-col items-center justify-center py-6 text-blue-500">
                                         <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                                        <p className="text-sm font-medium">Fetching bids...</p>
+                                        <p className="text-sm font-medium">{t("auctionModalFetchingBids")}</p>
                                     </div>
                                 ) : bids.length > 0 ? (
                                     bids.map((bid: any, idx: number) => (
                                         <div key={idx} className={`flex justify-between items-center text-base p-3 rounded-lg ${idx === 0 ? "bg-white shadow-md font-bold border border-blue-200" : "bg-white/60 text-gray-700 font-medium"}`}>
                                             <div className="flex items-center gap-3">
-                                                {idx === 0 && <span className="text-[11px] bg-[#D4A017] text-white px-2 py-1 rounded uppercase font-black tracking-widest">Top</span>}
+                                                {idx === 0 && <span className="text-[11px] bg-[#D4A017] text-white px-2 py-1 h-auto rounded uppercase font-black tracking-widest">{t("auctionModalTopBid")}</span>}
                                                 <span className="flex items-center gap-2">
-                                                    <User className="w-4 h-4 text-gray-400" />
-                                                    {bid.bidderName || `Bidder #${bid.bidderId}`}
+                                                    <User className="w-4 h-4 text-gray-400 shrink-0" />
+                                                    {bid.bidderName || `${t("auctionModalBidder")}${bid.bidderId}`}
                                                 </span>
                                             </div>
-                                            <span className={idx === 0 ? "text-[#03230F] font-black" : ""}>Rs. {formatCurrency(bid.bidAmount)}</span>
+                                            <span className={idx === 0 ? "text-[#03230F] font-black shrink-0" : "shrink-0"}>Rs. {formatCurrency(bid.bidAmount)}</span>
                                         </div>
                                     ))
                                 ) : (
                                     <div className="text-center py-8">
                                         <AlertCircle className="w-10 h-10 text-blue-300 mx-auto mb-3" />
-                                        <p className="text-sm font-medium text-blue-500 italic">No bids have been placed for this auction yet.</p>
+                                        <p className="text-sm font-medium text-blue-500 italic">{t("auctionModalNoBids")}</p>
                                     </div>
                                 )}
                             </div>
@@ -324,14 +325,14 @@ export function AuctionDetailsModal({
                         {(isDraft || isActive) && (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm">
                                 <h4 className="text-base font-bold flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3">
-                                    <Calendar className="w-5 h-5 text-[#D4A017]" />
-                                    Edit Auction Time
+                                    <Calendar className="w-5 h-5 text-[#D4A017] shrink-0" />
+                                    {t("auctionModalEditTime")}
                                 </h4>
 
                                 <div className="space-y-4">
                                     {isDraft && (
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("auctionModalStartTime")}</label>
                                             <Input
                                                 type="datetime-local"
                                                 value={editStartTime}
@@ -341,7 +342,7 @@ export function AuctionDetailsModal({
                                         </div>
                                     )}
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time</label>
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("auctionModalEndTime")}</label>
                                         <Input
                                             type="datetime-local"
                                             value={editEndTime}
@@ -352,9 +353,9 @@ export function AuctionDetailsModal({
                                     <Button
                                         onClick={handleUpdateTime}
                                         disabled={isUpdatingTime}
-                                        className="w-full h-10 text-sm bg-gray-900 text-white hover:bg-gray-800"
+                                        className="w-full h-auto py-2.5 text-sm bg-gray-900 text-white hover:bg-gray-800"
                                     >
-                                        {isUpdatingTime ? "Saving..." : "Update Time"}
+                                        {isUpdatingTime ? t("auctionModalSaving") : t("auctionModalUpdateTime")}
                                     </Button>
                                 </div>
                             </div>
@@ -363,13 +364,13 @@ export function AuctionDetailsModal({
                         {(isActive || isDraft) && (
                             <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 shadow-sm">
                                 <h4 className="text-base font-bold flex items-center gap-2 text-gray-900 border-b border-gray-100 pb-3">
-                                    <TrendingUp className="w-5 h-5 text-[#D4A017]" />
-                                    Lower Reserve Price
+                                    <TrendingUp className="w-5 h-5 text-[#D4A017] shrink-0" />
+                                    {t("auctionModalLowerReserve")}
                                 </h4>
                                 <div className="flex gap-3">
                                     <Input
                                         type="number"
-                                        placeholder="New minimum..."
+                                        placeholder={t("auctionModalNewMin")}
                                         value={newReservePrice}
                                         onChange={(e) => setNewReservePrice(e.target.value)}
                                         className="h-10 text-sm flex-1"
@@ -377,29 +378,29 @@ export function AuctionDetailsModal({
                                     <Button
                                         onClick={handleUpdateReserve}
                                         disabled={isUpdatingReserve || !newReservePrice}
-                                        className="h-10 text-sm px-8 bg-gray-900 text-white hover:bg-gray-800"
+                                        className="h-auto py-2 text-sm px-8 bg-gray-900 text-white hover:bg-gray-800"
                                     >
-                                        {isUpdatingReserve ? "..." : "Save"}
+                                        {isUpdatingReserve ? "..." : t("auctionModalSave")}
                                     </Button>
                                 </div>
-                                <p className="text-xs text-gray-400 font-medium">Note: You can only lower the reserve price.</p>
+                                <p className="text-xs text-gray-400 font-medium">{t("auctionModalNoteLowerOnly")}</p>
                             </div>
                         )}
 
                         {(isActive || isDraft) && (
                             <div className="bg-red-50 border border-red-100 rounded-xl p-6 space-y-4">
                                 <h4 className="text-base font-bold flex items-center gap-2 text-red-900 mb-3">
-                                    <AlertCircle className="w-5 h-5" />
-                                    Danger Zone
+                                    <AlertCircle className="w-5 h-5 shrink-0" />
+                                    {t("auctionModalDangerZone")}
                                 </h4>
 
                                 {isActive && (
                                     <Button
                                         onClick={handleEndAuctionEarly}
                                         disabled={isEndingAuction || bids.length === 0}
-                                        className="w-full h-12 bg-[#D4A017] hover:bg-[#D4A017]/90 text-[#03230F] font-bold rounded-lg uppercase tracking-widest transition-all"
+                                        className="w-full h-auto py-3 bg-[#D4A017] hover:bg-[#D4A017]/90 text-[#03230F] font-bold rounded-lg uppercase tracking-widest transition-all"
                                     >
-                                        {isEndingAuction ? "Ending Auction..." : "Select Winner Now"}
+                                        {isEndingAuction ? t("auctionModalEnding") : t("auctionModalSelectWinner")}
                                     </Button>
                                 )}
 
@@ -407,9 +408,9 @@ export function AuctionDetailsModal({
                                     onClick={handleCancelAuction}
                                     disabled={isCancelling}
                                     variant="destructive"
-                                    className="w-full h-12 rounded-lg uppercase tracking-widest font-bold transition-all text-sm"
+                                    className="w-full h-auto py-3 rounded-lg uppercase tracking-widest font-bold transition-all text-sm"
                                 >
-                                    {isCancelling ? "Cancelling..." : isActive ? "Cancel Auction" : "Delete Draft"}
+                                    {isCancelling ? t("auctionModalCancelling") : isActive ? t("auctionModalCancelBtn") : t("auctionModalDeleteDraft")}
                                 </Button>
                             </div>
                         )}

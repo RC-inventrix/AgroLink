@@ -1,10 +1,10 @@
-/* fileName: auction-card.tsx */
 "use client"
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Truck, MapPin, Clock } from "lucide-react"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 interface AuctionCardProps {
     auction: any
@@ -12,6 +12,7 @@ interface AuctionCardProps {
 }
 
 export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
+    const { t } = useLanguage() // Initialized the hook
     const [timeLeft, setTimeLeft] = useState("")
 
     useEffect(() => {
@@ -23,7 +24,7 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
             const diff = endTime - now
 
             if (diff <= 0) {
-                setTimeLeft("Ended")
+                setTimeLeft(t("auctionEnded")) // Translated
                 return
             }
 
@@ -32,18 +33,18 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
             if (days > 0) {
-                setTimeLeft(`${days}d ${hours}h`)
+                setTimeLeft(`${days}${t("auctionTimeDay")} ${hours}${t("auctionTimeHour")}`)
             } else if (hours > 0) {
-                setTimeLeft(`${hours}h ${minutes}m`)
+                setTimeLeft(`${hours}${t("auctionTimeHour")} ${minutes}${t("auctionTimeMin")}`)
             } else {
-                setTimeLeft(`${minutes}m`)
+                setTimeLeft(`${minutes}${t("auctionTimeMin")}`)
             }
         }
 
         updateCountdown()
         const interval = setInterval(updateCountdown, 60000)
         return () => clearInterval(interval)
-    }, [auction.endTime])
+    }, [auction.endTime, t])
 
     // Status Logic
     const status = auction.status?.toUpperCase()
@@ -65,7 +66,10 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
     }
 
     const getStatusLabel = () => {
-        if (isCompleted) return soldAtReserve ? "Sold (Met Reserve)" : "Sold (Below Reserve)"
+        if (isCompleted) return soldAtReserve ? t("auctionSoldMetReserve") : t("auctionSoldBelowReserve")
+        if (isActive) return t("auctionStatusActive")
+        if (isDraft) return t("auctionStatusDraft")
+        if (isCancelled) return t("auctionStatusCancelled")
         return status?.toLowerCase()
     }
 
@@ -95,11 +99,11 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                             </h3>
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="bg-gray-50">
-                                    {auction.productQuantity} kg
+                                    {auction.productQuantity} {t("purchaseKgUnit")}
                                 </Badge>
                             </div>
                         </div>
-                        <Badge className={`text-[11px] font-bold uppercase tracking-widest border ${getBadgeStyle()}`}>
+                        <Badge className={`text-[11px] font-bold uppercase tracking-widest border px-3 py-1 h-auto ${getBadgeStyle()}`}>
                             {getStatusLabel()}
                         </Badge>
                     </div>
@@ -107,21 +111,21 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                     {/* Info Grid */}
                     <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-6 max-w-2xl">
                         <div className="space-y-1">
-                            <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">
-                                {isActive ? "Current Bid" : isCompleted ? "Sold Price" : "Starting Price"}
+                            <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">
+                                {isActive ? t("auctionCurrentBid") : isCompleted ? t("auctionSoldPrice") : t("auctionStartingPrice")}
                             </p>
-                            <p className="text-[18px] font-[700] text-[#D4A017]">
+                            <p className="text-[18px] font-[700] text-[#D4A017] whitespace-nowrap">
                                 Rs. {(auction.currentHighestBidAmount ?? auction.startingPrice ?? 0).toLocaleString()}
                             </p>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">
-                                Reserve Price
+                            <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">
+                                {t("auctionReservePrice")}
                             </p>
-                            <p className="text-[18px] font-[700] text-[#1A1F25]">
+                            <p className="text-[18px] font-[700] text-[#1A1F25] whitespace-nowrap">
                                 {auction.reservePrice
                                     ? `Rs. ${auction.reservePrice.toLocaleString()}`
-                                    : <span className="text-gray-400 text-sm font-normal">Not Set</span>
+                                    : <span className="text-gray-400 text-sm font-normal">{t("auctionNotSet")}</span>
                                 }
                             </p>
                         </div>
@@ -129,11 +133,11 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
                         {/* Time Left / Starts In */}
                         {(isActive || isDraft) && (
                             <div className="space-y-1">
-                                <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em]">
-                                    {isDraft ? "Starts In" : "Time Left"}
+                                <p className="text-[12px] text-[#A3ACBA] font-bold uppercase tracking-[0.05em] leading-tight min-h-[1.5rem]">
+                                    {isDraft ? t("auctionStartsIn") : t("auctionTimeLeft")}
                                 </p>
-                                <div className={`flex items-center gap-1.5 text-[18px] font-[700] ${isDraft ? "text-orange-600" : "text-[#03230F]"}`}>
-                                    <Clock className="w-5 h-5" />
+                                <div className={`flex items-center gap-1.5 text-[18px] font-[700] whitespace-nowrap ${isDraft ? "text-orange-600" : "text-[#03230F]"}`}>
+                                    <Clock className="w-5 h-5 shrink-0" />
                                     {timeLeft}
                                 </div>
                             </div>
@@ -142,14 +146,13 @@ export function AuctionCard({ auction, onOpen }: AuctionCardProps) {
 
                     {/* Delivery Info */}
                     {auction.isDeliveryAvailable && (
-                        <div className="mt-6 flex items-center gap-2 text-[13px] text-[#697386]">
-                            <Truck className="w-4 h-4 text-green-600" />
-                            <span className="font-medium">Delivery available</span>
+                        <div className="mt-6 flex flex-wrap items-center gap-2 text-[13px] text-[#697386]">
+                            <Truck className="w-4 h-4 text-green-600 shrink-0" />
+                            <span className="font-medium">{t("auctionDeliveryAvailable")}</span>
                             <span className="text-[#A3ACBA]">•</span>
-                            <MapPin className="w-4 h-4 text-gray-400" />
-                            {/* FIX: Now correctly displaying the complete address from the DB */}
-                            <span className="text-[#A3ACBA]">
-                                {auction.pickupAddress ? auction.pickupAddress : "Location N/A"}
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span className="text-[#A3ACBA] truncate max-w-[200px] sm:max-w-[300px]">
+                                {auction.pickupAddress ? auction.pickupAddress : t("auctionLocationNA")}
                             </span>
                         </div>
                     )}

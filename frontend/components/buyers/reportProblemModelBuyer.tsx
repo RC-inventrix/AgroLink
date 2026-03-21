@@ -6,19 +6,22 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { XCircle, Upload, AlertTriangle, X } from "lucide-react"
 import { toast } from "sonner"
+import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// Array updated to use translation keys instead of hardcoded labels
 const ISSUE_TYPES = [
-  { id: "FAKE_OR_MISLEADING_PRODUCE", label: "Fake or Misleading Produce" },
-  { id: "INCORRECT_WEIGHT_OR_QUANTITY", label: "Incorrect Weight/Quantity" },
-  { id: "UNFAIR_PRICE_MANIPULATION", label: "Unfair Price Manipulation" },
-  { id: "UNAVAILABLE_ON_PICKUP", label: "Unavailable on pickup." },
-  { id: "NON_DELIVERY_AFTER_PAYMENT", label: "Non-delivery After Order placed" },
-  { id: "OTHER", label: "Other Issues" },
+  { id: "FAKE_OR_MISLEADING_PRODUCE", key: "reportIssueFake" },
+  { id: "INCORRECT_WEIGHT_OR_QUANTITY", key: "reportIssueWeight" },
+  { id: "UNFAIR_PRICE_MANIPULATION", key: "reportIssuePrice" },
+  { id: "UNAVAILABLE_ON_PICKUP", key: "reportIssuePickup" },
+  { id: "NON_DELIVERY_AFTER_PAYMENT", key: "reportIssueNonDelivery" },
+  { id: "OTHER", key: "reportIssueOther" },
 ];
 
 export default function ReportProblemModal({ orderId, reporterId, reportedId, isOpen, onClose }: any) {
+  const { t } = useLanguage() // Initialized the hook
   const [selectedIssue, setSelectedIssue] = useState("")
   const [details, setDetails] = useState("")
   const [files, setFiles] = useState<File[]>([])
@@ -29,7 +32,7 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
   useEffect(() => {
     setMounted(true)
     if (isOpen) {
-      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      document.body.style.overflow = 'hidden'; 
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -59,7 +62,7 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
 
   const handleSubmit = async () => {
     if (!selectedIssue || !details) {
-      toast.error("Please select an issue and provide details.");
+      toast.error(t("reportErrMissing"));
       return;
     }
 
@@ -82,7 +85,7 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
       });
 
       if (response.ok) {
-        toast.success("Report submitted successfully!");
+        toast.success(t("reportSuccess"));
         onClose();
         setSelectedIssue("");
         setDetails("");
@@ -91,7 +94,7 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
         throw new Error("Failed to save report");
       }
     } catch (error) {
-      toast.error("Process failed. Please try again.");
+      toast.error(t("reportFailProcess"));
     } finally {
       setIsSubmitting(false);
     }
@@ -105,18 +108,18 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
         {/* HEADER */}
         <div className="p-5 flex justify-between items-center border-b border-gray-100 shrink-0 bg-white">
           <div className="flex items-center gap-2 text-red-600">
-            <AlertTriangle size={22} className="fill-red-50" />
-            <h3 className="font-bold text-lg text-gray-800">Report Issue</h3>
+            <AlertTriangle size={22} className="fill-red-50 shrink-0" />
+            <h3 className="font-bold text-lg text-gray-800">{t("reportTitle")}</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors">
-            <XCircle size={24} />
+          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors shrink-0">
+            <XCircle size={24} className="shrink-0" />
           </button>
         </div>
 
         {/* BODY - SCROLLABLE */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar bg-white">
           <div className="space-y-3">
-            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">Select Issue Type</p>
+            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">{t("reportSelectType")}</p>
             <div className="grid gap-2">
               {ISSUE_TYPES.map((issue) => (
                 <label 
@@ -132,10 +135,10 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
                     name="issueType" 
                     checked={selectedIssue === issue.id} 
                     onChange={() => setSelectedIssue(issue.id)} 
-                    className="w-4 h-4 accent-red-600" 
+                    className="w-4 h-4 accent-red-600 shrink-0" 
                   />
                   <span className={`text-sm font-semibold ${selectedIssue === issue.id ? 'text-red-700' : 'text-gray-700'}`}>
-                    {issue.label}
+                    {t(issue.key)}
                   </span>
                 </label>
               ))}
@@ -143,32 +146,32 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
           </div>
 
           <div className="space-y-2">
-            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">Description</p>
+            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">{t("reportDescLabel")}</p>
             <textarea 
               className="w-full p-4 border-2 border-gray-100 rounded-xl text-sm min-h-[120px] focus:border-red-500 focus:bg-white bg-gray-50/50 outline-none resize-none transition-all" 
-              placeholder="Tell us what happened..." 
+              placeholder={t("reportDescPlaceholder")} 
               value={details} 
               onChange={(e) => setDetails(e.target.value)} 
             />
           </div>
 
           <div className="space-y-3">
-            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">Evidence ({files.length})</p>
+            <p className="text-[11px] font-bold uppercase text-gray-500 tracking-wider">{t("reportEvidence")} ({files.length})</p>
             {files.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
                 {files.map((file, index) => (
                   <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-100 shadow-sm">
                     <img src={URL.createObjectURL(file)} alt="preview" className="object-cover w-full h-full" />
                     <button onClick={() => removeFile(index)} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full shadow-lg">
-                      <X size={10} />
+                      <X size={10} className="shrink-0" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
             <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-red-400 hover:bg-red-50/10 transition-all">
-              <Upload className="w-5 h-5 text-gray-400 mb-1" />
-              <span className="text-[11px] text-gray-500 font-bold uppercase">Upload Photos</span>
+              <Upload className="w-5 h-5 text-gray-400 mb-1 shrink-0" />
+              <span className="text-[11px] text-gray-500 font-bold uppercase text-center">{t("reportUploadPhotos")}</span>
               <input 
                 type="file" className="hidden" multiple accept="image/*" 
                 onChange={(e) => e.target.files && setFiles([...files, ...Array.from(e.target.files)])}
@@ -178,12 +181,12 @@ export default function ReportProblemModal({ orderId, reporterId, reportedId, is
         </div>
 
         {/* FOOTER */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50/50 flex gap-3 shrink-0">
-          <Button variant="outline" className="flex-1 h-12 font-bold rounded-xl" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+        <div className="p-5 border-t border-gray-100 bg-gray-50/50 flex flex-wrap gap-3 shrink-0">
+          <Button variant="outline" className="flex-1 h-auto py-3 font-bold rounded-xl" onClick={onClose} disabled={isSubmitting}>
+            {t("reportCancel")}
           </Button>
-          <Button className="flex-[2] h-12 bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-red-100" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Sending..." : "Submit Report"}
+          <Button className="flex-[2] h-auto py-3 bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-red-100" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? t("reportSending") : t("reportSubmitBtn")}
           </Button>
         </div>
       </Card>

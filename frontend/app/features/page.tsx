@@ -415,27 +415,12 @@ export default function FeaturesPage() {
                     </motion.div>
 
                     <motion.div
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto gap-6"
                         variants={staggerContainer}
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true, amount: 0.2 }}
                     >
-                        <motion.div variants={fadeUpVariant}>
-                            <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
-                                <CardHeader>
-                                    <div className="w-12 h-12 bg-[#004d2b] rounded-lg flex items-center justify-center mb-3">
-                                        <TrendingUp className="h-6 w-6 text-[#EEC044]" />
-                                    </div>
-                                    <CardTitle className="text-xl font-bold text-[#004d2b]">{t("featAiCard1Title")}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-foreground/70 leading-relaxed">
-                                        {t("featAiCard1Desc")}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
 
                         <motion.div variants={fadeUpVariant}>
                             <Card className="border-2 border-[#EEC044] bg-white h-full transition-colors hover:shadow-lg">
@@ -626,47 +611,27 @@ export default function FeaturesPage() {
                     </motion.div>
 
                     <motion.div
-                        className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+                        className="flex justify-center gap-8 max-w-4xl mx-auto"
                         variants={staggerContainer}
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true, amount: 0.2 }}
                     >
                         <motion.div variants={fadeUpVariant}>
-                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
+                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full text-center">
                                 <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard1Title")}</h3>
                                 <p className="text-white/80 mb-4 leading-relaxed">
                                     {t("featPayCard1Desc")}
                                 </p>
                                 <ul className="space-y-2 text-white/90">
-                                    <li className="flex items-center gap-2">
+                                    <li className="flex items-center justify-center gap-2">
                                         <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item1")}
                                     </li>
-                                    <li className="flex items-center gap-2">
+                                    <li className="flex items-center justify-center gap-2">
                                         <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item2")}
                                     </li>
-                                    <li className="flex items-center gap-2">
+                                    <li className="flex items-center justify-center gap-2">
                                         <span className="text-[#EEC044]">✓</span> {t("featPayCard1Item3")}
-                                    </li>
-                                </ul>
-                            </div>
-                        </motion.div>
-
-                        <motion.div variants={fadeUpVariant}>
-                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-[#EEC044]/30 h-full">
-                                <h3 className="text-2xl font-bold text-[#EEC044] mb-4">{t("featPayCard2Title")}</h3>
-                                <p className="text-white/80 mb-4 leading-relaxed">
-                                    {t("featPayCard2Desc")}
-                                </p>
-                                <ul className="space-y-2 text-white/90">
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item1")}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item2")}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-[#EEC044]">✓</span> {t("featPayCard2Item3")}
                                     </li>
                                 </ul>
                             </div>

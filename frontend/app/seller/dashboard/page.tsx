@@ -1,4 +1,3 @@
-/* fileName: page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -25,10 +24,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
 import SellerHeader from "@/components/headers/SellerHeader";
 import SellerSidebar from "./SellerSideBar";
 import Footer2 from "@/components/footer/Footer";
+import { useLanguage } from "@/context/LanguageContext"; // Added Translation Hook
 
 
 
@@ -37,6 +36,7 @@ const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
 
 
 export default function SellerDashboard() {
+    const { t } = useLanguage(); // Initialize hook
     const [navUnread, setNavUnread] = useState(0);
     const [userName, setUserName] = useState<string | null>(null);
     const [isBanned, setIsBanned] = useState<boolean>(false);
@@ -197,26 +197,26 @@ export default function SellerDashboard() {
                         <AlertCircle size={64} className="text-white animate-pulse" />
                     </div>
                     <div className="p-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Restricted</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("sellerDashBannedTitle")}</h2>
                         <p className="text-gray-600 mb-6 text-sm">
-                            Your account has been <strong>banned</strong> for policy violation. Please contact customer service for more information.
+                            {t("sellerDashBannedDesc")}
                         </p>
                         <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3 text-left border border-gray-100">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Support Contact</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">{t("sellerDashSupportContact")}</p>
                             <div className="flex items-center gap-3 text-gray-700">
-                                <Mail size={18} className="text-red-500" />
+                                <Mail size={18} className="text-red-500 shrink-0" />
                                 <span className="text-sm font-medium">agrolinkcustomerservice@gmail.com</span>
                             </div>
                             <div className="flex items-center gap-3 text-gray-700">
-                                <Phone size={18} className="text-red-500" />
+                                <Phone size={18} className="text-red-500 shrink-0" />
                                 <span className="text-sm font-medium">+94 11 234 5678</span>
                             </div>
                         </div>
                         <button
                             onClick={() => { sessionStorage.clear(); window.location.href = "/login"; }}
-                            className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
+                            className="w-full h-auto py-3 bg-gray-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
                         >
-                            <LogOut size={18} /> Logout from System
+                            <LogOut size={18} /> {t("sellerDashLogout")}
                         </button>
                     </div>
                 </div>
@@ -235,13 +235,13 @@ export default function SellerDashboard() {
                     <header className="bg-[#03230F] rounded-3xl p-8 mb-6 flex justify-between items-center shadow-lg">
                         <div>
                             <h1 className="text-white text-3xl font-bold flex items-center gap-2">
-                                Welcome back, {userName} 👋
+                                {t("sellerDashWelcome")} {userName} 👋
                             </h1>
-                            <p className="text-gray-300 mt-2">Manage your orders, bargains, and requests in one place</p>
+                            <p className="text-gray-300 mt-2">{t("sellerDashSubtitle")}</p>
                         </div>
                         <Link href="/VegetableList/farmer/add-product">
-                            <button className="bg-[#EEC044] text-[#03230F] px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#d9af3d] transition-all shadow-md">
-                                <Plus size={20} /> Add New Product
+                            <button className="bg-[#EEC044] text-[#03230F] h-auto px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#d9af3d] transition-all shadow-md">
+                                <Plus size={20} className="shrink-0" /> {t("sellerDashAddProduct")}
                             </button>
                         </Link>
                     </header>
@@ -276,31 +276,31 @@ export default function SellerDashboard() {
                                         <h4 className={`font-black text-xl mb-1.5 tracking-tight ${
                                             bannerState === "ALERT" ? "text-white" : "text-[#03230F]"
                                         }`}>
-                                            {bannerState === "ALERT" ? "Action Needed: Check Your Stock!" : "Inventory Up to Date"}
+                                            {bannerState === "ALERT" ? t("sellerDashStockAlertTitle") : t("sellerDashStockOkTitle")}
                                         </h4>
                                         <p className={`text-sm font-medium leading-relaxed max-w-3xl ${
                                             bannerState === "ALERT" ? "text-gray-300" : "text-gray-500"
                                         }`}>
                                             {bannerState === "ALERT"
-                                                ? "Don't miss out on potential sales! Ensure your fixed-price products are fully stocked. Click here to quickly adjust your available quantities."
-                                                : "Great job keeping your listings fresh. If you recently harvested more crops and need to update a product, click here to adjust your stock levels."}
+                                                ? t("sellerDashStockAlertDesc")
+                                                : t("sellerDashStockOkDesc")}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="mt-5 md:mt-0 relative z-10 shrink-0">
-                                    <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all group-hover:scale-105 shadow-sm ${
+                                    <span className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl h-auto text-sm font-bold transition-all group-hover:scale-105 shadow-sm ${
                                         bannerState === "ALERT"
                                             ? "bg-[#EEC044] text-[#03230F]"
                                             : "bg-green-50 text-green-700 border border-green-200"
                                     }`}>
-                                        {bannerState === "ALERT" ? "Update Quantities" : "Manage Stock"}
-                                        <ChevronRight className="w-4 h-4" />
+                                        {bannerState === "ALERT" ? t("sellerDashUpdateQuantities") : t("sellerDashManageStock")}
+                                        <ChevronRight className="w-4 h-4 shrink-0" />
                                     </span>
                                 </div>
                             </div>
                         </Link>
-                    )} {/* <-- FIX: This closing bracket was missing in your original code! */}
+                    )}
 
                     {/* --- 1. PRIVATE WARNINGS SECTION --- */}
                     {warnings.length > 0 && (
@@ -308,16 +308,16 @@ export default function SellerDashboard() {
                             {warnings.map((warn) => (
                                 <div key={warn.id} className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex justify-between items-center shadow-sm animate-in fade-in slide-in-from-left duration-300">
                                     <div className="flex items-center gap-4 text-red-800">
-                                        <div className="bg-red-100 p-2 rounded-full">
-                                                <Shield size={24} className="text-red-600" />
-                                            </div>
+                                        <div className="bg-red-100 p-2 rounded-full shrink-0">
+                                            <Shield size={24} className="text-red-600" />
+                                        </div>
                                         <div>
-                                            <p className="font-bold text-xs uppercase tracking-widest">Administrative Warning</p>
+                                            <p className="font-bold text-xs uppercase tracking-widest">{t("sellerDashAdminWarning")}</p>
                                             <p className="text-sm font-medium">{warn.message}</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-100" onClick={() => handleDismissWarning(warn.id)}>
-                                        Dismiss
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-100 h-auto py-2" onClick={() => handleDismissWarning(warn.id)}>
+                                        {t("sellerDashDismiss")}
                                     </Button>
                                 </div>
                             ))}
@@ -329,7 +329,7 @@ export default function SellerDashboard() {
                         <div className="relative mb-8 max-w-full">
                             <div className="flex items-center justify-between mb-3 px-2">
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                    <Megaphone size={14} /> System Announcements ({announcements.length})
+                                    <Megaphone size={14} className="shrink-0" /> {t("sellerDashAnnouncements")} ({announcements.length})
                                 </h3>
                                 <button onClick={() => setShowAnnouncements(false)} className="text-gray-400 hover:text-red-500 transition-colors">
                                     <X size={18} />
@@ -355,7 +355,7 @@ export default function SellerDashboard() {
                                                     <h4 className={`font-bold text-base truncate ${ann.priority === 'URGENT' ? 'text-red-700' : 'text-[#03230F]'}`}>
                                                         {ann.title}
                                                     </h4>
-                                                    <Badge variant="outline" className="text-[10px] bg-white/40 border-transparent whitespace-nowrap">
+                                                    <Badge variant="outline" className="text-[10px] bg-white/40 border-transparent whitespace-nowrap px-2 h-auto py-0.5">
                                                         {new Date(ann.createdAt).toLocaleDateString()}
                                                     </Badge>
                                                 </div>
@@ -379,10 +379,10 @@ export default function SellerDashboard() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <StatCard label="Total Revenue" value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`} Icon={Wallet} color="text-green-600" />
-                        <StatCard label="Pending Orders" value={analytics.totalPendingOrders} Icon={Package} highlight />
-                        <StatCard label="Active Listings" value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
-                        <StatCard label="Total Sold" value={analytics.totalCompletedOrders} Icon={TrendingUp} color="text-blue-500" />
+                        <StatCard label={t("sellerDashTotalRevenue")} value={`Rs. ${(analytics.totalCompletedIncome / 100).toLocaleString()}`} Icon={Wallet} color="text-green-600" />
+                        <StatCard label={t("sellerDashPendingOrders")} value={analytics.totalPendingOrders} Icon={Package} highlight />
+                        <StatCard label={t("sellerDashActiveListings")} value={analytics.activeListingsCount} Icon={Carrot} color="text-orange-500" />
+                        <StatCard label={t("sellerDashTotalSold")} value={analytics.totalCompletedOrders} Icon={TrendingUp} color="text-blue-500" />
                     </div>
 
                     {/* Main Content Layout */}
@@ -393,9 +393,9 @@ export default function SellerDashboard() {
                             {/* Pending Orders Section */}
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-bold text-gray-800 text-lg">Current Pending Orders</h3>
+                                    <h3 className="font-bold text-gray-800 text-lg">{t("sellerDashCurrentPendingOrders")}</h3>
                                     <Link href="/seller/orders" className="text-[#03230F] text-sm font-semibold flex items-center gap-1 hover:underline">
-                                        View All Orders <ChevronRight size={16} />
+                                        {t("sellerDashViewAllOrders")} <ChevronRight size={16} />
                                     </Link>
                                 </div>
 
@@ -404,17 +404,17 @@ export default function SellerDashboard() {
                                         pendingOrders.slice(0, 5).map((order) => (
                                             <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-md transition-all">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50">
+                                                    <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-50 shrink-0">
                                                         <Package className="text-[#03230F]" size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-gray-800 text-sm">Order #{order.id}</p>
-                                                        <p className="text-xs text-gray-500">{order.customerName || 'Standard Order'}</p>
+                                                        <p className="font-bold text-gray-800 text-sm">{t("sellerDashOrderHash")}{order.id}</p>
+                                                        <p className="text-xs text-gray-500">{order.customerName || t("sellerDashStandardOrder")}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-[#03230F] text-sm">Rs. {(order.amount / 100).toLocaleString()}</p>
-                                                    <Badge className="bg-yellow-100 text-yellow-700 text-[10px] uppercase font-bold border-none">
+                                                    <Badge className="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 h-auto uppercase font-bold border-none">
                                                         {order.status}
                                                     </Badge>
                                                 </div>
@@ -423,7 +423,7 @@ export default function SellerDashboard() {
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                                             <Package size={48} className="mb-2 opacity-20" />
-                                            <p>No pending orders to display</p>
+                                            <p>{t("sellerDashNoPendingOrders")}</p>
                                         </div>
                                     )}
                                 </div>
@@ -434,17 +434,17 @@ export default function SellerDashboard() {
                         <div className="space-y-8">
                             <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
                                 <div className="flex items-center gap-2 mb-6">
-                                    <Bell className="text-gray-400" size={20} />
-                                    <h3 className="font-bold text-gray-800">Notifications</h3>
+                                    <Bell className="text-gray-400 shrink-0" size={20} />
+                                    <h3 className="font-bold text-gray-800">{t("sellerDashNotifications")}</h3>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                                        <p className="text-sm font-medium text-gray-800">New question on 'Fresh Carrots'</p>
-                                        <span className="text-[11px] text-gray-400">2 mins ago</span>
+                                        <p className="text-sm font-medium text-gray-800">{t("sellerDashMockNotif1")}</p>
+                                        <span className="text-[11px] text-gray-400">{t("sellerDashMockTime1")}</span>
                                     </div>
                                     <div className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                                        <p className="text-sm font-medium text-gray-800">Order #0026 was paid</p>
-                                        <span className="text-[11px] text-gray-400">1 hour ago</span>
+                                        <p className="text-sm font-medium text-gray-800">{t("sellerDashMockNotif2")}</p>
+                                        <span className="text-[11px] text-gray-400">{t("sellerDashMockTime2")}</span>
                                     </div>
                                 </div>
                             </div>
@@ -472,6 +472,7 @@ function StatCard({ label, value, Icon, highlight, color }: { label: string, val
 
 // Helper Component: Updated CropRecommendationCard
 function CropRecommendationCard() {
+    const { t } = useLanguage(); // Translation Hook for Child Component
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -507,7 +508,7 @@ function CropRecommendationCard() {
 
     const handlePredict = async () => {
         if (!userLocation || !userLocation.latitude || !userLocation.longitude) {
-            setError("Location data is missing. Please update your profile with your location.");
+            setError(t("sellerDashErrNoLocation"));
             return;
         }
 
@@ -530,7 +531,7 @@ function CropRecommendationCard() {
             });
 
             if (!response.ok) {
-                setError("Failed to get crop prediction from AI model.");
+                setError(t("sellerDashErrPredictFail"));
                 return;
             }
 
@@ -538,7 +539,7 @@ function CropRecommendationCard() {
             // Assuming the Python API returns { "recommended_crop": "Rice" }
             setResult(data.recommended_crop || data.crop || "Unknown Crop");
         } catch (err: any) {
-            setError(err.message || "Something went wrong communicating with the AI. Please try again.");
+            setError(err.message || t("sellerDashErrUnknown"));
         } finally {
             setLoading(false);
         }
@@ -548,25 +549,25 @@ function CropRecommendationCard() {
         <div className="bg-white border border-gray-100 rounded-4xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                    <Sparkles className="text-[#EEC044]" size={20} />
-                    <h3 className="font-bold text-gray-800">AI Smart Insight</h3>
+                    <Sparkles className="text-[#EEC044] shrink-0" size={20} />
+                    <h3 className="font-bold text-gray-800">{t("sellerDashAiInsight")}</h3>
                 </div>
-                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">Powered by ML</span>
+                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 h-auto rounded-md">{t("sellerDashPoweredByMl")}</span>
             </div>
 
             {/* Displaying detected location instead of input fields */}
             <div className="bg-gray-50 rounded-2xl p-4 mb-5 border border-gray-100 flex justify-between items-center">
                 <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Detected Farm Location</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{t("sellerDashDetectedLocation")}</p>
                     {userLocation ? (
                         <p className="text-sm font-semibold text-[#03230F]">
                             {userLocation.city}, {userLocation.district} <br/>
                             <span className="text-xs font-normal text-gray-400">
-                                Lat: {userLocation.latitude} | Lon: {userLocation.longitude}
+                                {t("sellerDashLat")} {userLocation.latitude} | {t("sellerDashLon")} {userLocation.longitude}
                             </span>
                         </p>
                     ) : (
-                        <p className="text-sm text-gray-400">Loading location data...</p>
+                        <p className="text-sm text-gray-400">{t("sellerDashLoadingLocation")}</p>
                     )}
                 </div>
                 <div className="bg-white p-3 rounded-xl shadow-sm">
@@ -578,9 +579,9 @@ function CropRecommendationCard() {
                 <button
                     onClick={handlePredict}
                     disabled={loading || !userLocation}
-                    className="bg-[#03230F] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-[#03230F] h-auto text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#03230f]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                    {loading ? "Analyzing Soil & Weather..." : "Auto-Recommend Crop"}
+                    {loading ? t("sellerDashAnalyzing") : t("sellerDashAutoRecommend")}
                 </button>
             </div>
 
@@ -588,16 +589,16 @@ function CropRecommendationCard() {
                 <div className={`flex items-center gap-6 p-4 rounded-2xl transition-all ${error ? 'bg-red-50' : 'bg-green-50'}`}>
                     <div className="text-4xl">{error ? '⚠️' : '🌱'}</div>
                     <div>
-                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>{error ? 'Analysis Error' : `Best to grow: ${result}`}</h4>
-                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : "Based on your farm's exact location coordinates."}</p>
+                        <h4 className={`font-bold ${error ? 'text-red-700' : 'text-[#03230F]'}`}>{error ? t("sellerDashAnalysisError") : `${t("sellerDashBestToGrow")} ${result}`}</h4>
+                        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-600'}`}>{error ? error : t("sellerDashBasedOnLocation")}</p>
                     </div>
                 </div>
             ) : (
                 <div className="flex items-center gap-6 p-4 rounded-2xl bg-gray-50 border border-dashed border-gray-200">
                     <div className="text-4xl opacity-50">🤖</div>
                     <div>
-                        <h4 className="font-bold text-gray-500">Ready to Analyze</h4>
-                        <p className="text-sm text-gray-400">Click the button above to let our ML model analyze your location.</p>
+                        <h4 className="font-bold text-gray-500">{t("sellerDashReadyToAnalyze")}</h4>
+                        <p className="text-sm text-gray-400">{t("sellerDashClickToAnalyze")}</p>
                     </div>
                 </div>
             )}
