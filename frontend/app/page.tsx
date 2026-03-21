@@ -295,18 +295,6 @@ export default function AgroLinkHome() {
                                 </p>
                             </div>
                         </FadeIn>
-
-                        <FadeIn delay={600}>
-                            <div className="p-4 sm:p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-[#EEC044] hover:shadow-lg transition h-full">
-                                <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#EEC044] rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                                    <Leaf className="text-[#03230F] w-5 sm:w-6 h-5 sm:h-6" />
-                                </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-[#03230F] mb-2">{t("feat6Title")}</h3>
-                                <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                                    {t("feat6Desc")}
-                                </p>
-                            </div>
-                        </FadeIn>
                     </div>
                 </div>
             </section>

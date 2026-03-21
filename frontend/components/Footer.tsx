@@ -24,21 +24,7 @@ export default function Footer() {
                     />
                 </div>
 
-                <div>
-                    <h3 className="font-bold mb-2 text-[#EEC044]">{t("footerExploreTitle")}</h3>
-                    {/* Notice we re-use navAbout and navFeatures from earlier! */}
-                    <p className="hover:text-gray-300 cursor-pointer transition">{t("navAbout")}</p>
-                    <p className="hover:text-gray-300 cursor-pointer transition mt-2">{t("navFeatures")}</p>
-                    <p className="hover:text-gray-300 cursor-pointer transition mt-2">{t("footerMeetFarmers")}</p>
-                </div>
-
-                <div>
-                    <h3 className="font-bold mb-2 text-[#EEC044]">{t("footerNewsTitle")}</h3>
-                    <p className="hover:text-gray-300 cursor-pointer transition">{t("footerNewsItem1")}</p>
-                    <p className="hover:text-gray-300 cursor-pointer transition mt-2">{t("footerNewsItem2")}</p>
-                </div>
-
-                <div>
+                <div className="md:col-start-4">
                     <h3 className="font-bold mb-2 text-[#EEC044]">{t("footerContactTitle")}</h3>
                     {/* Phone and Email are kept hardcoded as they don't need translation */}
                     <p className="mt-2">📞 +94 70 322 4356</p>
