@@ -481,7 +481,7 @@ export default function VegetableForm() {
             <div className="max-w-4xl mx-auto px-6 py-12">
                 <div className="flex items-center justify-between mb-12">
                     <h1 className="text-4xl font-bold text-foreground">Add Vegetable Item</h1>
-                    <Button variant="outline" onClick={() => router.push('/seller/products')}>
+                    <Button variant="outline" onClick={() => router.push('/seller/my-products')}>
                         <Eye className="w-4 h-4 mr-2" /> My Products
                     </Button>
                 </div>

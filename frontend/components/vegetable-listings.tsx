@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Search, ChevronDown, Loader2, AlertCircle, MapPin, Filter } from "lucide-react"
+import { Search, ChevronDown, Loader2, AlertCircle, MapPin, Filter, RotateCcw } from "lucide-react"
 import VegetableCard from "./vegetable-card"
 import AuctionBidPopup from "./auction-bid-popup"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8083";
@@ -94,12 +94,14 @@ const SRI_LANKA_LOCATIONS: ProvinceMap = {
 };
 
 export default function VegetableListings() {
-    const { t } = useLanguage() // Initialized the hook
-    
+    const { t } = useLanguage()
+
     // Basic Filters
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState("All")
-    const [priceRange, setPriceRange] = useState([0, 50000])
+
+    // Set max price limit to 500
+    const [priceRange, setPriceRange] = useState([0, 2000])
 
     // Location Filters
     const [selectedProvince, setSelectedProvince] = useState("All")
@@ -183,8 +185,6 @@ export default function VegetableListings() {
                     pickupAddress: item.pickupAddress,
                     pickupLatitude: item.pickupLatitude,
                     pickupLongitude: item.pickupLongitude,
-
-                    // Auction Specifics
                     isAuction: true,
                     currentBid: item.currentHighestBidAmount,
                     startingPrice: item.startingPrice,
@@ -196,7 +196,6 @@ export default function VegetableListings() {
 
             } catch (err) {
                 console.error("Error loading data:", err);
-                // Storing translation key for error
                 setError("browseErrorDesc");
             } finally {
                 setLoading(false);
@@ -235,15 +234,48 @@ export default function VegetableListings() {
             const matchesCategory = selectedCategory === "All" || veg.category === selectedCategory || (veg.isAuction && selectedCategory === "All")
             const matchesPrice = veg.price1kg >= priceRange[0] && veg.price1kg <= priceRange[1]
 
-            // Location Match Logic (Gracefully checks string inclusion if the address exists)
+            // --- Enhanced Nested Location Match Logic ---
             const address = veg.pickupAddress?.toLowerCase() || "";
-            const matchesProvince = selectedProvince === "All" || address.includes(selectedProvince.toLowerCase())
-            const matchesDistrict = selectedDistrict === "All" || address.includes(selectedDistrict.toLowerCase())
-            const matchesCity = selectedCity === "All" || address.includes(selectedCity.toLowerCase())
+
+            let matchesProvince = selectedProvince === "All";
+            if (!matchesProvince) {
+                const districts = Object.keys(SRI_LANKA_LOCATIONS[selectedProvince] || {});
+                const citiesInProvince = districts.flatMap(d => SRI_LANKA_LOCATIONS[selectedProvince][d] || []);
+
+                // Matches if address contains Province OR any of its Districts OR any of its Cities
+                matchesProvince = address.includes(selectedProvince.toLowerCase()) ||
+                    districts.some(d => address.includes(d.toLowerCase())) ||
+                    citiesInProvince.some(c => address.includes(c.toLowerCase()));
+            }
+
+            let matchesDistrict = selectedDistrict === "All";
+            if (!matchesDistrict) {
+                const citiesInDistrict = SRI_LANKA_LOCATIONS[selectedProvince]?.[selectedDistrict] || [];
+
+                // Matches if address contains District OR any of its Cities
+                matchesDistrict = address.includes(selectedDistrict.toLowerCase()) ||
+                    citiesInDistrict.some(c => address.includes(c.toLowerCase()));
+            }
+
+            let matchesCity = selectedCity === "All";
+            if (!matchesCity) {
+                // Direct check for specific city
+                matchesCity = address.includes(selectedCity.toLowerCase());
+            }
 
             return matchesSearch && matchesCategory && matchesPrice && matchesProvince && matchesDistrict && matchesCity
         })
     }, [searchQuery, selectedCategory, priceRange, selectedProvince, selectedDistrict, selectedCity, vegetables])
+
+    // Reset Filters Function
+    const resetFilters = () => {
+        setSearchQuery("");
+        setSelectedCategory("All");
+        setSelectedProvince("All");
+        setSelectedDistrict("All");
+        setSelectedCity("All");
+        setPriceRange([0, 2000]);
+    }
 
     return (
         <div className="flex min-h-screen bg-[#F8F9FA]">
@@ -256,7 +288,6 @@ export default function VegetableListings() {
                 </div>
 
                 <div className="container mx-auto px-4 py-0">
-                    {/* --- UNIFIED SEARCH & FILTERS SECTION --- */}
                     <div className="bg-card rounded-xl p-6 mb-10 border border-border shadow-sm">
                         <div className="flex items-center gap-3 mb-6 border-b pb-4">
                             <Filter className="w-5 h-5 text-[#2d5016] shrink-0" />
@@ -309,7 +340,7 @@ export default function VegetableListings() {
                                     <SelectContent>
                                         <SelectItem value="All">{t("browseAllProv")}</SelectItem>
                                         {Object.keys(SRI_LANKA_LOCATIONS).map(prov => (
-                                            <SelectItem key={prov} value={prov}>{prov}{t("browseProvSuffix")}</SelectItem>
+                                            <SelectItem key={prov} value={prov}>{prov} {t("browseProvSuffix")}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -355,7 +386,8 @@ export default function VegetableListings() {
                             </div>
 
                             {/* 6. Price Range */}
-                            <div className="space-y-2 lg:col-span-3">
+                            {/* Adjusted col-span to make room for the Reset Button */}
+                            <div className="space-y-2 lg:col-span-2">
                                 <div className="flex items-center justify-between mb-2">
                                     <Label className="text-muted-foreground font-semibold">{t("browsePriceRange")}</Label>
                                     <span className="text-sm font-bold text-[#2d5016] bg-[#2d5016]/10 px-3 py-1 rounded-full">
@@ -364,11 +396,23 @@ export default function VegetableListings() {
                                 </div>
                                 <input
                                     type="range"
-                                    min="0" max="50000" step="100"
+                                    min="0" max="2000" step="10"
                                     value={priceRange[1]}
                                     onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
                                     className="w-full accent-[#2d5016]"
                                 />
+                            </div>
+
+                            {/* 7. Reset Filters Button */}
+                            <div className="space-y-2 flex items-end">
+                                <Button
+                                    onClick={resetFilters}
+                                    variant="outline"
+                                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-10"
+                                >
+                                    <RotateCcw className="w-4 h-4 mr-2 shrink-0" />
+                                    {t("browseClearFilters") || "Reset Filters"}
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -417,14 +461,7 @@ export default function VegetableListings() {
                                     <Button
                                         variant="outline"
                                         className="mt-6 h-auto py-2.5 px-6"
-                                        onClick={() => {
-                                            setSearchQuery("");
-                                            setSelectedCategory("All");
-                                            setSelectedProvince("All");
-                                            setSelectedDistrict("All");
-                                            setSelectedCity("All");
-                                            setPriceRange([0, 50000]);
-                                        }}
+                                        onClick={resetFilters}
                                     >
                                         {t("browseClearFilters")}
                                     </Button>
