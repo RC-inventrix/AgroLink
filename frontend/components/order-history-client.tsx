@@ -386,7 +386,13 @@ function OrderCardItem({ order, onRefresh }: { order: OrderItem, onRefresh: () =
                                         <AlertCircle size={12} className="mr-1.5 shrink-0" /> {t("orderHistReportProblem")}
                                     </Button>
                                 </div>
-                                <ReportProblemModalBuyer orderId={order.displayOrderId} isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
+                                <ReportProblemModalBuyer 
+  orderId={order.displayOrderId} 
+  reporterId={sessionStorage.getItem("id")} // The current user (Buyer)
+  reportedId={order.sellerId}              // The seller of this order
+  isOpen={showReportModal} 
+  onClose={() => setShowReportModal(false)} 
+/>
                             </div>
                         )}
                     </div>
