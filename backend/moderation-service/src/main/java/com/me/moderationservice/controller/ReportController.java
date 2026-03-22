@@ -3,6 +3,7 @@ package com.me.moderationservice.controller;
 import com.me.moderationservice.model.IssueType;
 import com.me.moderationservice.model.UserNotification;
 import com.me.moderationservice.model.UserReport;
+import com.me.moderationservice.repository.ReportRepository;
 import com.me.moderationservice.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportRepository reportRepository;
 
 
     @PostMapping("/user/report")
@@ -79,6 +81,18 @@ public class ReportController {
     public ResponseEntity<Void> markAsRead(@PathVariable Long notificationId) {
         reportService.markNotificationRead(notificationId);
         return ResponseEntity.ok().build();
+    }
+
+    // Inside ReportController.java
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
+        try {
+            // You'll need to add a deleteReport method in ReportService or use repo directly
+            reportRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
 }

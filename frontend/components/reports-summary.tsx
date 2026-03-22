@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, FileText, ShieldAlert, Filter, ExternalLink, Calendar } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock, Check, ArrowLeft, User, FileText, ShieldAlert, Filter, ExternalLink, Calendar, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +29,7 @@ interface Report {
   id: number
   reporter: string
   reportedUser: string
+  reportedId: number
   reason: string
   status: "pending" | "in-progress" | "resolved"
   date: string
@@ -111,6 +112,7 @@ export function ReportsSummary() {
           reportedUser: nameMap[r.reportedId] || `User #${r.reportedId}`,
           reason: r.issueType?.replaceAll("_", " ") ?? "Unknown",
           status: normalizeStatus(r.status),
+          reportedId: r.reportedId,
           date: formatDate(r.createdAt) || "",
           details: r.description ?? "",
           evidence: (r.evidenceUrls ?? []).filter(Boolean).map(String),
@@ -160,6 +162,29 @@ export function ReportsSummary() {
       alert(e?.message ?? "Resolve failed")
     }
   }
+
+  // --- NEW DELETE FUNCTION ---
+  const handleDeleteReport = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this report? This action cannot be undone.")) return;
+
+    try {
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/v1/moderation/delete/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      if (selectedReport?.id === id) setSelectedReport(null);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -212,7 +237,6 @@ export function ReportsSummary() {
                 <option value="">Select an action...</option>
                 <option value="WARNING_ISSUED">Warning Issued</option>
                 <option value="USER_BANNED">User Banned</option>
-                <option value="CONTENT_REMOVED">Content Removed</option>
                 <option value="NO_ACTION_NEEDED">No Action Needed</option>
               </select>
             </div>
@@ -241,9 +265,14 @@ export function ReportsSummary() {
 
       {selectedReport ? (
         <div className="space-y-6">
-          <Button variant="ghost" className="pl-0 mb-2" onClick={() => setSelectedReport(null)}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Reports List
-          </Button>
+          <div className="flex justify-between items-center">
+            <Button variant="ghost" className="pl-0 mb-2" onClick={() => setSelectedReport(null)}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Reports List
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => handleDeleteReport(selectedReport.id)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Delete Report
+            </Button>
+          </div>
 
           <Card className="border-border bg-card">
             <CardHeader className="border-b pb-4">
@@ -375,7 +404,6 @@ export function ReportsSummary() {
                         {report.riskLevel && <Badge className={getStatusColor(report.riskLevel)}>{report.riskLevel}</Badge>}
                       </div>
                       
-                      {/* DATE ADDED HERE */}
                       <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                          <span className="flex items-center gap-1.5">
                             <Calendar className="h-3.5 w-3.5" />
@@ -391,15 +419,25 @@ export function ReportsSummary() {
                     </div>
                     <div className="flex flex-col gap-2 ml-4">
                       <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>View Details</Button>
-                      {report.status !== "resolved" && (
+                      <div className="flex gap-2">
+                        {report.status !== "resolved" && (
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700 text-white" 
+                            onClick={() => { setResolvingId(report.id); setIsResolveDialogOpen(true); }}
+                          >
+                            <Check className="h-4 w-4 mr-1" /> Resolve
+                          </Button>
+                        )}
                         <Button 
+                          variant="ghost" 
                           size="sm" 
-                          className="bg-green-600 hover:bg-green-700 text-white" 
-                          onClick={() => { setResolvingId(report.id); setIsResolveDialogOpen(true); }}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteReport(report.id)}
                         >
-                          <Check className="h-4 w-4 mr-1" /> Resolve
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))
