@@ -18,11 +18,10 @@ import BuyerHeader from "@/components/headers/BuyerHeader"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Footer2 from "@/components/footer/Footer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// SSR safe Map imports
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
@@ -56,7 +55,7 @@ interface Offer {
 }
 
 export default function MyRequirementsPage() {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const router = useRouter();
     const [requirements, setRequirements] = useState<Requirement[]>([])
     const [offers, setOffers] = useState<Record<number, Offer[]>>({}) 
@@ -70,10 +69,17 @@ export default function MyRequirementsPage() {
     const [isDeleting, setIsDeleting] = useState(false)
     const [navUnread, setNavUnread] = useState(0) 
 
+    // --- POPUP STATES ---
+    const [showAcceptPrompt, setShowAcceptPrompt] = useState(false); // "Are you sure?" step
+    const [pendingAcceptData, setPendingAcceptData] = useState<{reqId: number, offerId: number} | null>(null);
+    const [isAccepting, setIsAccepting] = useState(false);
+
+    const [showStatusPopup, setShowStatusPopup] = useState(false); // Final Success/Error step
+    const [statusConfig, setStatusConfig] = useState({ title: "", desc: "", isError: false });
+
     const [userId, setUserId] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
 
-    // Map Modal States
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [mapData, setMapData] = useState({ lat: 0, lng: 0, address: "", city: "" });
 
@@ -127,27 +133,56 @@ export default function MyRequirementsPage() {
         if (userId && token) fetchMyRequirements(); 
     }, [userId, token, fetchMyRequirements]);
 
-    const handleAcceptOffer = async (reqId: number, offerId: number) => {
+    // --- STEP 1: OPEN CONFIRMATION PROMPT ---
+    const handleAcceptClick = (reqId: number, offerId: number) => {
+        setPendingAcceptData({ reqId, offerId });
+        setShowAcceptPrompt(true);
+    };
+
+    // --- STEP 2: EXECUTE ACCEPTANCE ---
+    const executeAcceptOffer = async () => {
+        if (!pendingAcceptData || !token) return;
+        const { reqId, offerId } = pendingAcceptData;
         const reqToUpdate = requirements.find(r => r.id === reqId);
-        if (!reqToUpdate || !token) return;
+        
+        setIsAccepting(true);
         try {
             const offerRes = await fetch(`${API_URL}/api/offers/${offerId}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ status: "ACCEPTED" })
             });
-            if (!offerRes.ok) throw new Error("Failed to update offer status");
+            if (!offerRes.ok) throw new Error("Failed");
+
             const reqPayload = { ...reqToUpdate, status: "CLOSED" };
             const reqRes = await fetch(`${API_URL}/api/requirements/${reqId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify(reqPayload)
             });
+
             if (reqRes.ok) {
-                alert(t("reqAlertDealConfirmed"));
+                setShowAcceptPrompt(false);
+                setStatusConfig({
+                    title: t("reqAlertDealConfirmed"),
+                    desc: "Offer Accepted. Requirement is now closed.",
+                    isError: false
+                });
+                setShowStatusPopup(true);
                 fetchMyRequirements();
             }
-        } catch (err) { alert(t("reqAlertDealFailed")); }
+        } catch (err) {
+            setShowAcceptPrompt(false);
+            setStatusConfig({
+                title: t("reqAlertDealFailed"),
+                desc:"Could not confirm the deal. Please try again.",
+                isError: true
+            });
+            setShowStatusPopup(true);
+        } finally {
+            setIsAccepting(false);
+            setPendingAcceptData(null);
+        }
     };
 
     const handleUpdate = async (id: number) => {
@@ -180,6 +215,7 @@ export default function MyRequirementsPage() {
         <div className="min-h-screen flex flex-col bg-[#F8F9FA] relative">
             <BuyerHeader />
 
+            {/* DELETE CONFIRMATION */}
             {showDeletePopup && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-2xl bg-white text-center relative overflow-hidden">
@@ -195,6 +231,47 @@ export default function MyRequirementsPage() {
                             </Button>
                             <button onClick={() => setShowDeletePopup(false)} className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors h-auto">{t("commonCancel")}</button>
                         </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* --- ACCEPT OFFER "ARE YOU SURE" PROMPT --- */}
+            {showAcceptPrompt && (
+                <div className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-2xl bg-white text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
+                        <div className="bg-yellow-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <CheckCircle className="w-10 h-10 text-[#EEC044] shrink-0" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">{"Accept Offer?"}</h2>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">{"Are you sure you want to accept this offer? This will close your requirement for others."}</p>
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={executeAcceptOffer} disabled={isAccepting} className="w-full bg-[#03230F] text-[#EEC044] font-bold h-auto py-4 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all hover:bg-black">
+                                {isAccepting ? <Loader2 className="animate-spin shrink-0" /> : t("reqBtnAcceptOffer")}
+                            </Button>
+                            <button onClick={() => setShowAcceptPrompt(false)} className="w-full font-bold text-gray-400 py-3 uppercase text-[10px] tracking-widest hover:text-gray-600 transition-colors h-auto">{t("commonCancel")}</button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* --- FINAL STATUS POPUP --- */}
+            {showStatusPopup && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md p-8 border-none shadow-2xl rounded-2xl bg-white text-center relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-full h-2 ${statusConfig.isError ? 'bg-red-500' : 'bg-green-500'}`} />
+                        <div className={`${statusConfig.isError ? 'bg-red-50' : 'bg-green-50'} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6`}>
+                            {statusConfig.isError ? (
+                                <AlertTriangle className="w-10 h-10 text-red-500 shrink-0" />
+                            ) : (
+                                <CheckCircle className="w-10 h-10 text-green-500 shrink-0" />
+                            )}
+                        </div>
+                        <h2 className="text-2xl font-black text-[#03230F] uppercase mb-2 tracking-tight">{statusConfig.title}</h2>
+                        <p className="text-sm text-gray-500 mb-8 font-medium">{statusConfig.desc}</p>
+                        <Button onClick={() => setShowStatusPopup(false)} className="w-full bg-[#03230F] text-[#EEC044] font-bold h-auto py-4 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all">
+                            {"OK"}
+                        </Button>
                     </Card>
                 </div>
             )}
@@ -390,7 +467,7 @@ export default function MyRequirementsPage() {
                                                                                 <div className="flex gap-4 w-full">
                                                                                     {req.status === 'OPEN' ? (
                                                                                         <Button 
-                                                                                            onClick={() => handleAcceptOffer(req.id, offer.id)} 
+                                                                                            onClick={() => handleAcceptClick(req.id, offer.id)} 
                                                                                             className="flex-1 bg-[#EEC044] text-[#03230F] rounded-xl h-auto py-4 min-h-[56px] font-black uppercase text-xs shadow-lg tracking-widest flex items-center justify-center gap-2 hover:bg-[#d4b43a]"
                                                                                         >
                                                                                             <CheckCircle className="w-5 h-5 shrink-0" /> {t("reqBtnAcceptOffer")}
