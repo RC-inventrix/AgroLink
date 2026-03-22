@@ -38,51 +38,50 @@ public class ReportService {
      * Logic: LOW = 0 points, MEDIUM = 1 point, HIGH = 2 points.
      * If user points reach 6, the user is banned.
      */
-    @Transactional // Ensures both Report and User updates succeed or fail together
+    @Transactional // Ensures atomicity for report update, user points, and notification
     public UserReport resolveReport(Long reportId, Long adminId, String remarks, String action) {
-        // 1. Fetch and update the Report status
+        // 1. Fetch and update the Report status - this must exist
         UserReport report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
         report.setAdminId(adminId);
         report.setAdminRemarks(remarks);
-        report.setActionTaken(action); // Uses the action selected in the frontend popup
+        report.setActionTaken(action);
         report.setResolvedAt(LocalDateTime.now());
         report.setStatus("RESOLVED");
 
-        // 2. Fetch the reported User from the shared 'users' table
-        User reportedUser = userRepository.findById(report.getReportedId())
-                .orElseThrow(() -> new RuntimeException("Reported user not found"));
+        // 2. Safely attempt to find the reported User to apply penalties and notifications
+        userRepository.findById(report.getReportedId()).ifPresent(reportedUser -> {
+            // Calculate penalty points
+            int pointsToAdd = 0;
+            if (report.getRiskLevel() == UserReport.RiskLevel.MEDIUM) {
+                pointsToAdd = 1;
+            } else if (report.getRiskLevel() == UserReport.RiskLevel.HIGH) {
+                pointsToAdd = 2;
+            }
 
-        // 3. Calculate points based on RiskLevel
-        int pointsToAdd = 0;
-        if (report.getRiskLevel() == UserReport.RiskLevel.MEDIUM) {
-            pointsToAdd = 1;
-        } else if (report.getRiskLevel() == UserReport.RiskLevel.HIGH) {
-            pointsToAdd = 2;
-        }
+            int newTotalPoints = reportedUser.getPenaltyPoints() + pointsToAdd;
+            reportedUser.setPenaltyPoints(newTotalPoints);
 
-        // 4. Update user points and check for 6-point ban threshold
-        int currentPoints = reportedUser.getPenaltyPoints();
-        int newTotalPoints = currentPoints + pointsToAdd;
+            if (newTotalPoints >= 6) {
+                reportedUser.setBanned(true);
+            }
 
-        reportedUser.setPenaltyPoints(newTotalPoints);
+            userRepository.save(reportedUser);
 
-        if (newTotalPoints >= 6) {
-            reportedUser.setBanned(true);
-        }
+            // 3. CREATE NOTIFICATION ONLY IF USER EXISTS
+            if ("WARNING_ISSUED".equalsIgnoreCase(action)) {
+                UserNotification warning = new UserNotification();
+                warning.setUserId(report.getReportedId()); // Link to reported user
+                warning.setTitle("Account Warning");
+                warning.setMessage("Administration has issued a warning regarding: " + remarks);
+                warning.setType("WARNING");
+                warning.setRead(false); // Explicitly set as unread
+                notificationRepository.save(warning);
+            }
+        });
 
-        if ("WARNING_ISSUED".equalsIgnoreCase(action)) {
-            UserNotification warning = new UserNotification();
-            warning.setUserId(report.getReportedId()); // The person who was reported
-            warning.setTitle("Account Warning");
-            warning.setMessage("Administration has issued a warning regarding: " + remarks);
-            warning.setType("WARNING");
-            notificationRepository.save(warning);
-        }
-
-        // 5. Save both changes to the shared database
-        userRepository.save(reportedUser);
+        // 4. Save the report regardless of whether the user was found
         return reportRepository.save(report);
     }
 

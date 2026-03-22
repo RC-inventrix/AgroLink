@@ -15,7 +15,8 @@ import {
     Megaphone,
     X,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Check
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,6 +51,29 @@ export default function BuyerDashboard() {
 
     const gatewayUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
+    // --- NEW FUNCTION: DISMISS WARNING ---
+    const handleDismissWarning = async (notificationId: string) => {
+        try {
+            const token = sessionStorage.getItem("token");
+            const id = notificationId.replace("warning-", ""); // Remove UI prefix to get DB ID
+
+            const res = await fetch(`${gatewayUrl}/api/v1/moderation/notifications/mark-read/${id}`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (res.ok) {
+                // Remove from local state immediately
+                setAnnouncements(prev => prev.filter(ann => ann.id !== notificationId));
+            }
+        } catch (err) {
+            console.error("Failed to dismiss warning:", err);
+        }
+    };
+
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         const myId = sessionStorage.getItem("id") || "1";
@@ -71,11 +95,32 @@ export default function BuyerDashboard() {
                     if (data.fullName) setFirstName(data.fullName.split(" ")[0]);
                 }
 
+                // 1. Fetch General Announcements
                 const annRes = await fetch(`${gatewayUrl}/api/v1/announcements/my-announcements?role=BUYER`, { headers });
+                let allItems = [];
                 if (annRes.ok) {
-                    const annData = await annRes.json();
-                    setAnnouncements(annData);
+                    allItems = await annRes.json();
                 }
+
+                // 2. Fetch Moderation Notifications (Warnings) - NEW ADDITION
+                const modRes = await fetch(`${gatewayUrl}/api/v1/moderation/user/notifications/${myId}`, { headers });
+                if (modRes.ok) {
+                    const modData = await modRes.json();
+                    const warnings = modData
+                        .filter((n: any) => !n.read) // Only show unread
+                        .map((n: any) => ({
+                            id: `warning-${n.id}`,
+                            title: n.title,
+                            message: n.message,
+                            type: "WARNING", // Specifically marker for red styling
+                            createdAt: n.createdAt
+                        }));
+                    // Warnings are prioritized at the top
+                    setAnnouncements([...warnings, ...allItems]);
+                } else {
+                    setAnnouncements(allItems);
+                }
+                
             } catch (err) {
                 console.error("User data or announcement fetch failed:", err);
             }
@@ -198,7 +243,7 @@ export default function BuyerDashboard() {
             fetchOrdersAndBargains();
         }, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [gatewayUrl]);
 
     if (isBanned) {
         return (
@@ -281,19 +326,42 @@ export default function BuyerDashboard() {
                             <p className="text-lg text-gray-300">{t("buyerDashSubtitle2")}</p>
                         </div>
 
-                        {/* Announcement Bar */}
+                        {/* Combined Announcement & Moderation Warning Bar */}
                         {showAnnouncements && announcements.length > 0 && (
-                            <div className="mb-6 bg-[#EEC044] rounded-xl px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className={`mb-6 rounded-xl px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-md animate-in fade-in slide-in-from-top-4 duration-500 ${
+                                announcements[0].type === "WARNING" ? "bg-red-500 text-white" : "bg-[#EEC044] text-[#03230F]"
+                            }`}>
                                 <div className="flex items-start sm:items-center gap-3">
-                                    <div className="bg-[#03230F] p-2 rounded-lg shrink-0"><Megaphone size={18} className="text-[#EEC044]" /></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-[#03230F] leading-tight">{announcements[0].title}</p>
-                                        <p className="text-sm text-[#03230F]/80 font-medium">{announcements[0].message}</p>
+                                    <div className={`${announcements[0].type === "WARNING" ? "bg-white/20" : "bg-[#03230F]"} p-2 rounded-lg shrink-0`}>
+                                        {announcements[0].type === "WARNING" ? (
+                                            <AlertCircle size={18} className="text-white" />
+                                        ) : (
+                                            <Megaphone size={18} className="text-[#EEC044]" />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-bold leading-tight truncate">{announcements[0].title}</p>
+                                        <p className="text-sm opacity-90 font-medium">{announcements[0].message}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowAnnouncements(false)} className="hover:bg-[#03230F]/10 p-1.5 rounded-full transition-colors shrink-0 self-end sm:self-auto">
-                                    <X size={20} className="text-[#03230F]" />
-                                </button>
+                                
+                                <div className="flex items-center gap-3 self-end sm:self-auto">
+                                    {/* NEW BUTTON: DISMISS WARNING AS READ */}
+                                    {announcements[0].type === "WARNING" && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => handleDismissWarning(announcements[0].id)}
+                                            className="h-8 text-[10px] font-black uppercase tracking-widest border border-white/40 hover:bg-white/20 text-white"
+                                        >
+                                            <Check className="mr-1 h-3 w-3" /> {t("dissmiss") || "Mark as Read"}
+                                        </Button>
+                                    )}
+
+                                    <button onClick={() => setShowAnnouncements(false)} className="hover:bg-black/10 p-1.5 rounded-full transition-colors shrink-0">
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
                         )}
 
