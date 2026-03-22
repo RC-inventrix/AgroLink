@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/cart")
@@ -19,16 +21,21 @@ public class CartController {
 
     @PostMapping("/add")
     public ResponseEntity<CartItem> addToCart(@RequestBody CartItem item) {
-        var existingItem = cartRepository.findByUserIdAndProductId(item.getUserId(), item.getProductId());
+        // Find all cart items for this user and product
+        List<CartItem> existingItems = cartRepository.findByUserIdAndProductId(item.getUserId(), item.getProductId());
 
-        if (existingItem.isPresent()) {
-            CartItem cartItem = existingItem.get();
+        // Filter the list to find an EXACT MATCH based on the chosen Delivery Address
+        Optional<CartItem> matchingItem = existingItems.stream()
+                .filter(c -> Objects.equals(c.getBuyerAddress(), item.getBuyerAddress()))
+                .findFirst();
 
-            // Add new quantity to existing quantity
+        if (matchingItem.isPresent()) {
+            CartItem cartItem = matchingItem.get();
+
+            // Add new quantity to existing quantity because the location matches perfectly
             cartItem.setQuantity(cartItem.getQuantity() + item.getQuantity());
 
             // INTEGRATION FOR BARGAINING & NEW LOGISTICS:
-            // Update the pricing to the bargained rate
             if (item.getPricePerKg() != null) {
                 cartItem.setPricePerKg(item.getPricePerKg());
             }
@@ -39,20 +46,19 @@ public class CartController {
                 cartItem.setBargainId(item.getBargainId());
             }
 
-            // Update Delivery Info in case the buyer changed locations
-            if (item.getBuyerAddress() != null) {
-                cartItem.setBuyerAddress(item.getBuyerAddress());
-                cartItem.setBuyerCity(item.getBuyerCity());
-                cartItem.setBuyerStreetAddress(item.getBuyerStreetAddress());
+            // Update Delivery Info safely
+            if (item.getBuyerLatitude() != null) {
                 cartItem.setBuyerLatitude(item.getBuyerLatitude());
                 cartItem.setBuyerLongitude(item.getBuyerLongitude());
+            }
+            if (item.getDeliveryFee() != null) {
                 cartItem.setDeliveryFee(item.getDeliveryFee());
             }
 
             return ResponseEntity.ok(cartRepository.save(cartItem));
         }
 
-        // If it's a completely new item, save directly.
+        // If it's a completely new item OR the delivery location is different, save as a separate row!
         return ResponseEntity.ok(cartRepository.save(item));
     }
 

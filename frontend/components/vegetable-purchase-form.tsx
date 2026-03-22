@@ -240,6 +240,11 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
             ? (addressOption === "default" ? userDefaultAddress?.address : confirmedCustomLocation?.address)
             : "Pickup by Buyer";
 
+        // Extract coordinates based on the user's selection
+        const buyerCoords = vegetable.deliveryAvailable
+            ? (addressOption === "default" ? userDefaultAddress : confirmedCustomLocation)
+            : null;
+
         const goodsTotal = qty * vegetable.price1kg
         const finalTotal = goodsTotal + deliveryFee
 
@@ -259,6 +264,9 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                     sellerId: vegetable.sellerId,
                     farmerAddress: vegetable.pickupAddress,
                     buyerAddress: finalBuyerAddress,
+                    // Send coordinates to backend perfectly
+                    buyerLatitude: buyerCoords?.lat ?? null,
+                    buyerLongitude: buyerCoords?.lng ?? null,
                     deliveryFee: deliveryFee,
                     productPrice: goodsTotal,
                     totalPrice: finalTotal
@@ -319,7 +327,6 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                             <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-primary" /> Farmer's Location
                             </h3>
-                            {/* FIX: Increased font size to base, made it bold/semibold, darkened text */}
                             <p className="text-base font-semibold text-gray-900 mb-3 leading-relaxed">
                                 {vegetable.pickupAddress || "Address not provided by farmer"}
                             </p>
@@ -372,7 +379,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
                                             <Label htmlFor="opt-custom" className="cursor-pointer font-medium text-gray-900">
-                                                Select Another Address
+                                                Select Another Location
                                             </Label>
                                             {addressOption === "custom" && (
                                                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIsAddressModalOpen(true)}>
@@ -387,7 +394,7 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                                 </div>
                             </RadioGroup>
 
-                            {/* Delivery Fee Info - UPDATED WITH BREAKDOWN & REAL ROAD DISTANCE */}
+                            {/* Delivery Fee Info */}
                             <div className="mt-4 pt-4 border-t border-blue-100 flex justify-between items-center text-sm">
                                 <span className="text-blue-800 flex items-center gap-1">
                                     {isCalculatingDistance ? (
@@ -430,7 +437,6 @@ export default function VegetablePurchaseForm({ vegetable }: { vegetable: Vegeta
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">kg</span>
                         </div>
-                        {/* FIX: Increased font size to sm, made it bold, darkened text */}
                         <p className="text-sm font-bold text-gray-700 mt-2">Available Stock: {vegetable.quantity} kg</p>
                     </div>
 
