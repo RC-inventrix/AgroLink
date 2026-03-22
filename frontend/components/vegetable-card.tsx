@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoins, Truck, MapPin, Package, Gavel, Timer } from "lucide-react"
+import { Star, ShoppingCart, Loader2, Check, AlertCircle, MessageCircle, HandCoins, Truck, MapPin, Package, Gavel, Timer, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ interface Vegetable {
     id: string
     name: string
     image: string
+    images?: string[] // Multiple images
     price100g: number
     price1kg: number
     seller: string
@@ -48,6 +49,9 @@ export default function VegetableCard({
     const { t } = useLanguage() // Initialized the hook
     const [adding, setAdding] = useState(false)
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    // Image Carousel State
+    const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     const handleRedirect = () => {
         sessionStorage.setItem("selectedVegetable", JSON.stringify(vegetable));
@@ -95,6 +99,22 @@ export default function VegetableCard({
         return <span className="text-orange-600 font-medium">{t("vegCardHoursLeft").replace("{n}", hours.toString())}</span>;
     }
 
+    // Prepare images array
+    const displayImages = vegetable.images && vegetable.images.length > 0
+        ? vegetable.images
+        : [vegetable.image || "/placeholder.svg"];
+
+    // Image navigation handlers
+    const nextImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentImageIndex((prev) => (prev + 1) % displayImages.length);
+    }
+
+    const prevImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentImageIndex((prev) => (prev - 1 + displayImages.length) % displayImages.length);
+    }
+
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full border-border">
             {notification && (
@@ -105,12 +125,41 @@ export default function VegetableCard({
                 </div>
             )}
 
-            <div className="relative h-48 bg-muted overflow-hidden rounded-t-lg shrink-0">
-                <img src={vegetable.image || "/placeholder.svg"} alt={vegetable.name} className="w-full h-full object-cover" />
+            <div className="relative h-48 bg-muted overflow-hidden rounded-t-lg shrink-0 group">
+                {/* Main Image rendered here based on currentImageIndex */}
+                <img src={displayImages[currentImageIndex]} alt={vegetable.name} className="w-full h-full object-cover transition-all duration-300" />
+
+                {/* Carousel Controls (Only visible on hover and if there is more than 1 image) */}
+                {displayImages.length > 1 && (
+                    <>
+                        <button
+                            onClick={prevImage}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={nextImage}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+
+                        {/* Pagination Dots */}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                            {displayImages.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/60"}`}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
 
                 {/* Auction Badge */}
                 {vegetable.isAuction && (
-                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1">
+                    <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1">
                         <Gavel className="h-3 w-3 shrink-0" />
                         {t("vegCardAuctionBadge")}
                     </div>
@@ -118,7 +167,7 @@ export default function VegetableCard({
 
                 {/* Out of Stock Overlay */}
                 {!vegetable.isAuction && vegetable.quantity <= 0 && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
                         <span className="text-white font-bold px-3 py-1 border-2 border-white rounded">{t("vegCardOutOfStock")}</span>
                     </div>
                 )}

@@ -128,7 +128,8 @@ export default function BargainPage() {
             const token = sessionStorage.getItem("token")
             if (userId) {
                 try {
-                    const res = await fetch(`${API_URL}/api/users/${userId}/address`, {
+                    // FIX: Removed the /api prefix so it correctly matches the UserController mapping (/users/{id}/address)
+                    const res = await fetch(`${API_URL}/users/${userId}/address`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     })
                     if (res.ok) {

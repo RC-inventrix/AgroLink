@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Trash2, Truck, Store, MapPin, User } from "lucide-react"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -14,11 +15,11 @@ interface Vegetable {
     image: string
     pricePerKg: number
     quantity: number
-    seller: string 
+    seller: string
     selected: boolean
     deliveryFee?: number | null
     deliveryAddress?: string
-    sellerId?: string | number 
+    sellerId?: string | number
 }
 
 interface CartItemProps {
@@ -28,13 +29,13 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const [sellerFullName, setSellerFullName] = useState<string>("");
 
     useEffect(() => {
         const fetchSellerName = async () => {
             const idToFetch = item.sellerId || item.seller.replace(/\D/g, "");
-            
+
             if (!idToFetch) {
                 setSellerFullName(item.seller);
                 return;
@@ -62,9 +63,25 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
 
     const finalPrice = item.pricePerKg * item.quantity
 
+    // FIX: Check if the address implies it's a pickup order
+    const isPickup = !item.deliveryAddress ||
+        item.deliveryAddress.trim() === "" ||
+        item.deliveryAddress.toLowerCase().includes("pickup") ||
+        item.deliveryAddress.toLowerCase() === "location n/a";
+
     return (
         <div className={`p-4 transition-colors`}>
             <div className="flex gap-4">
+
+                <div className="flex items-center shrink-0">
+                    <Checkbox
+                        checked={item.selected}
+                        onCheckedChange={() => onToggle(item.id)}
+                        className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F] w-5 h-5"
+                        aria-label={`Select ${item.name}`}
+                    />
+                </div>
+
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100 shadow-sm">
                     <img
                         src={item.image || "/placeholder.svg"}
@@ -76,7 +93,7 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                 <div className="flex-1 flex flex-col justify-between py-1">
                     <div>
                         <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{item.name}</h3>
-                        
+
                         <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-2">
                             <User className="w-3.5 h-3.5 shrink-0" />
                             <span className="font-medium truncate max-w-[150px]">{sellerFullName || "Loading..."}</span>
@@ -85,12 +102,14 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                         <div className="flex items-center gap-3 text-sm">
                             <span className="font-bold text-[#03230F] bg-green-50 px-2 py-0.5 rounded-md">{item.quantity} {t("purchaseKgUnit")}</span>
                             <span className="text-gray-400 font-medium">×</span>
-                            <span className="text-gray-600 font-medium">Rs. {item.pricePerKg.toFixed(2)} / kg</span>
+                            {/* FIX: Formatted price per kg with commas */}
+                            <span className="text-gray-600 font-medium">Rs. {item.pricePerKg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / kg</span>
                         </div>
                     </div>
 
                     <div className="mt-3">
-                        {item.deliveryFee !== null && item.deliveryFee !== undefined ? (
+                        {/* FIX: Swapped to checking the new isPickup boolean */}
+                        {!isPickup ? (
                             <div className="flex items-center gap-1.5 text-blue-700 bg-blue-50 w-fit px-2.5 py-1 rounded-md">
                                 <Truck className="w-4 h-4 shrink-0" />
                                 <span className="font-bold text-xs tracking-tight shrink-0">{t("cartItemDeliveryOrder")}</span>
@@ -112,7 +131,8 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                 </div>
 
                 <div className="flex flex-col items-end justify-between">
-                    <p className="font-bold text-gray-900 text-lg">Rs. {finalPrice.toFixed(2)}</p>
+                    {/* FIX: Formatted final price with commas */}
+                    <p className="font-bold text-gray-900 text-lg">Rs. {finalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
 
                     <Button
                         variant="ghost"
