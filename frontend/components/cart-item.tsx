@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox" // <-- Imported Checkbox
 import { Trash2, Truck, Store, MapPin, User } from "lucide-react"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -14,11 +15,11 @@ interface Vegetable {
     image: string
     pricePerKg: number
     quantity: number
-    seller: string 
+    seller: string
     selected: boolean
     deliveryFee?: number | null
     deliveryAddress?: string
-    sellerId?: string | number 
+    sellerId?: string | number
 }
 
 interface CartItemProps {
@@ -28,13 +29,13 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
-    const { t } = useLanguage() // Initialized the hook
+    const { t } = useLanguage()
     const [sellerFullName, setSellerFullName] = useState<string>("");
 
     useEffect(() => {
         const fetchSellerName = async () => {
             const idToFetch = item.sellerId || item.seller.replace(/\D/g, "");
-            
+
             if (!idToFetch) {
                 setSellerFullName(item.seller);
                 return;
@@ -65,6 +66,18 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
     return (
         <div className={`p-4 transition-colors`}>
             <div className="flex gap-4">
+
+                {/* --- NEW CHECKBOX ADDED HERE --- */}
+                <div className="flex items-center shrink-0">
+                    <Checkbox
+                        checked={item.selected}
+                        onCheckedChange={() => onToggle(item.id)}
+                        className="data-[state=checked]:bg-[#03230F] data-[state=checked]:border-[#03230F] w-5 h-5"
+                        aria-label={`Select ${item.name}`}
+                    />
+                </div>
+                {/* ------------------------------- */}
+
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100 shadow-sm">
                     <img
                         src={item.image || "/placeholder.svg"}
@@ -76,7 +89,7 @@ export default function CartItem({ item, onToggle, onDelete }: CartItemProps) {
                 <div className="flex-1 flex flex-col justify-between py-1">
                     <div>
                         <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{item.name}</h3>
-                        
+
                         <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-2">
                             <User className="w-3.5 h-3.5 shrink-0" />
                             <span className="font-medium truncate max-w-[150px]">{sellerFullName || "Loading..."}</span>
