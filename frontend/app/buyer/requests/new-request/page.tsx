@@ -1,7 +1,7 @@
 /* fileName: page.tsx */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,17 +24,16 @@ import {
 import { useRouter } from "next/navigation"
 import BuyerHeader from "@/components/headers/BuyerHeader"
 import LocationPicker from "@/components/LocationPicker"
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { useLanguage } from "@/context/LanguageContext"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function RequirementForm() {
-    const { t } = useLanguage(); // Initialized the hook
+    const { t } = useLanguage();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     
-    // Toggle state for Delivery vs Pickup
     const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("PICKUP");
 
     const [formData, setFormData] = useState({
@@ -43,10 +42,9 @@ export default function RequirementForm() {
         expectedUnitPrice: "",
         expectedDate: "",
         description: "",
-        contactNumber: "" // Added to state
+        contactNumber: ""
     });
 
-    // Map Location State
     const [location, setLocation] = useState({
         province: "",
         district: "",
@@ -55,6 +53,41 @@ export default function RequirementForm() {
         latitude: null as number | null,
         longitude: null as number | null
     });
+
+    // --- FETCH USER DEFAULT LOCATION ---
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const userId = sessionStorage.getItem("id");
+            const token = sessionStorage.getItem("token");
+            if (!userId || !token) return;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/user/${userId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const userData = await res.json();
+                    // Pre-fill location state with user's saved data
+                    setLocation({
+                        province: userData.province || "",
+                        district: userData.district || "",
+                        city: userData.city || "",
+                        streetAddress: userData.address || "",
+                        latitude: userData.latitude || null,
+                        longitude: userData.longitude || null
+                    });
+                    // Also pre-fill contact number if available
+                    if (userData.phone) {
+                        setFormData(prev => ({ ...prev, contactNumber: userData.phone }));
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load user profile for default location", error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,17 +107,13 @@ export default function RequirementForm() {
                     ...formData,
                     buyerId: userId,
                     deliveryMethod,
-                    // Send map data if delivery is selected
-                    ...(deliveryMethod === "DELIVERY" ? {
-                        province: location.province,
-                        district: location.district,
-                        city: location.city,
-                        deliveryAddress: location.streetAddress,
-                        latitude: location.latitude,
-                        longitude: location.longitude
-                    } : {
-                        deliveryAddress: "Buyer Pickup at Farm" // Kept as English for backend consistency
-                    }),
+                    // Send map data for either method chosen
+                    province: location.province,
+                    district: location.district,
+                    city: location.city,
+                    deliveryAddress: location.streetAddress,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
                     quantity: parseFloat(formData.quantity) || 0,
                     expectedUnitPrice: parseFloat(formData.expectedUnitPrice) || 0
                 })
@@ -132,7 +161,6 @@ export default function RequirementForm() {
                     <div className="absolute top-0 left-0 w-full h-2 bg-[#EEC044]" />
 
                     <form onSubmit={handleSubmit} className="space-y-8 mt-4">
-                        {/* Upper Grid for Basic Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
@@ -157,7 +185,6 @@ export default function RequirementForm() {
                                     placeholder={t("reqFormQuantityPh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.quantity}
-                                    maxLength={10}
                                     onChange={(e) => setFormData({...formData, quantity: e.target.value})}
                                 />
                             </div>
@@ -189,7 +216,6 @@ export default function RequirementForm() {
                                 />
                             </div>
 
-                            {/* --- CONTACT NUMBER FIELD --- */}
                             <div className="space-y-3">
                                 <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                                     <Phone className="w-4 h-4 shrink-0" /> {t("reqFormContact")}
@@ -200,13 +226,11 @@ export default function RequirementForm() {
                                     placeholder={t("reqFormContactPh")}
                                     className="rounded-xl border-gray-200 bg-gray-50/50 h-12 focus:border-[#EEC044] focus:ring-0 transition-all font-medium text-lg"
                                     value={formData.contactNumber}
-                                    maxLength={10}
                                     onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
                                 />
                             </div>
                         </div>
 
-                        {/* RADIO BUTTONS - Positioned Above Description */}
                         <div className="space-y-4 pt-4 border-t border-gray-100">
                             <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                                 <Truck className="w-4 h-4 shrink-0" /> {t("reqFormMethod")}
@@ -246,7 +270,23 @@ export default function RequirementForm() {
                             </div>
                         </div>
 
-                        {/* Requirement Description */}
+                        {/* --- ALWAYS VISIBLE LOCATION PICKER WITH DYNAMIC TITLE --- */}
+                        <div className="space-y-3 animate-in fade-in duration-500">
+                            <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                                <MapPin className="w-4 h-4 shrink-0" /> 
+                                {deliveryMethod === "PICKUP" ? "Your Location" : t("reqFormSetLoc")}
+                            </Label>
+                            <div className="rounded-2xl border-2 border-gray-100 p-4 bg-gray-50/30">
+                                <LocationPicker 
+                                    value={location}
+                                    onChange={setLocation}
+                                    variant="light"
+                                    showStreetAddress={true}
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
                         <div className="space-y-3">
                             <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                                 <FileText className="w-4 h-4 shrink-0" /> {t("reqFormDesc")}
@@ -260,25 +300,6 @@ export default function RequirementForm() {
                             />
                         </div>
 
-                        {/* Conditional Map View */}
-                        {deliveryMethod === "DELIVERY" && (
-                            <div className="space-y-3 animate-in slide-in-from-top duration-500">
-                                <Label className="text-[#03230F] font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 shrink-0" /> {t("reqFormSetLoc")}
-                                </Label>
-                                <div className="rounded-2xl border-2 border-gray-100 p-4 bg-gray-50/30">
-                                    <LocationPicker 
-                                        value={location}
-                                        onChange={setLocation}
-                                        variant="light"
-                                        showStreetAddress={true}
-                                        required={true}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Action Buttons */}
                         <div className="flex gap-4 pt-4">
                             <Button 
                                 type="submit" 
