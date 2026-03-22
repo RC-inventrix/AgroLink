@@ -18,6 +18,7 @@ interface Vegetable {
     id: string
     name: string
     image: string
+    images?: string[] // Added to hold multiple images
     price100g: number
     price1kg: number
     seller: string
@@ -152,6 +153,8 @@ export default function VegetableListings() {
                     id: item.id?.toString() || "unique-id",
                     name: item.vegetableName,
                     image: item.images && item.images.length > 0 ? item.images[0].imageUrl : "/placeholder.svg",
+                    // Fetch all image URLs from the product images table
+                    images: item.images && item.images.length > 0 ? item.images.map((img: any) => img.imageUrl) : ["/placeholder.svg"],
                     price1kg: item.fixedPrice || item.biddingPrice || 0,
                     price100g: (item.fixedPrice || item.biddingPrice || 0) / 10,
                     pricingType: item.pricingType,
@@ -175,6 +178,8 @@ export default function VegetableListings() {
                     id: item.id?.toString(),
                     name: item.productName,
                     image: item.productImageUrl || "/placeholder.svg",
+                    // Map the auction image into an array to keep the type consistent
+                    images: [item.productImageUrl || "/placeholder.svg"],
                     price1kg: item.currentHighestBidAmount || item.startingPrice,
                     price100g: 0,
                     seller: item.farmerName || t("browseUnknownFarmer"),
