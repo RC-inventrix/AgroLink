@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY app.py .
 COPY model.pkl .
-COPY standscaler.pkl .
-COPY minmaxscaler.pkl .
+#COPY standscaler.pkl .
+#COPY minmaxscaler.pkl .
 
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
