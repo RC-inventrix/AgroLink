@@ -1,18 +1,22 @@
 /* fileName: horizontal-bargain-card.tsx */
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Trash2, ShoppingCart, RotateCcw, MapPin, Truck, Store, User } from "lucide-react"
-import Link from "next/link" 
-import { useLanguage } from "@/context/LanguageContext" // Imported translation hook
+import { Trash2, ShoppingCart, RotateCcw, MapPin, Truck, Store, User, Map, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { useLanguage } from "@/context/LanguageContext"
 
-// Updated Interface to include sellerId
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+// Updated Interface to include vegetableId
 interface BargainItem {
     id: string
     name: string
     seller: string
-    sellerId: string | number 
+    sellerId: string | number
+    vegetableId: string
     image: string
     pricePerHundredG: number
     pricePerKg: number
@@ -44,18 +48,19 @@ function formatCurrency(amount: number): string {
 }
 
 export function HorizontalBargainCard({
-    item,
-    status,
-    hideActions = false,
-    onDelete,
-    onAddToCart,
-    onBargainAgain,
-}: HorizontalBargainCardProps) {
-    const { t } = useLanguage() // Initialized the hook
+                                          item,
+                                          status,
+                                          hideActions = false,
+                                          onDelete,
+                                          onAddToCart,
+                                          onBargainAgain,
+                                      }: HorizontalBargainCardProps) {
+    const { t } = useLanguage()
     const {
         name,
         seller,
-        sellerId, 
+        sellerId,
+        vegetableId,
         image,
         pricePerKg,
         requestedQuantityKg,
@@ -66,6 +71,34 @@ export function HorizontalBargainCard({
         buyerAddress,
         deliveryFee
     } = item
+
+    // State to hold the dynamically fetched Farmer/Product location
+    const [farmerLocation, setFarmerLocation] = useState<{ lat: number | null, lng: number | null, address: string | null }>({ lat: null, lng: null, address: null });
+
+    // Fetch the Farmer's location dynamically from the Product Service
+    useEffect(() => {
+        if (!deliveryRequired && sellerId && vegetableId) {
+            const fetchFarmerLocation = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/products/farmer/${sellerId}`);
+                    if (res.ok) {
+                        const products = await res.json();
+                        const product = products.find((p: any) => p.id.toString() === vegetableId.toString());
+                        if (product) {
+                            setFarmerLocation({
+                                lat: product.pickupLatitude || null,
+                                lng: product.pickupLongitude || null,
+                                address: product.pickupAddress || null
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching product location:", error);
+                }
+            };
+            fetchFarmerLocation();
+        }
+    }, [deliveryRequired, sellerId, vegetableId]);
 
     const getStatusBadge = () => {
         switch (status) {
@@ -83,6 +116,11 @@ export function HorizontalBargainCard({
     }
 
     const finalTotal = requestedPrice + (deliveryRequired ? deliveryFee : 0);
+
+    // Generate Google Maps URL if coordinates exist
+    const googleMapsUrl = farmerLocation.lat && farmerLocation.lng
+        ? `https://www.google.com/maps?q=${farmerLocation.lat},${farmerLocation.lng}`
+        : null;
 
     return (
         <Card className="flex flex-col sm:flex-row overflow-hidden border-green-100 bg-white rounded-2xl h-full sm:h-auto transition-all hover:shadow-lg shadow-sm">
@@ -105,13 +143,13 @@ export function HorizontalBargainCard({
                             <h3 className="font-bold text-2xl text-green-900">{name}</h3>
                             {getStatusBadge()}
                         </div>
-                        
+
                         {/* Seller Link Section */}
                         <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1.5 flex-wrap">
                             <User className="w-4 h-4 opacity-70 shrink-0" />
                             <span>{t("bargainBuyerSellerLabel")} </span>
-                            <Link 
-                                href={`/user/${sellerId}`} 
+                            <Link
+                                href={`/user/${sellerId}`}
                                 className="font-bold text-green-900 hover:text-green-600 hover:underline transition-all decoration-green-600 truncate max-w-[200px]"
                             >
                                 {seller}
@@ -168,9 +206,24 @@ export function HorizontalBargainCard({
                         <div className="flex items-start gap-2 text-sm">
                             <MapPin className={`w-4 h-4 shrink-0 mt-0.5 ${deliveryRequired ? "text-blue-500" : "text-orange-500"}`} />
                             <span className="text-gray-700 font-medium leading-tight">
-                                {buyerAddress}
+                                {/* Display fetched Address if available, otherwise fallback to DB buyerAddress */}
+                                {!deliveryRequired && farmerLocation.address ? farmerLocation.address : buyerAddress}
                             </span>
                         </div>
+
+                        {/* NEW: Google Maps Link for Pickup Orders */}
+                        {!deliveryRequired && googleMapsUrl && (
+                            <div className="pl-6">
+                                <a
+                                    href={googleMapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 hover:text-orange-800 hover:underline transition-colors"
+                                >
+                                    <Map className="w-3.5 h-3.5" /> View on Google Maps <ExternalLink className="w-3 h-3" />
+                                </a>
+                            </div>
+                        )}
 
                         <div className="flex justify-between items-center text-sm border-t pt-2 mt-2 border-white/60 gap-2">
                             <span className="text-gray-600 truncate">{t("bargainBuyerDeliveryFee")}</span>
