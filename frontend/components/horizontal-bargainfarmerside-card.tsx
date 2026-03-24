@@ -81,8 +81,9 @@ export function HorizontalBargainCard({
         }
     }
 
+    // FIXED: Updated the Google Maps URL to correctly format the search query with the coordinates
     const googleMapsUrl = deliveryRequired && buyerLatitude && buyerLongitude
-        ? `https://www.google.com/maps?q=$${buyerLatitude},${buyerLongitude}`
+        ? `https://www.google.com/maps/search/?api=1&query=${buyerLatitude},${buyerLongitude}`
         : null;
 
     return (
