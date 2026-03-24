@@ -1,135 +1,95 @@
-from flask import Flask, request, jsonify
-import requests
-from datetime import datetime, timedelta
 import pickle
 import numpy as np
+from flask import Flask, request, jsonify
+import requests
 import warnings
 
-# Suppress scikit-learn version warnings if any
+# Suppress scikit-learn version warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 app = Flask(__name__)
 
-# --- 1. LOAD THE NEW ML MODEL AND SCALER ---
+# --- 1. LOAD THE MODEL AND SCALER ---
 try:
     model = pickle.load(open('model.pkl', 'rb'))
-    scaler = pickle.load(open('scaler.pkl', 'rb')) # Using the new single scaler
+    scaler = pickle.load(open('scaler.pkl', 'rb'))
     ml_ready = True
-    print("✅ New ML Model and Scaler loaded successfully.")
+    print("✅ ML Model and Scaler loaded successfully.")
 except Exception as e:
-    print(f"⚠️ Warning: Could not load ML models. Using rule-based fallback. Error: {e}")
+    print(f"⚠️ Error loading models: {e}")
     ml_ready = False
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy"}), 200
+
+def get_weather_data(lat, lon):
+    """
+    Fetches real-time temperature, humidity, and rainfall using the free Open-Meteo API.
+    This replaces the complex NASA API logic to ensure fast, reliable weather retrieval.
+    """
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation"
+        response = requests.get(url, timeout=5)
+
+        if response.status_code == 200:
+            data = response.json()
+            current = data.get('current', {})
+
+            temp = current.get('temperature_2m', 28.0)
+            humidity = current.get('relative_humidity_2m', 70.0)
+            # Precipitation from current is hourly, multiply for a baseline daily estimate
+            rainfall = current.get('precipitation', 2.0) * 24
+
+            return temp, humidity, rainfall
+    except Exception as e:
+        print(f"Weather API failed: {e}")
+
+    # Safe fallback values if the API fails
+    return 28.0, 75.0, 100.0
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    # The Java backend sends a JSON with latitude and longitude
     data = request.json
     lat = data.get('latitude')
     lon = data.get('longitude')
 
-    if not lat or not lon:
+    # FIX FOR 400 ERROR: Validate lat/lon instead of looking for N, P, K
+    if lat is None or lon is None:
         return jsonify({'error': 'Latitude and Longitude are required'}), 400
 
-    # --- 2. FETCH WEATHER DATA (NASA POWER API) ---
-    end_date = datetime.now() - timedelta(days=1)
-    start_date = end_date - timedelta(days=20)
-    start_str = start_date.strftime("%Y%m%d")
-    end_str = end_date.strftime("%Y%m%d")
-
-    url = (
-        f"https://power.larc.nasa.gov/api/temporal/daily/point"
-        f"?parameters=T2M,PRECTOTCORR,RH2M"
-        f"&community=AG"
-        f"&longitude={lon}"
-        f"&latitude={lat}"
-        f"&start={start_str}"
-        f"&end={end_str}"
-        f"&format=JSON"
-    )
-
     try:
-        res = requests.get(url).json()
+        # 1. Fetch weather based on the user's coordinates
+        temp, humidity, rainfall = get_weather_data(lat, lon)
 
-        if "properties" not in res or "parameter" not in res["properties"]:
-            return jsonify({'error': 'No weather data found for these coordinates'}), 404
+        if ml_ready:
+            # FIX FOR "VEGETABLE"/WRONG CROP ERROR:
+            # The scaler expects exactly 3 features: temperature, humidity, rainfall
+            input_features = np.array([[temp, humidity, rainfall]])
+            input_features_scaled = scaler.transform(input_features)
 
-        t2m_data = res["properties"]["parameter"].get("T2M", {})
-        rh2m_data = res["properties"]["parameter"].get("RH2M", {})
-        rain_data = res["properties"]["parameter"].get("PRECTOTCORR", {})
+            # Make the prediction
+            prediction = model.predict(input_features_scaled)
 
-        temps = [v for v in t2m_data.values() if -10 <= v <= 50]
-        hums  = [v for v in rh2m_data.values() if 0 <= v <= 100]
-        rains = [v for v in rain_data.values() if v >= 0]
+            # The model.pkl classes are ALREADY exact crop names (e.g., 'rice', 'apple').
+            # We bypass the dictionary mapping entirely and use the prediction directly.
+            recommended_crop = str(prediction[0]).capitalize()
+        else:
+            recommended_crop = "System Unavailable"
 
-        avg_temp = sum(temps) / len(temps) if temps else 0
-        avg_hum  = sum(hums) / len(hums) if hums else 0
-        total_rain = sum(rains) if rains else 0
+        # 2. Return using the exact JSON keys expected by the page.tsx frontend
+        return jsonify({
+            'recommended_crop': recommended_crop,
+            'weather_metrics': {
+                'temperature': round(temp, 2),
+                'humidity': round(humidity, 2),
+                'rainfall': round(rainfall, 2)
+            }
+        })
 
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch weather data from NASA: {str(e)}'}), 500
+        print(f"Prediction error: {e}")
+        return jsonify({'error': 'Internal server error during prediction'}), 500
 
-    # --- 3. PREDICT THE CROP ---
-    recommended_crop = "Unknown"
-
-    # Crop Mapping based on standard Kaggle Dataset
-    crop_dictionary = {
-        '1': 'Apple', '2': 'Banana', '3': 'Blackgram', '4': 'Chickpea',
-        '5': 'Coconut', '6': 'Coffee', '7': 'Cotton', '8': 'Grapes',
-        '9': 'Jute', '10': 'Kidneybeans', '11': 'Lentil', '12': 'Maize',
-        '13': 'Mango', '14': 'Mothbeans', '15': 'Mungbean', '16': 'Muskmelon',
-        '17': 'Orange', '18': 'Papaya', '19': 'Pigeonpeas', '20': 'Pomegranate',
-        '21': 'Rice', '22': 'Watermelon'
-    }
-
-    if ml_ready:
-        try:
-            # Create feature array
-            features = np.array([[avg_temp, avg_hum, total_rain]])
-
-            # Apply the new single scaler!
-            features_scaled = scaler.transform(features)
-
-            # Predict using the scaled features
-            prediction = model.predict(features_scaled)
-
-            # Extract ID, ensure it's cast properly to match dictionary keys
-            predicted_id = str(int(prediction[0]))
-
-            # Look up the crop name using the dictionary
-            recommended_crop = crop_dictionary.get(predicted_id, "Unknown Crop")
-        except Exception as e:
-            print(f"ML Prediction failed: {e}. Falling back to rules.")
-            recommended_crop = rule_based_predict(avg_temp, avg_hum, total_rain)
-    else:
-        # Uses original fallback logic if the .pkl files don't work
-        recommended_crop = rule_based_predict(avg_temp, avg_hum, total_rain)
-
-    return jsonify({
-        'recommended_crop': recommended_crop,
-        'weather_metrics': {
-            'temperature': round(avg_temp, 2),
-            'humidity': round(avg_hum, 2),
-            'rainfall': round(total_rain, 2)
-        }
-    })
-
-# Fallback Logic
-def rule_based_predict(avgTemp, avgHum, totalRain):
-    crops = []
-    if avgTemp >= 28 and totalRain >= 50: crops.append("Rice")
-    if 26 <= avgTemp < 28 and avgHum < 70 and totalRain >= 20: crops.append("Maize")
-    if avgTemp < 26 and totalRain < 20: crops.extend(["Chickpea", "Lentils"])
-    if avgHum >= 75 and 24 <= avgTemp <= 32: crops.extend(["Banana", "Papaya"])
-    if 20 <= avgTemp <= 30 and 50 <= avgHum <= 80 and totalRain < 50:
-        crops.extend(["Tomato", "Cabbage", "Carrot", "Brinjal", "Okra"])
-    if avgTemp > 30 and totalRain < 30: crops.extend(["Mango", "Pineapple"])
-
-    if not crops: crops.append("Vegetables")
-    return ", ".join(crops)
 
 if __name__ == '__main__':
-    # Runs on port 5000, accessible to Docker
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True, port=5000)

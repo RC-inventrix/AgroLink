@@ -80,10 +80,27 @@ export default function BuyerBargainPage() {
                 if (bargainsRes.ok) {
                     const data = await bargainsRes.json()
 
+                    const sellerIds = Array.from(new Set(data.map((b: any) => b.sellerId)));
+            let nameMap: Record<string, string> = {};
+
+            if (sellerIds.length > 0) {
+                try {
+                    // Fetch real names from the auth service using the IDs
+                    const nameRes = await fetch(`${API_URL}/auth/fullnames?ids=${sellerIds.join(',')}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    if (nameRes.ok) {
+                        nameMap = await nameRes.json();
+                    }
+                } catch (nameErr) {
+                    console.error("Failed to fetch seller names:", nameErr);
+                }
+            }
+
                     const mappedData: BargainItem[] = data.map((item: any) => ({
                         id: item.id.toString(),
                         name: item.vegetableName,
-                        seller: `Farmer #${item.sellerId}`, // Default if name service is unavailable
+                        seller: `${nameMap[item.sellerId] || 'Unknown Farmer'}`, // Default if name service is unavailable
                         sellerId: item.sellerId.toString(),
                         image: item.vegetableImage || "/placeholder.svg",
                         pricePerHundredG: (item.originalPricePerKg || 0) / 10,
